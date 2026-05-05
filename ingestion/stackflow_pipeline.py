@@ -39,8 +39,8 @@ def zendesk_source():
 
 def run_pipeline():
     pipeline = dlt.pipeline(
-        pipeline_name="stackflow_revops",
-        destination=dlt.destinations.duckdb("duckdb/stackflow.duckdb"),
+        pipeline_name="revops_intelligence",
+        destination=dlt.destinations.duckdb("duckdb/revops_intelligence.duckdb"),
         dataset_name="raw_data",
     )
 

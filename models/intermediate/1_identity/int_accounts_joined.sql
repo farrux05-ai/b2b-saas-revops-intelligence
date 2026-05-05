@@ -16,8 +16,10 @@ hubspot as (
 ),
 
 stripe as (
-    -- In staging, the column is named customer_id
-    select distinct customer_id as stripe_customer_id 
+    select distinct 
+        customer_id as stripe_customer_id,
+        hubspot_company_id,
+        workspace_id as internal_workspace_id
     from {{ ref('stg_stripe__subscriptions') }}
 ),
 
@@ -34,7 +36,7 @@ all_ids as (
     union
     
     -- 3. All from Billing (Direct Stripe customers)
-    select null as hubspot_company_id, null as internal_workspace_id, stripe_customer_id, null as workspace_name from stripe
+    select hubspot_company_id, internal_workspace_id, stripe_customer_id, null as workspace_name from stripe
 ),
 
 -- Match domain from HubSpot for the global ID

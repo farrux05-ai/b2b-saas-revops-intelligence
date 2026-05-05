@@ -4,5 +4,5 @@ revops_intelligence_engine:
   outputs:
     dev:
       type: duckdb
-      path: './duckdb/stackflow.duckdb'
+      path: './duckdb/revops_intelligence.duckdb'
       threads: 4
