@@ -1,24 +1,90 @@
 version: 2
 
 models:
+  # ---------------------------------------------------------------------------
+  # Layer 1: Identity
+  # ---------------------------------------------------------------------------
   - name: int_accounts_joined
-    description: "The primary account-level identity spine linking DB, CRM, and Billing."
+    description: >
+      Global account identity spine. Merges internal workspaces (primary), 
+      HubSpot CRM companies, and CRM-only leads into a single deduplicated
+      account record with a stable surrogate key.
+    columns:
+      - name: account_id
+        description: "Stable surrogate key. Anchor for all downstream joins."
+        tests: [unique, not_null]
+      - name: internal_workspace_id
+        description: "FK to internal product workspace. NULL for CRM-only leads."
+
+  - name: int_users_joined
+    description: >
+      Links internal product users to HubSpot contacts via case-insensitive
+      email match and resolves their parent account_id.
+    columns:
+      - name: global_user_id
+        description: "Surrogate key based on internal_user_id (email-independent)."
+        tests: [unique, not_null]
+      - name: email
+        tests: [not_null]
+
+  # ---------------------------------------------------------------------------
+  # Layer 2: Domain Aggregations
+  # ---------------------------------------------------------------------------
+  - name: int_finance_aggregated
+    description: >
+      Billing metrics per workspace from Stripe. Computes MRR here (not in
+      staging) as per best practice: business logic belongs in Intermediate.
+    columns:
+      - name: workspace_id
+        tests: [unique, not_null]
+      - name: active_mrr
+        tests: [not_null]
+      - name: total_mrr
+        tests: [not_null]
+
+  - name: int_sales_aggregated
+    description: >
+      CRM pipeline metrics per account from HubSpot deals.
+    columns:
+      - name: hubspot_company_id
+        tests: [unique, not_null]
+
+  - name: int_support_aggregated
+    description: >
+      Support health metrics per account from Zendesk. Computes resolution_hours
+      here (removed from staging in thin staging refactor).
     columns:
       - name: account_id
         tests: [unique, not_null]
-      - name: internal_workspace_id
-        tests: [unique]
 
+  - name: int_usage_aggregated
+    description: >
+      Product usage and PLG (Product-Led Growth) signals from PostHog events.
+    columns:
+      - name: workspace_id
+        tests: [unique, not_null]
+
+  # ---------------------------------------------------------------------------
+  # Layer 3: Integration (Final Output of Intermediate)
+  # ---------------------------------------------------------------------------
   - name: int_accounts_integrated
-    description: "Aggregated account data from all sources (HubSpot, Stripe, Zendesk)."
+    description: >
+      Full Account 360° view. Joins all domain aggregations onto the account
+      spine. Materialized as TABLE for mart query performance.
     columns:
       - name: account_id
         tests: [unique, not_null]
       - name: mrr
         tests: [not_null]
+      - name: account_segment
+        tests:
+          - accepted_values:
+              values: ['Enterprise', 'Mid-Market', 'SMB', 'Trial/Free']
 
   - name: int_accounts_scored
-    description: "Multi-dimensional health scoring and risk reasoning for accounts."
+    description: >
+      Multi-signal health scoring model. Scoring priority: Churned >
+      Payment Failing > Support Critical > Low Engagement > Expansion Target > Healthy.
     columns:
       - name: account_id
         tests: [unique, not_null]
@@ -26,11 +92,8 @@ models:
         tests:
           - accepted_values:
               values: ['Healthy', 'At Risk', 'Churned']
-
-  - name: int_users_joined
-    description: "Links internal product users to HubSpot contacts via email."
-    columns:
-      - name: global_user_id
-        tests: [unique, not_null]
-      - name: email
-        tests: [not_null]
+      - name: health_reason
+        tests:
+          - accepted_values:
+              values: ['Healthy', 'Payment Failing', 'Support Critical',
+                       'Low Engagement', 'Expansion Target', 'Churned']

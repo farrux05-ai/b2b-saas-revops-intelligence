@@ -1,3 +1,13 @@
+{{ config(materialized='table') }}
+
+-- =============================================================================
+-- int_accounts_integrated: Full Account 360 View
+-- Layer: 3_integration
+--
+-- Materialized as TABLE because this is a heavily queried model by marts.
+-- Joins all domain aggregations onto the account spine.
+-- =============================================================================
+
 with spine as (
     select * from {{ ref('int_accounts_joined') }}
 ),
@@ -48,6 +58,7 @@ final as (
         f.latest_subscription_status,
         f.current_plan,
         f.is_payment_failing,
+        f.is_churning_soon,
         
         -- Seat Utilization (Expansion blind spot)
         -- Solving the problem where Sales missed upsell opportunities
