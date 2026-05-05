@@ -20,16 +20,9 @@ renamed as (
         cast(created_at as timestamp)                   as created_at,
         cast(trial_started_at as timestamp)             as trial_started_at,
         cast(trial_ended_at as timestamp)               as trial_ended_at,
-        cast(converted_at as timestamp)                 as converted_at,
-
-        -- surrogate key
-        {{ dbt_utils.generate_surrogate_key(['id']) }}  as workspace_sk
+        cast(converted_at as timestamp)                 as converted_at
 
     from source
-    qualify row_number() over (
-        partition by id
-        order by created_at desc
-    ) = 1
 )
 
 select * from renamed

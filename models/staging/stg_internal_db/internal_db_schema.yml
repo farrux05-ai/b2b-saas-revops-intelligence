@@ -6,8 +6,6 @@ models:
       Core workspace entity. Bridge table connecting HubSpot, Stripe, and
       internal product.
     columns:
-      - name: workspace_sk
-        tests: [unique, not_null]
       - name: workspace_id
         tests: [unique, not_null]
       - name: workspace_name
@@ -19,8 +17,6 @@ models:
     description: >
       Users within workspaces.
     columns:
-      - name: user_sk
-        tests: [unique, not_null]
       - name: user_id
         tests: [unique, not_null]
       - name: workspace_id

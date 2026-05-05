@@ -18,16 +18,9 @@ renamed as (
 
         -- timestamps
         cast(createdate as timestamp)                as created_at,
-        cast(hs_lastmodifieddate as timestamp)       as updated_at,
-
-        -- surrogate key
-        {{ dbt_utils.generate_surrogate_key(['hs_object_id']) }} as company_sk
+        cast(hs_lastmodifieddate as timestamp)       as updated_at
 
     from source
-    qualify row_number() over (
-        partition by hs_object_id
-        order by hs_lastmodifieddate desc
-    ) = 1
 )
 
 select * from renamed

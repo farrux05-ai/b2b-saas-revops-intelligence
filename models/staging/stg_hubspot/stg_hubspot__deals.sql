@@ -1,3 +1,5 @@
+{{ config(materialized='view') }}
+
 with source as (
     select * from {{ source('hubspot', 'deals') }}
 ),
@@ -17,16 +19,9 @@ renamed as (
 
         -- timestamps
         cast(createdate as timestamp)                   as created_at,
-        cast(closedate as timestamp)                    as closed_at,
-
-        -- surrogate key
-        {{ dbt_utils.generate_surrogate_key(['hs_object_id']) }}  as deal_sk
+        cast(closedate as timestamp)                    as closed_at
 
     from source
-    qualify row_number() over (
-        partition by hs_object_id
-        order by createdate desc
-    ) = 1
 )
 
 select * from renamed

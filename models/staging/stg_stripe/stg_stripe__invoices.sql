@@ -23,16 +23,9 @@ renamed as (
         cast(due_date as timestamp)                     as due_date,
         cast(paid_at as timestamp)                      as paid_at,
         cast(period_start as timestamp)                 as period_start,
-        cast(period_end as timestamp)                   as period_end,
-
-        -- surrogate key
-        {{ dbt_utils.generate_surrogate_key(['id']) }}  as invoice_sk
+        cast(period_end as timestamp)                   as period_end
 
     from source
-    qualify row_number() over (
-        partition by id
-        order by created desc
-    ) = 1
 )
 
 select * from renamed

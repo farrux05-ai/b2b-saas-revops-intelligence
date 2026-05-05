@@ -1,3 +1,5 @@
+{{ config(materialized='view') }}
+
 with source as (
     select * from {{ source('stripe', 'subscriptions') }}
 ),
@@ -14,8 +16,8 @@ renamed as (
         cast(status as varchar)                         as subscription_status,
         cast(plan_id as varchar)                        as plan_id,
 
-        -- financials (cents → dollars)
-        (cast(unit_amount as integer) * cast(quantity as integer)) / 100.0 as mrr_amount,
+        cast(unit_amount as integer)                    as unit_amount,
+        cast(quantity as integer)                       as quantity,
         cast(quantity as integer)                       as seats_used,
 
         -- booleans
@@ -25,16 +27,9 @@ renamed as (
         cast(created as timestamp)                      as created_at,
         cast(current_period_start as timestamp)         as current_period_start_at,
         cast(current_period_end as timestamp)           as current_period_end_at,
-        cast(trial_end as timestamp)                    as trial_end_at,
-
-        -- surrogate key
-        {{ dbt_utils.generate_surrogate_key(['id']) }}  as subscription_sk
+        cast(trial_end as timestamp)                    as trial_end_at
 
     from source
-    qualify row_number() over (
-        partition by id
-        order by created desc
-    ) = 1
 )
 
 select * from renamed

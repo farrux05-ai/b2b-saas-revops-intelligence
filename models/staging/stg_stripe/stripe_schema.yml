@@ -5,8 +5,6 @@ models:
     description: >
       Cleaned Stripe subscription records. One row per subscription.
     columns:
-      - name: subscription_sk
-        tests: [unique, not_null]
       - name: subscription_id
         tests: [unique, not_null]
       - name: workspace_id
@@ -17,16 +15,11 @@ models:
         tests: [not_null]
       - name: subscription_status
         tests: [not_null]
-      - name: mrr_amount
-        description: "MRR in USD (unit_amount * quantity / 100)"
-        tests: [not_null]
 
   - name: stg_stripe__invoices
     description: >
       Cleaned Stripe invoice records.
     columns:
-      - name: invoice_sk
-        tests: [unique, not_null]
       - name: invoice_id
         tests: [unique, not_null]
       - name: invoice_status
@@ -36,8 +29,6 @@ models:
     description: >
       Cleaned Stripe payment records.
     columns:
-      - name: payment_sk
-        tests: [unique, not_null]
       - name: payment_id
         tests: [unique, not_null]
       - name: payment_status

@@ -5,8 +5,6 @@ models:
     description: >
       Cleaned Zendesk support tickets.
     columns:
-      - name: ticket_sk
-        tests: [unique, not_null]
       - name: ticket_id
         tests: [unique, not_null]
       - name: requester_email
@@ -15,5 +13,3 @@ models:
         tests: [not_null]
       - name: priority
         tests: [not_null]
-      - name: resolution_hours
-        description: "Hours from created_at to solved_at."

@@ -1,3 +1,5 @@
+{{ config(materialized='view') }}
+
 with source as (
     select * from {{ source('stripe', 'payments') }}
 ),
@@ -17,20 +19,10 @@ renamed as (
         cast(amount as integer) / 100.0                 as amount,
         cast(currency as varchar)                       as currency,
 
-        -- booleans
-        cast(status as varchar) = 'failed'              as is_failed,
-
         -- timestamps
-        cast(created as timestamp)                      as created_at,
-
-        -- surrogate key
-        {{ dbt_utils.generate_surrogate_key(['id']) }}  as payment_sk
+        cast(created as timestamp)                      as created_at
 
     from source
-    qualify row_number() over (
-        partition by id
-        order by created desc
-    ) = 1
 )
 
 select * from renamed
