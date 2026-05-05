@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: stg_posthog__events
+    description: "Product engagement events from PostHog."
+    columns:
+      - name: event_sk
+        tests: [unique, not_null]
+      - name: event_id
+        tests: [unique, not_null]
+      - name: workspace_id
+        tests: [not_null]
+      - name: event_name
+        tests: [not_null]

@@ -1,0 +1,7 @@
+version: 2
+
+macros:
+  - name: postgres_source
+    description: "Internal macro for scanning Postgres data into DuckDB. Uses environment variables for authentication."
+    docs:
+      show: false

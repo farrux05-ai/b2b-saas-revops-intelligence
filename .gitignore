@@ -1,0 +1,60 @@
+# ── dbt ───────────────────────────────────────────────
+dbt_packages/
+logs/
+*.log
+target/
+.dbt/
+
+# ── Python virtual environments ───────────────────────
+.venv/
+venv/
+env/
+dbt-venv/
+*.pyc
+__pycache__/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+
+# ── Environment & Secrets (NEVER commit these) ────────
+.env
+.env.local
+.env.*.local
+dashboards/.env
+
+# ── IDE ───────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ── Streamlit ─────────────────────────────────────────
+.streamlit/
+.streamlit/secrets.toml
+
+# ── Database files (never commit binary DB files) ─────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Node ──────────────────────────────────────────────
+
+node_modules/
+package-lock.json
+yarn.lock
+
+# ── OS ────────────────────────────────────────────────
+Thumbs.db
+.AppleDouble
+package-lock.yml
+packages.yml
+
+PLAN.md
+
+# ── Project Data ──────────────────────────────────────
+data/raw/
+duckdb/

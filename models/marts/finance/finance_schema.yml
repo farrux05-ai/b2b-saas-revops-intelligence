@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: fct_mrr_waterfall
+    description: "Monthly MRR movements and snapshots using a date spine."
+    columns:
+      - name: account_id
+        description: "Primary key for the account."
+      - name: month
+        description: "The month of the snapshot."
+      - name: mrr
+        description: "Total MRR for the account in that month."
+      - name: movement_type
+        description: "Type of MRR change: new, expansion, contraction, churn, or reactivation."
+
+    # Lightdash / Semantic Metrics
+    # (Note: Using standard dbt meta for BI tools)
+    meta:
+      metrics:
+        total_mrr:
+          type: sum
+          sql: ${TABLE}.mrr
+          label: "Total MRR"
+          format: "usd"
+        avg_mrr:
+          type: average
+          sql: ${TABLE}.mrr
+          label: "Average MRR per Account"
+        new_mrr:
+          type: sum
+          sql: ${TABLE}.mrr
+          filters:
+            - field: movement_type
+              operator: equal_to
+              value: 'new'
+          label: "New Biz MRR"

@@ -1,0 +1,8 @@
+# dbt profile for SentinelGuard RevOps Engine
+sentinelguard_revops:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: './duckdb/stackflow.duckdb'
+      threads: 4

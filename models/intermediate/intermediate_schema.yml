@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: int_accounts_joined
+    description: "The primary account-level identity spine linking DB, CRM, and Billing."
+    columns:
+      - name: account_id
+        tests: [unique, not_null]
+      - name: internal_workspace_id
+        tests: [unique]
+
+  - name: int_accounts_integrated
+    description: "Aggregated account data from all sources (HubSpot, Stripe, Zendesk)."
+    columns:
+      - name: account_id
+        tests: [unique, not_null]
+      - name: mrr
+        tests: [not_null]
+
+  - name: int_accounts_scored
+    description: "Multi-dimensional health scoring and risk reasoning for accounts."
+    columns:
+      - name: account_id
+        tests: [unique, not_null]
+      - name: health_status
+        tests:
+          - accepted_values:
+              values: ['Healthy', 'At Risk', 'Churned']
+
+  - name: int_users_joined
+    description: "Links internal product users to HubSpot contacts via email."
+    columns:
+      - name: global_user_id
+        tests: [unique, not_null]
+      - name: email
+        tests: [not_null]

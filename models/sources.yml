@@ -1,0 +1,82 @@
+version: 2
+
+sources:
+  - name: hubspot
+    schema: raw_data
+    tables:
+      - name: companies
+        description: "HubSpot company records"
+        columns:
+          - name: hs_object_id
+            tests: [unique, not_null]
+          - name: domain
+            tests: [not_null]
+          - name: name
+            tests: [not_null]
+      - name: deals
+        description: "HubSpot deal pipeline records"
+        columns:
+          - name: hs_object_id
+            tests: [unique, not_null]
+          - name: associated_company_id
+            tests: [not_null]
+      - name: contacts
+        description: "HubSpot contact records"
+        columns:
+          - name: hs_object_id
+            tests: [unique, not_null]
+
+  - name: stripe
+    schema: raw_data
+    tables:
+      - name: subscriptions
+        description: "Stripe subscription records per workspace"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: metadata__workspace_id
+            tests: [not_null]
+      - name: invoices
+        description: "Stripe invoice history"
+      - name: payments
+        description: "Stripe payment history"
+
+  - name: internal
+    schema: raw_data
+    tables:
+      - name: workspaces
+        description: "Internal product workspaces"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+      - name: users
+        description: "Internal product users"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: email
+            tests: [not_null]
+
+  - name: zendesk
+    schema: raw_data
+    tables:
+      - name: tickets
+        description: "Support tickets linked to workspaces"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: requester_email
+            tests: [not_null]
+
+  - name: posthog
+    schema: raw_data
+    tables:
+      - name: events
+        description: "Product analytics events from PostHog"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: event_name
+            tests: [not_null]
+          - name: occurred_at
+            tests: [not_null]

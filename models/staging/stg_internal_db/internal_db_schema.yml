@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: stg_internal__workspaces
+    description: >
+      Core workspace entity. Bridge table connecting HubSpot, Stripe, and
+      internal product.
+    columns:
+      - name: workspace_sk
+        tests: [unique, not_null]
+      - name: workspace_id
+        tests: [unique, not_null]
+      - name: workspace_name
+        tests: [not_null]
+      - name: plan
+        tests: [not_null]
+
+  - name: stg_internal__users
+    description: >
+      Users within workspaces.
+    columns:
+      - name: user_sk
+        tests: [unique, not_null]
+      - name: user_id
+        tests: [unique, not_null]
+      - name: workspace_id
+        tests: [not_null]
+      - name: user_role
+        tests: [not_null]

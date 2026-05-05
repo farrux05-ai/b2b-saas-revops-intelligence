@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: stg_hubspot__companies
+    description: >
+      Cleaned and deduplicated HubSpot company records.
+      One row per company.
+    columns:
+      - name: company_sk
+        description: "Surrogate key (dbt_utils)"
+        tests: [unique, not_null]
+      - name: hubspot_company_id
+        description: "HubSpot native company ID"
+        tests: [unique, not_null]
+      - name: domain
+        tests: [not_null]
+      - name: company_name
+        tests: [not_null]
+
+  - name: stg_hubspot__deals
+    description: >
+      Cleaned HubSpot deal records. One row per deal (latest version after dedup).
+    columns:
+      - name: deal_sk
+        tests: [unique, not_null]
+      - name: hubspot_deal_id
+        tests: [unique, not_null]
+      - name: hubspot_company_id
+        tests: [not_null]
+      - name: deal_stage
+        tests: [not_null]
+
+  - name: stg_hubspot__contacts
+    description: >
+      Cleaned HubSpot contact records. One row per contact.
+    columns:
+      - name: contact_sk
+        tests: [unique, not_null]
+      - name: hubspot_contact_id
+        tests: [unique, not_null]
+      - name: hubspot_company_id
+        tests: [not_null]
+      - name: email
+        tests: [not_null]

@@ -1,0 +1,35 @@
+name: "sentinelguard_revops_engine"
+version: '1.0.0'
+config-version: 2
+
+profile: 'sentinelguard_revops'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+analysis-paths: ["analyses"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  stackflow_revops:
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: ephemeral
+      +schema: intermediate
+      1_identity:
+        +schema: identity
+      2_domains:
+        +schema: domains
+      3_integration:
+        +schema: integration
+    marts:
+      +materialized: table
+      +schema: marts

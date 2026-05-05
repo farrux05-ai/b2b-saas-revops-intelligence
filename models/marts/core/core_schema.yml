@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: dim_accounts
+    description: "The Golden Record for all accounts, integrating product, sales, and finance data."
+    columns:
+      - name: domain
+        description: "Primary domain used for identity stitching."
+        tests:
+          - unique
+          - not_null
+      - name: health_status
+        description: "Account health categorized as Healthy, At Risk, or Churned."
+      - name: is_pql
+        description: "True if the account is a Product Qualified Lead."
+
+    # Semantic Layer (Lightdash/Semantic Layer)
+    tests:
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          min_value: 1
+
+  - name: dim_users
+    description: "Summary of users across all workspaces."

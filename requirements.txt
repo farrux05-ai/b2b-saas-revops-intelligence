@@ -1,0 +1,19 @@
+# Core Web Framework
+streamlit
+
+# Data Processing & Visualization
+pandas
+plotly
+
+# Database & dbt
+duckdb
+dbt-core
+dbt-duckdb
+dbt-postgres
+
+# Utilities
+python-dotenv
+requests
+scikit-learn
+psycopg2-binary
+dlt[duckdb]

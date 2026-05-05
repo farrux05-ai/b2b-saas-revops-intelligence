@@ -1,0 +1,17 @@
+version: 2
+
+exposures:
+  - name: revops_intelligence_dashboard
+    label: "RevOps Intelligence Dashboard"
+    type: dashboard
+    maturity: high
+    url: "https://evidence.sentinelguard.io/revops"
+    description: "The primary source of truth for B2B SaaS revenue metrics, including MRR Waterfall, PQL signals, and Account Health."
+    owner:
+      name: "RevOps Analytics Team"
+      email: "analytics@sentinelguard.io"
+    depends_on:
+      - ref('dim_accounts')
+      - ref('fct_mrr_waterfall')
+      - ref('dim_users')
+      - ref('dim_dates')
