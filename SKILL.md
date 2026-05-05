@@ -3,7 +3,7 @@ name: sentinelguard-revops-standard
 description: The ultimate standard for B2B SaaS RevOps data architecture.
 ---
 
-# SentinelGuard RevOps Standard
+# RevOps Intelligence Engine RevOps Standard
 
 ## 1. Naming & Structure
 - **Staging**: `stg_[source]__[entity].sql` (Double underscore). Clean raw sources only.

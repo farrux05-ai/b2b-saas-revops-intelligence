@@ -1,8 +1,8 @@
-name: "sentinelguard_revops_engine"
+name: "revops_intelligence_engine"
 version: '1.0.0'
 config-version: 2
 
-profile: 'sentinelguard_revops'
+profile: 'revops_intelligence_engine'
 
 model-paths: ["models"]
 seed-paths: ["seeds"]

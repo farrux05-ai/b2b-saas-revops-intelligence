@@ -1,5 +1,5 @@
-# dbt profile for SentinelGuard RevOps Engine
-sentinelguard_revops:
+# dbt profile for RevOps Intelligence Engine
+revops_intelligence_engine:
   target: dev
   outputs:
     dev:
