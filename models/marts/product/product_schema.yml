@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: fct_product_activation
+    description: >
+      Product team mart. One row per workspace. Tracks activation milestones,
+      feature adoption (git integration, sprints), PQL scoring, user stats,
+      and trial conversion signals.
+      Used for onboarding optimization and PLG funnel analysis.
+    columns:
+      - name: workspace_id
+        tests: [unique, not_null]
+      - name: activation_rate
+        description: "Fraction of users who have activated (0.0 to 1.0)."
+        tests: [not_null]

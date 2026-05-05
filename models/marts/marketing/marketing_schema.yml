@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: fct_lead_funnel
+    description: >
+      Marketing team mart. One row per HubSpot company (lead). Tracks the full
+      journey from Lead → MQL → SQL → Opportunity → Customer.
+      Used for funnel analysis, MQL quality scoring, and campaign ROI.
+    columns:
+      - name: hubspot_company_id
+        tests: [unique, not_null]
+      - name: lifecycle_stage
+        tests:
+          - accepted_values:
+              values: ['subscriber', 'lead', 'marketingqualifiedlead',
+                       'salesqualifiedlead', 'opportunity', 'customer',
+                       'evangelist', 'other']

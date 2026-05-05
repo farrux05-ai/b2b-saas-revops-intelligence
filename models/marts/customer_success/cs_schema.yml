@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: fct_accounts_health
+    description: >
+      CS team mart. One row per paying account. Shows health status,
+      all three churn risk signals (payment, intent, engagement), and
+      support burden. Used for CS prioritization and churn prevention workflows.
+    columns:
+      - name: account_id
+        tests: [unique, not_null]
+      - name: health_status
+        tests:
+          - accepted_values:
+              values: ['Healthy', 'At Risk', 'Churned']
+      - name: mrr
+        tests: [not_null]

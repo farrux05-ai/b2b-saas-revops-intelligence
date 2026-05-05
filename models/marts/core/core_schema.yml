@@ -2,22 +2,38 @@ version: 2
 
 models:
   - name: dim_accounts
-    description: "The Golden Record for all accounts, integrating product, sales, and finance data."
+    description: >
+      Golden Record for every account (B2B company). Integrates identity,
+      revenue, health, product, and sales data into a single row per account.
+      Source of truth for all GTM teams.
     columns:
+      - name: account_id
+        description: "Stable surrogate key. Use for all downstream joins."
+        tests: [unique, not_null]
       - name: domain
-        description: "Primary domain used for identity stitching."
-        tests:
-          - unique
-          - not_null
+        tests: [not_null]
       - name: health_status
-        description: "Account health categorized as Healthy, At Risk, or Churned."
-      - name: is_pql
-        description: "True if the account is a Product Qualified Lead."
-
-    # Semantic Layer (Lightdash/Semantic Layer)
+        tests:
+          - accepted_values:
+              values: ['Healthy', 'At Risk', 'Churned']
+      - name: account_segment
+        tests:
+          - accepted_values:
+              values: ['Enterprise', 'Mid-Market', 'SMB', 'Trial/Free']
+      - name: mrr
+        tests: [not_null]
     tests:
       - dbt_expectations.expect_table_row_count_to_be_between:
           min_value: 1
 
   - name: dim_users
-    description: "Summary of users across all workspaces."
+    description: >
+      Enriched user directory. Links internal product users to HubSpot contacts
+      and their parent account. Excludes internal-only columns.
+    columns:
+      - name: global_user_id
+        tests: [unique, not_null]
+      - name: email
+        tests: [not_null]
+      - name: account_id
+        tests: [not_null]

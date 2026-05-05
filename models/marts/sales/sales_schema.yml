@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: fct_pipeline
+    description: >
+      Sales team mart. One row per HubSpot deal. Shows pipeline position,
+      weighted forecast amounts, deal velocity, and account context.
+      Used for pipeline reviews and forecasting.
+    columns:
+      - name: hubspot_deal_id
+        tests: [unique, not_null]
+      - name: deal_amount
+        tests: [not_null]
+      - name: win_probability
+        tests: [not_null]
