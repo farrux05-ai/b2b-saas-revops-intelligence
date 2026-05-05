@@ -15,3 +15,9 @@ models:
               values: ['subscriber', 'lead', 'marketingqualifiedlead',
                        'salesqualifiedlead', 'opportunity', 'customer',
                        'evangelist', 'other']
+
+  - name: fct_attribution
+    description: "Marketing attribution mapping accounts and revenue to specific acquisition channels and campaigns."
+    columns:
+      - name: account_id
+        tests: [unique, not_null]

@@ -31,3 +31,11 @@ models:
         tests:
           - accepted_values:
               values: ['active', 'trialing', 'past_due', 'canceled', 'incomplete', 'incomplete_expired', 'unpaid']
+
+  - name: fct_arr_movements
+    description: "Annualized revenue movements derived from the MRR waterfall."
+    columns:
+      - name: arr_snapshot_id
+        tests: [unique, not_null]
+      - name: account_id
+        tests: [not_null]

@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 HUBSPOT_ACCESS_TOKEN = os.getenv("HUBSPOT_ACCESS_TOKEN")
-DUCKDB_PATH = "./duckdb/revops_analytics.duckdb"
+DUCKDB_PATH = "./duckdb/revops_intelligence.duckdb"
 
 # HubSpot API endpoints
 HUBSPOT_BASE_URL = "https://api.hubapi.com"
@@ -66,13 +66,19 @@ def main():
         query = """
             SELECT 
                 domain as canonical_domain,
-                account_name,
+                coalesce(hubspot_company_name, workspace_name) as account_name,
                 mrr,
                 health_status,
-                health_score,
+                CASE 
+                    WHEN health_status = 'Healthy' THEN 100 
+                    WHEN health_status = 'At Risk' THEN 50 
+                    ELSE 0 
+                END as health_score,
                 is_pql,
                 is_ready_for_upsell,
-                is_payment_failing
+                is_payment_failing,
+                seat_utilization_pct,
+                last_activity_at
             FROM main_marts.dim_accounts
             WHERE domain IS NOT NULL
         """
@@ -93,6 +99,8 @@ def main():
             is_pql = bool(row['is_pql'])
             is_upsell = bool(row['is_ready_for_upsell'])
             is_payment_failing = bool(row['is_payment_failing'])
+            seat_utilization = float(row['seat_utilization_pct']) if pd.notnull(row['seat_utilization_pct']) else 0.0
+            last_activity = str(row['last_activity_at']) if pd.notnull(row['last_activity_at']) else ""
             
             print(f"🔄 Processing: {name} ({domain}) - Health: {health}, Score: {score}, PQL: {is_pql}")
             
@@ -114,12 +122,14 @@ def main():
             updates.append({
                 "id": company_id,
                 "properties": {
-                    "revops_health_status": health,
-                    "revops_health_score": str(score),
-                    "revops_total_mrr": str(mrr),
+                    "stackflow_health_status": health,
+                    "stackflow_health_score": str(score),
+                    "current_mrr": str(mrr),
                     "is_product_qualified": "true" if is_pql else "false",
                     "ready_for_upsell": "true" if is_upsell else "false",
-                    "payment_failing_signal": "true" if is_payment_failing else "false"
+                    "payment_failing_signal": "true" if is_payment_failing else "false",
+                    "seat_utilization_pct": str(seat_utilization),
+                    "last_product_activity": last_activity
                 }
             })
             

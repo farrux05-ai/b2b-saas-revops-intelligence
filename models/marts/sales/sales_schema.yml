@@ -13,3 +13,9 @@ models:
         tests: [not_null]
       - name: win_probability
         tests: [not_null]
+
+  - name: fct_activities
+    description: "Tracks sales representative activities (calls, emails, meetings) mapped to accounts."
+    columns:
+      - name: activity_id
+        tests: [unique, not_null]
