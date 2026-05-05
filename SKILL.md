@@ -30,3 +30,9 @@ description: The ultimate standard for B2B SaaS RevOps data architecture.
 - **Seeds**: All static data (Holidays, segments) in CSV seeds.
 - **Exposures**: Document dashboard dependencies in `exposures.yml`.
 - **Nega?**: Data Lineage va tizimning moslashuvchanligi uchun.
+
+## 6. Testing Philosophy (Data Quality)
+- **Staging Layer (Source Contracts)**: Only test the contract with the source. `unique` and `not_null` on the natural Primary Key. Test `accepted_values` ONLY on source-managed enums (e.g. ticket status). Do NOT test business metrics (amounts, probabilities) here.
+- **Intermediate Layer (Integration)**: Test foreign keys and surrogate keys. Test the outputs of business logic (e.g. does the score match an accepted value?).
+- **Marts Layer (Business Reliability)**: Test business requirements (e.g. `dbt_expectations` row counts). Test primary keys for the dimension/fact tables.
+- **Rule**: Do not duplicate tests across layers. If `unique` and `not_null` are verified in `int_accounts_integrated`, there is no need to re-test the exact same spine key in `int_accounts_scored`.

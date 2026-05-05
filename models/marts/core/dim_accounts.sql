@@ -57,6 +57,9 @@ final as (
         -- CRM & Sales
         total_tickets,
         open_tickets,
+        high_priority_tickets,
+        avg_resolution_hours,
+        last_ticket_at,
         open_deals_count,
         lifetime_revenue,
         last_won_date,

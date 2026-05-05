@@ -15,7 +15,7 @@
 -- =============================================================================
 
 with accounts as (
-    select * from {{ ref('int_accounts_scored') }}
+    select * from {{ ref('dim_accounts') }}
 ),
 
 final as (
@@ -35,7 +35,7 @@ final as (
         -- Health Signals
         health_status,
         health_reason,
-        latest_subscription_status                      as subscription_status,
+        subscription_status,
 
         -- Churn Risk Signals (3 distinct warning types)
         is_payment_failing,                             -- Silent churn: card declined
@@ -53,7 +53,7 @@ final as (
         last_ticket_at,
 
         -- Product Engagement
-        total_product_events                            as product_events_count,
+        product_events_count,
         last_activity_at,
         is_pql,
 
@@ -65,7 +65,7 @@ final as (
 
     from accounts
     -- CS team only cares about accounts that have entered billing
-    where latest_subscription_status is not null
+    where subscription_status is not null
 )
 
 select * from final

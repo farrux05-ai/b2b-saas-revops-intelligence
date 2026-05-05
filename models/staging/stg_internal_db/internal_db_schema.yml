@@ -1,25 +1,34 @@
 version: 2
 
+# STAGING PHILOSOPHY: Test source CONTRACT only.
+# Internal DB is our product database. We test for primary keys and essential foreign keys.
+
 models:
   - name: stg_internal__workspaces
     description: >
-      Core workspace entity. Bridge table connecting HubSpot, Stripe, and
-      internal product.
+      Core workspace entity from our internal database.
+      Bridge table connecting HubSpot, Stripe, and internal product.
     columns:
       - name: workspace_id
+        description: "Primary key for internal workspaces."
         tests: [unique, not_null]
       - name: workspace_name
         tests: [not_null]
-      - name: plan
-        tests: [not_null]
+      # NOTE: We do not test 'plan' for not_null or accepted_values here.
+      # Plan logic/validity belongs in the intermediate layer, as old workspaces might have legacy plans.
 
   - name: stg_internal__users
-    description: >
-      Users within workspaces.
+    description: "Cleaned internal users records. One row per user."
     columns:
       - name: user_id
+        description: "Primary key for internal users."
         tests: [unique, not_null]
       - name: workspace_id
+        description: "Foreign key to workspaces. All users must belong to a workspace."
         tests: [not_null]
       - name: user_role
-        tests: [not_null]
+        description: "Product-defined enum for user permissions."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['admin', 'member', 'viewer', 'billing', 'owner']

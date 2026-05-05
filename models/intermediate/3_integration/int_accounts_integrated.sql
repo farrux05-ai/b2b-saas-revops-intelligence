@@ -39,6 +39,7 @@ usage as (
 final as (
     select
         s.account_id,
+        s.hubspot_company_id,
         s.internal_workspace_id,
         s.workspace_name,
         s.domain,
@@ -81,7 +82,9 @@ final as (
         -- Support domain
         coalesce(sp.total_tickets, 0)                   as total_tickets,
         coalesce(sp.open_tickets, 0)                    as open_tickets,
+        coalesce(sp.high_priority_tickets, 0)           as high_priority_tickets,
         sp.avg_resolution_hours,
+        sp.last_ticket_at,
         
         -- Usage domain
         coalesce(u.total_product_events, 0)             as total_product_events,

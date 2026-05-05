@@ -86,8 +86,7 @@ models:
       Multi-signal health scoring model. Scoring priority: Churned >
       Payment Failing > Support Critical > Low Engagement > Expansion Target > Healthy.
     columns:
-      - name: account_id
-        tests: [unique, not_null]
+      # account_id is not tested here because its uniqueness is verified in int_accounts_integrated
       - name: health_status
         tests:
           - accepted_values:

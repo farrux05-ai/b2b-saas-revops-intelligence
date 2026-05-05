@@ -1,14 +1,18 @@
 version: 2
 
+# STAGING PHILOSOPHY: Test source CONTRACT only.
+# PostHog delivers raw events. We test for uniqueness of the event ID.
+
 models:
   - name: stg_posthog__events
-    description: "Product engagement events from PostHog."
+    description: "Product engagement events from PostHog. One row per event."
     columns:
-      - name: event_sk
-        tests: [unique, not_null]
+      # NOTE: Removed event_sk test here since it was deleted during the thin staging refactor.
       - name: event_id
+        description: "Native PostHog event ID."
         tests: [unique, not_null]
       - name: workspace_id
-        tests: [not_null]
+        description: "Mapped to the group profile in PostHog."
+        # Not null removed: some events (like pageviews on login) might not have a workspace_id yet
       - name: event_name
         tests: [not_null]

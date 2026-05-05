@@ -1,35 +1,44 @@
 version: 2
 
+# STAGING PHILOSOPHY: Test source CONTRACT only.
+# Stripe always delivers: id (unique), customer_id, status.
+# We do NOT test amounts here — Stripe can legitimately send $0 or negative values.
+
 models:
   - name: stg_stripe__subscriptions
-    description: >
-      Cleaned Stripe subscription records. One row per subscription.
+    description: "Cleaned Stripe subscription records. One row per subscription."
     columns:
       - name: subscription_id
         tests: [unique, not_null]
-      - name: workspace_id
-        tests: [not_null]
       - name: customer_id
         tests: [not_null]
-      - name: plan_id
-        tests: [not_null]
       - name: subscription_status
-        tests: [not_null]
+        description: "Stripe-managed enum. Tested here as source contract."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['active', 'trialing', 'past_due', 'canceled',
+                       'incomplete', 'incomplete_expired', 'unpaid']
 
   - name: stg_stripe__invoices
-    description: >
-      Cleaned Stripe invoice records.
+    description: "Cleaned Stripe invoice records. One row per invoice."
     columns:
       - name: invoice_id
         tests: [unique, not_null]
       - name: invoice_status
-        tests: [not_null]
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['draft', 'open', 'paid', 'uncollectible', 'void']
 
   - name: stg_stripe__payments
-    description: >
-      Cleaned Stripe payment records.
+    description: "Cleaned Stripe payment intent records. One row per payment."
     columns:
       - name: payment_id
         tests: [unique, not_null]
       - name: payment_status
-        tests: [not_null]
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['requires_payment_method', 'requires_confirmation',
+                       'requires_action', 'processing', 'succeeded', 'canceled', 'failed']

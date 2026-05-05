@@ -42,7 +42,7 @@ accounts as (
 -- User activation stats per workspace
 user_stats as (
     select
-        internal_workspace_id,
+        account_id,
         count(*)                                        as total_users,
         count(*) filter (where is_activated)            as activated_users,
         count(*) filter (where is_active_last_30d)      as active_users_last_30d
@@ -109,7 +109,7 @@ final as (
     left join usage u
         on w.workspace_id = u.workspace_id
     left join user_stats us
-        on w.workspace_id = us.internal_workspace_id
+        on a.account_id = us.account_id
 )
 
 select * from final

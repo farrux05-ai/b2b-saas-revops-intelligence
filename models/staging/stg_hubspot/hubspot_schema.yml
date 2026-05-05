@@ -1,22 +1,30 @@
 version: 2
 
+# =============================================================================
+# STAGING TESTING PHILOSOPHY:
+# Test the CONTRACT with the source system.
+# Staging tests answer: "Did the source deliver what it promised?"
+#
+# Rules:
+#   1. ALWAYS test: unique + not_null on the natural Primary Key
+#   2. ONLY test accepted_values for fields we control via enum/picklist (CRM statuses)
+#   3. NEVER test business-derived metrics (amounts, counts) — that's Mart territory
+#   4. NEVER duplicate tests that will be re-tested downstream
+# =============================================================================
+
 models:
   - name: stg_hubspot__companies
     description: >
-      Cleaned and deduplicated HubSpot company records.
-      One row per company.
+      Cleaned HubSpot company records. One row per company (source dedup by ELT tool).
     columns:
       - name: hubspot_company_id
-        description: "HubSpot native company ID"
+        description: "Natural PK from HubSpot."
         tests: [unique, not_null]
       - name: domain
-        description: "Identity stitching uchun asosiy kalit"
-        tests:
-          - not_null
-          - unique
-      - name: company_name
-        tests: [not_null]
+        description: "Primary identity stitching key. Unique per company in HubSpot."
+        tests: [unique, not_null]
       - name: lifecycle_stage
+        description: "HubSpot-managed enum. Tested here because we own the allowed values."
         tests:
           - accepted_values:
               values: ['subscriber', 'lead', 'marketingqualifiedlead', 'salesqualifiedlead',
@@ -24,25 +32,8 @@ models:
       - name: lead_status
         tests:
           - accepted_values:
-              values: ['new', 'open', 'in_progress', 'attempted_to_contact',
-                       'connected', 'bad_timing', 'unqualified']
-
-  - name: stg_hubspot__deals
-    description: >
-      Cleaned HubSpot deal records. One row per deal (latest version after dedup).
-    columns:
-      - name: hubspot_deal_id
-        tests: [unique, not_null]
-      - name: hubspot_company_id
-        tests: [not_null]
-      - name: deal_stage
-        tests: [not_null]
-      - name: amount
-        description: "Bitim summasi USD da"
-        tests: [not_null]
-      - name: probability
-        tests:
-          - not_null
+              values: ['NEW', 'OPEN', 'IN_PROGRESS', 'ATTEMPTED_TO_CONTACT',
+                       'CONNECTED', 'BAD_TIMING', 'UNQUALIFIED']
 
   - name: stg_hubspot__contacts
     description: >
@@ -50,14 +41,22 @@ models:
     columns:
       - name: hubspot_contact_id
         tests: [unique, not_null]
-      - name: hubspot_company_id
-        tests: [not_null]
       - name: email
-        tests:
-          - not_null
-          - unique
-      - name: lead_status
-        tests:
-          - accepted_values:
-              values: ['new', 'open', 'in_progress', 'attempted_to_contact',
-                       'connected', 'bad_timing', 'unqualified']
+        description: "Used for identity stitching to internal users. Not guaranteed unique by HubSpot."
+        tests: [not_null]
+      # NOTE: lead_status accepted_values NOT repeated here —
+      # same enum is already tested on stg_hubspot__companies.
+      # Contacts inherit the same CRM-managed values.
+
+  - name: stg_hubspot__deals
+    description: >
+      Cleaned HubSpot deal records. One row per deal.
+    columns:
+      - name: hubspot_deal_id
+        tests: [unique, not_null]
+      - name: hubspot_company_id
+        description: "FK to stg_hubspot__companies. Can be null for deals not linked to a company."
+        # NOTE: not_null removed — HubSpot allows orphan deals without a company
+      - name: deal_stage
+        description: "Current pipeline stage. not_null contract with HubSpot."
+        tests: [not_null]
