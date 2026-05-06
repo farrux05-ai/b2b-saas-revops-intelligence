@@ -57,4 +57,4 @@ PLAN.md
 
 # ── Project Data ──────────────────────────────────────
 data/raw/
-duckdb/
+duckdb/md:*

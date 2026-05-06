@@ -16,9 +16,12 @@ python-dotenv
 requests
 scikit-learn
 psycopg2-binary
-dlt[duckdb]
+dlt[motherduck]
 
 # Orchestration
 dagster
 dagster-webserver
 dagster-dbt
+
+# Cloud Warehouse
+motherduck

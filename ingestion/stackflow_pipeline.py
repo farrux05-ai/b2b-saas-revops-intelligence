@@ -1,6 +1,11 @@
 import dlt
 import json
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
+os.environ["MOTHERDUCK_TOKEN"] = os.getenv("MOTHERDUCK_TOKEN", "")
 
 def load_json(filename):
     path = Path("data/raw") / filename
@@ -41,7 +46,7 @@ def zendesk_source():
 def run_pipeline():
     pipeline = dlt.pipeline(
         pipeline_name="revops_intelligence",
-        destination=dlt.destinations.duckdb("md:revops_intelligence"),
+        destination=dlt.destinations.duckdb("duckdb/revops_intelligence.duckdb"),
         dataset_name="raw_data",
     )
 
