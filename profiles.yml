@@ -1,8 +1,12 @@
 # dbt profile for RevOps Intelligence Engine
 revops_intelligence_engine:
-  target: dev
+  target: local
   outputs:
     dev:
       type: duckdb
       path: 'md:revops_intelligence'
+      threads: 4
+    local:
+      type: duckdb
+      path: 'duckdb/revops_intelligence.duckdb'
       threads: 4
