@@ -11,7 +11,7 @@ load_dotenv()
 
 ZENDESK_API_TOKEN = os.getenv("ZENDESK_API_TOKEN")
 ZENDESK_DOMAIN = os.getenv("ZENDESK_DOMAIN", "example.zendesk.com")
-DUCKDB_PATH = "./duckdb/revops_intelligence.duckdb"
+DUCKDB_PATH = "md:revops_intelligence"
 
 def main():
     print("🚀 Starting RevOps Reverse ETL to Zendesk...")

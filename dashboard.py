@@ -10,7 +10,7 @@ st.set_page_config(
 )
 
 # Constants
-DUCKDB_PATH = "./duckdb/revops_intelligence.duckdb"
+DUCKDB_PATH = "md:revops_intelligence"
 
 @st.cache_resource
 def get_connection():

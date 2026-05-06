@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 HUBSPOT_ACCESS_TOKEN = os.getenv("HUBSPOT_ACCESS_TOKEN")
-DUCKDB_PATH = "./duckdb/revops_intelligence.duckdb"
+DUCKDB_PATH = "md:revops_intelligence"
 
 # HubSpot API endpoints
 HUBSPOT_BASE_URL = "https://api.hubapi.com"
