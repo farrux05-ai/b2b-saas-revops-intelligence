@@ -35,6 +35,7 @@ with internal_users as (
 hubspot_contacts as (
     select
         hubspot_contact_id,
+        hubspot_company_id, -- Original association in CRM
         lower(email)                            as normalized_email,
         first_name,
         last_name,
@@ -46,6 +47,7 @@ account_spine as (
     select
         account_id,
         internal_workspace_id,
+        hubspot_company_id, -- Needed for Reverse ETL
         lower(domain)                           as account_domain
     from {{ ref('int_accounts_joined') }}
 ),
@@ -72,6 +74,7 @@ user_account_stitching as (
         u.activated_at,
         u.last_seen_at,
         h.hubspot_contact_id,
+        h.hubspot_company_id as hubspot_company_id_raw, -- Original state in HubSpot
         h.first_name,
         h.last_name,
         h.job_title,
@@ -81,6 +84,12 @@ user_account_stitching as (
             s_direct.account_id,  -- Priority 1: Explicit DB Relationship
             s_domain.account_id   -- Priority 2: Inferred L2A Relationship
         ) as account_id,
+
+        -- REVERSE ETL TARGET: Which HubSpot Company should this contact belong to?
+        coalesce(
+            s_direct.hubspot_company_id,
+            s_domain.hubspot_company_id
+        ) as hubspot_company_id_stitched,
 
         -- TRACEABILITY: Record how the association was made for downstream debugging
         case 
@@ -116,7 +125,11 @@ final as (
     select
         -- Stable anchor independent of PII (emails)
         {{ dbt_utils.generate_surrogate_key(['internal_user_id']) }} as global_user_id,
-        *
+        *,
+        -- Logic for Reverse ETL: Is there a mismatch between HubSpot and our Truth?
+        (hubspot_contact_id is not null 
+         and hubspot_company_id_raw is null 
+         and hubspot_company_id_stitched is not null) as is_l2a_orphan_fix_pending
     from user_account_stitching
 )
 

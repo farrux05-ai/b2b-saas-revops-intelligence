@@ -261,7 +261,7 @@ for idx, (name, domain, industry, emp_count, segment) in enumerate(COMPANIES):
             "firstname":           fname,
             "lastname":            lname,
             "jobtitle":            random.choice(roles),
-            "associated_company_id": hs_company_id,
+            "associated_company_id": hs_company_id if random.random() < 0.8 else None,
             "hs_lead_status":      LEAD_STATUSES[segment],
             "createdate":          iso(created_at),
             "lastmodifieddate":    iso(rand_date(created_at, NOW)),

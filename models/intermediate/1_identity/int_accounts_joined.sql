@@ -1,14 +1,10 @@
 {{ config(materialized='view') }}
 
 -- =============================================================================
--- int_accounts_joined: Global Account Identity Spine
--- Layer: 1_identity
---
--- ARCHITECTURE NOTE:
--- stg_internal__workspaces is the PRIMARY spine because it already contains
--- all three foreign keys (hubspot_company_id, stripe_customer_id, workspace_id).
--- We only UNION in CRM-only accounts (HubSpot leads that have not signed up yet).
--- This eliminates the fragile UNION+GROUP BY MAX anti-pattern.
+-- MODEL: int_accounts_joined
+-- DESCRIPTION: Global Account Identity Spine for B2B SaaS.
+-- This model consolidates identities from Product (Workspaces), Billing (Stripe),
+-- and CRM (HubSpot) into a single unique Account Spine.
 -- =============================================================================
 
 with workspaces as (
@@ -28,20 +24,25 @@ hubspot as (
     from {{ ref('stg_hubspot__companies') }}
 ),
 
--- Accounts that exist in product (workspaces), enriched with HubSpot domain
+-- 1. ENRICHED PRODUCT ACCOUNTS
+-- We join internal workspaces with HubSpot to get clean domain/company names.
+-- Priority: Internal DB data enriched with CRM-verified attributes.
 product_accounts as (
     select
         w.internal_workspace_id,
         w.hubspot_company_id,
         w.stripe_customer_id,
-        coalesce(w.workspace_name, h.company_name)      as workspace_name,
+        -- Prioritize HubSpot name if available for cleaner reporting
+        coalesce(h.company_name, w.workspace_name)      as workspace_name,
         h.domain
     from workspaces w
     left join hubspot h on w.hubspot_company_id = h.hubspot_company_id
 ),
 
--- CRM-only: HubSpot leads that have NOT yet signed up for the product
--- Prevents Leads from being invisible in the account spine
+-- 2. CRM-ONLY LEADS (ANTI-JOIN PATTERN)
+-- Captures HubSpot companies that have not signed up for the product yet.
+-- This ensures 'Leads' are visible in our account spine for GTM analysis.
+-- The filter 'w.hubspot_company_id is null' prevents duplicate entries.
 crm_only as (
     select
         null                                            as internal_workspace_id,
@@ -51,9 +52,13 @@ crm_only as (
         h.domain
     from hubspot h
     left join workspaces w on h.hubspot_company_id = w.hubspot_company_id
-    where w.hubspot_company_id is null  -- only leads without a workspace
+    where w.hubspot_company_id is null 
 ),
 
+-- 3. GLOBAL CONSOLIDATION
+-- We use UNION ALL because the anti-join logic in 'crm_only' guarantees 
+-- that these two sets are Mutually Exclusive (no duplicates).
+-- This is more performant than a standard UNION.
 all_accounts as (
     select * from product_accounts
     union all
@@ -62,8 +67,9 @@ all_accounts as (
 
 final as (
     select
-        -- Surrogate key: prefer hubspot_company_id (stable CRM ID),
-        -- fall back to internal workspace ID for orphan workspaces
+        -- SURROGATE KEY: Stable global anchor for all downstream models.
+        -- We prioritize hubspot_company_id to group multiple workspaces under
+        -- a single Parent Account, enabling true B2B 'Land & Expand' analysis.
         {{ dbt_utils.generate_surrogate_key([
             'coalesce(hubspot_company_id, internal_workspace_id)'
         ]) }}                                           as account_id,
