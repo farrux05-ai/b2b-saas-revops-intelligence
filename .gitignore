@@ -38,6 +38,7 @@ dashboards/.env
 
 # ── Database files (never commit binary DB files) ─────
 *.db
+*.duckdb
 *.sqlite
 *.sqlite3
 
