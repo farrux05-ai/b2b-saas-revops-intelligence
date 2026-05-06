@@ -2,61 +2,76 @@
 
 -- =============================================================================
 -- MODEL: fct_gtm_icp_scoring
--- DESCRIPTION: Modern GTM Scoring based on Clay/n8n enriched attributes.
--- This model demonstrates the power of GTM Engineering by assigning scores
--- to leads based on enriched firmographic and technographic data.
+-- DESCRIPTION: Hybrid GTM Scoring Engine.
+-- This model combines External Data (Clay/HubSpot) with Internal Data (Usage/Support).
+-- 
+-- Hybrid Philosophy:
+-- 1. Clay (Outside): Tells us WHO they are (Potential).
+-- 2. Product/Support (Inside): Tells us WHAT they are doing (Intent/Friction).
 -- =============================================================================
 
 with account_identity as (
     select * from {{ ref('int_accounts_joined') }}
 ),
 
-scoring_logic as (
-    select
-        account_id,
-        workspace_name,
-        industry,
-        annual_revenue,
-        tech_stack,
-        is_gtm_enriched,
-        
-        -- ICP SCORING ALGORITHM
-        (
-            -- 1. Technographic Score (From Clay)
-            case 
-                when tech_stack like '%AWS%' then 30 
-                when tech_stack like '%GCP%' then 20
-                else 10 
-            end +
-            
-            -- 2. Firmographic Score (From Clay)
-            case 
-                when annual_revenue like '%500M%' then 50
-                when annual_revenue like '%100M%' then 30
-                else 10
-            end +
-            
-            -- 3. Data Quality Bonus
-            case when is_gtm_enriched then 20 else 0 end
-        ) as total_icp_score
+usage_stats as (
+    select * from {{ ref('int_usage_aggregated') }}
+),
 
-    from account_identity
+support_stats as (
+    select * from {{ ref('int_support_aggregated') }}
+),
+
+hybrid_scoring as (
+    select
+        acc.account_id,
+        acc.workspace_name,
+        acc.industry,
+        acc.annual_revenue,
+        acc.tech_stack,
+        
+        -- 1. CLAY SCORE (External Firmographics - Handled by Clay outside WH)
+        -- We map their results here to provide context.
+        (case 
+            when acc.annual_revenue like '%500M%' then 30
+            when acc.annual_revenue like '%100M%' then 20
+            else 10
+        end) as clay_firmographic_score,
+
+        -- 2. PRODUCT INTENT SCORE (Internal Usage - Only Warehouse knows this)
+        (case 
+            when coalesce(usg.is_pql, false) then 40
+            when coalesce(usg.total_product_events, 0) > 100 then 20
+            else 0
+        end) as product_intent_score,
+
+        -- 3. SUPPORT FRICTION (Internal Health - Only Warehouse knows this)
+        (case 
+            when coalesce(sup.open_tickets, 0) > 3 then -15
+            else 0
+        end) as support_friction_score,
+
+        -- TOTAL HYBRID SCORE
+        (
+            (case when acc.annual_revenue like '%500M%' then 30 when acc.annual_revenue like '%100M%' then 20 else 10 end) + 
+            (case when coalesce(usg.is_pql, false) then 40 when coalesce(usg.total_product_events, 0) > 100 then 20 else 0 end) + 
+            (case when coalesce(sup.open_tickets, 0) > 3 then -15 else 0 end)
+        ) as total_hybrid_score
+
+    from account_identity acc
+    left join usage_stats usg on acc.internal_workspace_id = usg.workspace_id
+    left join support_stats sup on acc.account_id = sup.account_id
 )
 
 select
     *,
+    -- HYBRID ACTIONABLE SEGMENTATION
     case 
-        when total_icp_score >= 80 then 'Tier 1 (High Fit)'
-        when total_icp_score >= 50 then 'Tier 2 (Medium Fit)'
-        else 'Tier 3 (Low Fit)'
-    end as icp_tier,
-    
-    -- Actionable Next Step for GTM Team
-    case 
-        when total_icp_score >= 80 then 'Route to Senior AE - Urgent'
-        when total_icp_score >= 50 then 'Add to Automated Outbound Sequence'
-        else 'Nurture via Marketing Email'
-    end as gtm_action
+        when total_hybrid_score >= 70 and product_intent_score >= 40 then 'Expansion Target (Up-sell Now!)'
+        when total_hybrid_score >= 50 and product_intent_score < 20 then 'Activation Risk (CS Intervention)'
+        when support_friction_score < 0 then 'High Friction (Fix Support First)'
+        else 'Standard Nurture'
+    end as hybrid_gtm_action
 
-from scoring_logic
-order by total_icp_score desc
+from hybrid_scoring
+order by total_hybrid_score desc
