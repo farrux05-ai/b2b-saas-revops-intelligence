@@ -1,27 +1,295 @@
 version: 2
 
+# =============================================================================
+# SEMANTIC LAYER: Product Domain
+#
+# Product activation funnels, feature adoption heatmaps, PQL scoring.
+# =============================================================================
+
 models:
+  # ─── fct_product_activation ────────────────────────────────────────────────
   - name: fct_product_activation
     description: >
-      Product team mart. One row per workspace. Tracks activation milestones,
-      feature adoption (git integration, sprints), PQL scoring, user stats,
-      and trial conversion signals.
+      Product activation and PQL analysis. One row per workspace. Tracks
+      activation milestones, feature adoption (git, sprints), PQL scoring,
+      user stats, and trial conversion signals.
       Used for onboarding optimization and PLG funnel analysis.
+    meta:
+      label: "Product Activation"
+      group_label: "Product"
     columns:
       - name: workspace_id
+        description: "Internal workspace identifier."
         tests: [unique, not_null]
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            total_workspaces:
+              type: count_distinct
+              label: "Total Workspaces"
+
+      - name: account_id
+        description: "FK to dim_accounts."
+        meta:
+          dimension:
+            hidden: true
+
+      - name: workspace_name
+        description: "Workspace display name."
+        meta:
+          dimension:
+            label: "Workspace"
+
+      - name: domain
+        description: "Account domain."
+        meta:
+          dimension:
+            label: "Domain"
+
+      - name: account_segment
+        description: "Account revenue tier."
+        meta:
+          dimension:
+            label: "Segment"
+
+      - name: current_plan
+        description: "Active pricing plan."
+        meta:
+          dimension:
+            label: "Plan"
+
+      - name: mrr
+        description: "Monthly recurring revenue for this workspace."
+        meta:
+          dimension:
+            hidden: true
+
+      - name: subscription_status
+        description: "Stripe subscription status."
+        meta:
+          dimension:
+            label: "Sub Status"
+
+      - name: total_users
+        description: "Total registered users in the workspace."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            sum_total_users:
+              type: sum
+              label: "Total Users"
+
+      - name: activated_users
+        description: "Users who completed the activation milestone."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            sum_activated_users:
+              type: sum
+              label: "Activated Users"
+
+      - name: active_users_last_30d
+        description: "Users active in the last 30 days."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            sum_active_30d:
+              type: sum
+              label: "Active Users (30d)"
+
       - name: activation_rate
-        description: "Fraction of users who have activated (0.0 to 1.0)."
+        description: "Fraction of users who activated (0.0–1.0)."
         tests: [not_null]
         meta:
+          dimension:
+            hidden: true
           metrics:
             avg_activation_rate:
               type: average
-              label: "Average Activation Rate"
+              label: "Avg Activation Rate"
+              description: "Average user activation rate across workspaces."
               format: "percent"
 
+      - name: seat_limit
+        description: "Maximum seats allowed."
+        meta:
+          dimension:
+            hidden: true
+
+      - name: seats_used
+        description: "Seats currently in use."
+        meta:
+          dimension:
+            hidden: true
+
+      - name: seat_utilization_pct
+        description: "Seat utilization percentage."
+        meta:
+          dimension:
+            hidden: true
+
+      - name: is_ready_for_upsell
+        description: "True when seat utilization ≥ 90%."
+        meta:
+          dimension:
+            label: "Upsell Ready"
+            type: boolean
+
+      - name: is_pql
+        description: "Product Qualified Lead flag."
+        meta:
+          dimension:
+            label: "Is PQL"
+            type: boolean
+          metrics:
+            pql_workspaces:
+              type: count_distinct
+              sql: "${workspace_id}"
+              label: "PQL Workspaces"
+              filters:
+                - field: is_pql
+                  operator: "is"
+                  value: "true"
+
+      - name: has_connected_git
+        description: "Whether this workspace connected a Git integration."
+        meta:
+          dimension:
+            label: "Git Connected"
+            type: boolean
+
+      - name: has_started_sprint
+        description: "Whether this workspace started at least one sprint."
+        meta:
+          dimension:
+            label: "Sprint Started"
+            type: boolean
+
+      - name: total_product_events
+        description: "Lifetime product telemetry events."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            sum_product_events:
+              type: sum
+              label: "Total Product Events"
+
+      - name: workspace_created_at
+        description: "Workspace signup timestamp."
+        meta:
+          dimension:
+            label: "Signed Up"
+            type: timestamp
+
+      - name: trial_started_at
+        description: "Trial start timestamp."
+        meta:
+          dimension:
+            label: "Trial Started"
+            type: timestamp
+
+      - name: converted_at
+        description: "Paid conversion timestamp."
+        meta:
+          dimension:
+            label: "Converted"
+            type: timestamp
+
+      - name: is_converted
+        description: "Whether the workspace converted to paid."
+        meta:
+          dimension:
+            label: "Converted"
+            type: boolean
+          metrics:
+            converted_workspaces:
+              type: count_distinct
+              sql: "${workspace_id}"
+              label: "Converted Workspaces"
+              filters:
+                - field: is_converted
+                  operator: "is"
+                  value: "true"
+
+      - name: is_trial_expired_no_convert
+        description: "Trial expired without converting to paid."
+        meta:
+          dimension:
+            label: "Trial Expired"
+            type: boolean
+
+  # ─── fct_feature_usage ─────────────────────────────────────────────────────
   - name: fct_feature_usage
-    description: "Tracks adoption and usage of specific product features."
+    description: >
+      Feature adoption heatmap. Aggregates product telemetry by workspace,
+      feature category, and week. Used to identify stickiness, adoption gaps,
+      and upsell opportunities.
+    meta:
+      label: "Feature Usage"
+      group_label: "Product"
     columns:
       - name: usage_id
+        description: "Surrogate key for the usage record."
         tests: [unique, not_null]
+        meta:
+          dimension:
+            hidden: true
+
+      - name: account_id
+        description: "FK to dim_accounts."
+        meta:
+          dimension:
+            hidden: true
+
+      - name: workspace_id
+        description: "Internal workspace ID."
+        meta:
+          dimension:
+            hidden: true
+
+      - name: feature_category
+        description: "Feature group: Core Features, Advanced Features, Admin Features, General Usage."
+        meta:
+          dimension:
+            label: "Feature Category"
+
+      - name: usage_week
+        description: "First day of the usage week."
+        meta:
+          dimension:
+            label: "Week"
+            type: date
+
+      - name: total_events
+        description: "Number of events for this feature category in this week."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            sum_feature_events:
+              type: sum
+              label: "Feature Events"
+            avg_weekly_events:
+              type: average
+              label: "Avg Weekly Events"
+
+      - name: active_days
+        description: "Number of distinct days with activity in this week."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            avg_active_days:
+              type: average
+              label: "Avg Active Days per Week"
+
+      - name: account_segment
+        description: "Account revenue tier for segmented analysis."
+        meta:
+          dimension:
+            label: "Account Segment"

@@ -1,59 +1,156 @@
 version: 2
 
+# =============================================================================
+# SEMANTIC LAYER: Finance Domain
+#
+# Revenue metrics: MRR Waterfall, Subscriptions, ARR Movements.
+# All monetary values in USD cents → converted to dollars in staging.
+# =============================================================================
+
 models:
+  # ─── fct_mrr_waterfall ─────────────────────────────────────────────────────
   - name: fct_mrr_waterfall
     description: >
-      Monthly MRR movements per account using a date spine + LAG window function.
-      Classifies every account-month as: new, expansion, contraction, churn,
-      resurrection, or retained.
+      Monthly MRR movements per account. Uses a date spine + LAG window to
+      classify every account-month as: new, expansion, contraction, churn,
+      resurrection, or retained. The canonical source for SaaS revenue trends.
+    meta:
+      label: "MRR Waterfall"
+      group_label: "Finance"
     columns:
       - name: account_id
-        tests: [not_null]
-      - name: month_date
-        tests: [not_null]
-      - name: mrr
+        description: "FK to dim_accounts."
         tests: [not_null]
         meta:
+          dimension:
+            hidden: true
+
+      - name: workspace_name
+        description: "Account workspace name for display."
+        meta:
+          dimension:
+            label: "Account"
+
+      - name: month_date
+        description: "First day of the calendar month."
+        tests: [not_null]
+        meta:
+          dimension:
+            label: "Month"
+            type: date
+
+      - name: mrr
+        description: "MRR at the end of this month."
+        tests: [not_null]
+        meta:
+          dimension:
+            hidden: true
           metrics:
             total_mrr:
               type: sum
               label: "Total MRR"
+              description: "Sum of MRR for the selected period."
               format: "usd"
-            net_revenue_retention:
+
+      - name: previous_month_mrr
+        description: "MRR from the prior month (via LAG)."
+        meta:
+          dimension:
+            hidden: true
+
+      - name: mrr_change_amount
+        description: "Dollar change in MRR from prior month."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            net_mrr_change:
               type: sum
-              label: "Net Revenue Retention (NRR)"
-              format: "percent"
-              description: "Requires advanced BI calculation, placeholder metric."
+              label: "Net MRR Change"
+              description: "Net expansion minus contraction minus churn."
+              format: "usd"
+
       - name: mrr_movement_type
+        description: "Movement classification: new, expansion, contraction, churn, resurrection, retained."
         tests:
           - accepted_values:
               values: ['new', 'expansion', 'contraction', 'churn', 'resurrection', 'retained']
+        meta:
+          dimension:
+            label: "Movement Type"
 
+  # ─── fct_subscriptions ─────────────────────────────────────────────────────
   - name: fct_subscriptions
     description: >
       Active subscription snapshot. One row per Stripe subscription.
       Finance source of truth for plan mix, MRR/ARR, and churn intent signals.
+    meta:
+      label: "Subscriptions"
+      group_label: "Finance"
     columns:
       - name: subscription_id
+        description: "Stripe subscription ID."
         tests: [unique, not_null]
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            total_subscriptions:
+              type: count_distinct
+              label: "Total Subscriptions"
+
       - name: mrr_amount
+        description: "Monthly recurring revenue for this subscription."
         tests: [not_null]
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            subscription_mrr:
+              type: sum
+              label: "Subscription MRR"
+              format: "usd"
+
       - name: subscription_status
+        description: "Stripe status: active, trialing, past_due, canceled, etc."
         tests:
           - accepted_values:
               values: ['active', 'trialing', 'past_due', 'canceled', 'incomplete', 'incomplete_expired', 'unpaid']
+        meta:
+          dimension:
+            label: "Status"
 
+  # ─── fct_arr_movements ─────────────────────────────────────────────────────
   - name: fct_arr_movements
-    description: "Annualized revenue movements derived from the MRR waterfall."
+    description: >
+      Annualized revenue movements derived from the MRR waterfall.
+      Each row represents one account-month with ARR-level aggregation.
+    meta:
+      label: "ARR Movements"
+      group_label: "Finance"
     columns:
       - name: arr_snapshot_id
+        description: "Surrogate key for the ARR snapshot."
         tests: [unique, not_null]
-      - name: account_id
-        tests: [not_null]
-      - name: current_arr
         meta:
+          dimension:
+            hidden: true
+
+      - name: account_id
+        description: "FK to dim_accounts."
+        tests: [not_null]
+        meta:
+          dimension:
+            hidden: true
+
+      - name: current_arr
+        description: "Current annualized recurring revenue."
+        meta:
+          dimension:
+            hidden: true
           metrics:
             total_arr:
               type: sum
               label: "Total ARR"
+              description: "Sum of ARR across all accounts."
               format: "usd"

@@ -1,23 +1,229 @@
 version: 2
 
+# =============================================================================
+# SEMANTIC LAYER: Marketing Domain
+#
+# Lead funnel analysis and marketing channel attribution.
+# =============================================================================
+
 models:
+  # ─── fct_lead_funnel ───────────────────────────────────────────────────────
   - name: fct_lead_funnel
     description: >
-      Marketing team mart. One row per HubSpot company (lead). Tracks the full
-      journey from Lead → MQL → SQL → Opportunity → Customer.
+      Marketing lead funnel. One row per HubSpot company (lead). Tracks the
+      full journey from Lead → MQL → SQL → Opportunity → Customer.
       Used for funnel analysis, MQL quality scoring, and campaign ROI.
+    meta:
+      label: "Lead Funnel"
+      group_label: "Marketing"
     columns:
       - name: hubspot_company_id
+        description: "HubSpot company record ID."
         tests: [unique, not_null]
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            total_leads:
+              type: count_distinct
+              label: "Total Leads"
+
+      - name: account_id
+        description: "FK to dim_accounts."
+        meta:
+          dimension:
+            hidden: true
+
+      - name: company_name
+        description: "Company name."
+        meta:
+          dimension:
+            label: "Company"
+
+      - name: domain
+        description: "Company domain."
+        meta:
+          dimension:
+            label: "Domain"
+
+      - name: industry
+        description: "Industry vertical."
+        meta:
+          dimension:
+            label: "Industry"
+
+      - name: employee_count
+        description: "Employee headcount."
+        meta:
+          dimension:
+            hidden: true
+
       - name: lifecycle_stage
+        description: "Current HubSpot lifecycle stage (subscriber → customer)."
         tests:
           - accepted_values:
               values: ['subscriber', 'lead', 'marketingqualifiedlead',
                        'salesqualifiedlead', 'opportunity', 'customer',
                        'evangelist', 'other']
+        meta:
+          dimension:
+            label: "Lifecycle Stage"
 
+      - name: lead_status
+        description: "CRM lead status."
+        meta:
+          dimension:
+            label: "Lead Status"
+
+      - name: is_customer
+        description: "Whether the lead has converted to a paying customer."
+        meta:
+          dimension:
+            label: "Customer"
+            type: boolean
+          metrics:
+            customers:
+              type: count_distinct
+              sql: "${hubspot_company_id}"
+              label: "Customers"
+              filters:
+                - field: is_customer
+                  operator: "is"
+                  value: "true"
+
+      - name: is_sql_or_beyond
+        description: "Lead has reached SQL stage or beyond."
+        meta:
+          dimension:
+            label: "SQL+"
+            type: boolean
+          metrics:
+            sql_count:
+              type: count_distinct
+              sql: "${hubspot_company_id}"
+              label: "SQLs"
+              filters:
+                - field: is_sql_or_beyond
+                  operator: "is"
+                  value: "true"
+
+      - name: is_mql_or_beyond
+        description: "Lead has reached MQL stage or beyond."
+        meta:
+          dimension:
+            label: "MQL+"
+            type: boolean
+          metrics:
+            mql_count:
+              type: count_distinct
+              sql: "${hubspot_company_id}"
+              label: "MQLs"
+              filters:
+                - field: is_mql_or_beyond
+                  operator: "is"
+                  value: "true"
+
+      - name: is_pql
+        description: "Product Qualified Lead overlay from product data."
+        meta:
+          dimension:
+            label: "Is PQL"
+            type: boolean
+
+      - name: current_mrr
+        description: "Current MRR (only if the lead became a customer)."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            pipeline_mrr:
+              type: sum
+              label: "Pipeline MRR"
+              description: "MRR from leads that converted."
+              format: "usd"
+
+      - name: became_lead_at
+        description: "When the lead first entered the funnel."
+        meta:
+          dimension:
+            label: "Became Lead"
+            type: timestamp
+
+      - name: lead_age_days
+        description: "Days since the lead entered the funnel."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            avg_lead_age:
+              type: average
+              label: "Avg Lead Age (Days)"
+              round: 0
+
+  # ─── fct_attribution ───────────────────────────────────────────────────────
   - name: fct_attribution
-    description: "Marketing attribution mapping accounts and revenue to specific acquisition channels and campaigns."
+    description: >
+      Marketing attribution. Maps revenue (deals/MRR) to acquisition channels
+      using First-Touch UTM parameters from HubSpot.
+      Used for channel ROI analysis and budget allocation.
+    meta:
+      label: "Channel Attribution"
+      group_label: "Marketing"
     columns:
       - name: account_id
+        description: "FK to dim_accounts."
         tests: [unique, not_null]
+        meta:
+          dimension:
+            hidden: true
+
+      - name: workspace_name
+        description: "Account workspace name."
+        meta:
+          dimension:
+            label: "Account"
+
+      - name: acquisition_channel
+        description: "First-touch marketing channel (Organic Search, Google Ads, LinkedIn, etc.)."
+        meta:
+          dimension:
+            label: "Channel"
+
+      - name: first_touch_campaign
+        description: "First-touch campaign name."
+        meta:
+          dimension:
+            label: "Campaign"
+
+      - name: mrr
+        description: "Current MRR attributed to this channel."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            attributed_mrr:
+              type: sum
+              label: "Attributed MRR"
+              description: "Total MRR attributed to each channel."
+              format: "usd"
+
+      - name: lifetime_revenue
+        description: "Total closed-won revenue attributed to this channel."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            attributed_revenue:
+              type: sum
+              label: "Attributed Revenue"
+              format: "usd"
+
+      - name: won_deals_count
+        description: "Number of closed-won deals from this channel."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            total_won_deals:
+              type: sum
+              label: "Won Deals"
