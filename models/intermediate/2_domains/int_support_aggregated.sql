@@ -54,7 +54,7 @@ final as (
         max(t.created_at)                               as last_ticket_at
 
     from users u
-    join tickets_with_resolution t
+    left join tickets_with_resolution t
         on lower(u.email) = lower(t.requester_email)
     group by 1
 )

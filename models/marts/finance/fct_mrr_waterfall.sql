@@ -10,24 +10,36 @@
 -- Mart: finance
 --
 -- Classic SaaS MRR Waterfall using account-month spine + LAG window function.
--- FIX: now() replaced with current_timestamp.
--- FIX: mrr_amount computed inline (removed from thin staging).
--- FIX: 'resurrection' logic placed BEFORE 'new' to avoid false new-biz signals.
+-- FIX 1: Subscription logic now uses validity period (start/end) instead of created_at.
+-- FIX 2: Consolidated int_accounts_joined to avoid double joins.
+-- FIX 3: Handles resurrection before new biz signal.
 -- =============================================================================
 
--- Step 0: Compute MRR in this mart (business logic, not staging)
-with subscriptions_with_mrr as (
-    select
-        *,
-        case
-            when unit_amount > 0
-            then (unit_amount * quantity) / 100.0
-            else 0
-        end                                             as mrr_amount
-    from {{ ref('stg_stripe__subscriptions') }}
+-- Step 0: Get account spine (Single source for joins)
+with spine as (
+    select * from {{ ref('int_accounts_joined') }}
 ),
 
--- Step 1: Create a Date Spine (last 2 years, month by month)
+-- Step 1: Compute MRR from subscriptions (with validity dates)
+subscriptions_with_mrr as (
+    select
+        s.workspace_id,
+        sp.account_id,
+        sp.workspace_name,
+        s.created_at,
+        s.current_period_start_at,
+        s.current_period_end_at,
+        s.subscription_status,
+        case
+            when s.unit_amount > 0
+            then (s.unit_amount * s.quantity) / 100.0
+            else 0
+        end                                             as mrr_amount
+    from {{ ref('stg_stripe__subscriptions') }} s
+    join spine sp on s.workspace_id = sp.internal_workspace_id
+),
+
+-- Step 2: Create a Date Spine (last 2 years)
 months as (
     select
         date_trunc('month', range)::date                as month_date
@@ -38,42 +50,43 @@ months as (
     )
 ),
 
--- Step 2: Get all accounts and their first active month
-accounts as (
+-- Step 3: Get all accounts and their first active month
+accounts_active_range as (
     select
-        sp.account_id,
-        sp.workspace_name,
-        date_trunc('month', min(s.created_at))::date    as first_active_month
-    from subscriptions_with_mrr s
-    join {{ ref('int_accounts_joined') }} sp
-        on s.workspace_id = sp.internal_workspace_id
+        account_id,
+        workspace_name,
+        date_trunc('month', min(created_at))::date      as first_active_month
+    from subscriptions_with_mrr
     group by 1, 2
 ),
 
--- Step 3: Account-Month spine (only for each account's active period)
+-- Step 4: Account-Month spine (only for each account's active period)
 account_month_spine as (
     select
         a.account_id,
         a.workspace_name,
         m.month_date
-    from accounts a
+    from accounts_active_range a
     cross join months m
     where m.month_date >= a.first_active_month
 ),
 
--- Step 4: Actual MRR per account per month
+-- Step 5: Actual MRR per account per month
+-- FIXED: Cross-joins subscriptions with months and checks validity period
 monthly_mrr as (
     select
-        sp.account_id,
-        date_trunc('month', s.created_at)::date         as month_date,
+        s.account_id,
+        m.month_date,
         sum(s.mrr_amount)                               as mrr
     from subscriptions_with_mrr s
-    join {{ ref('int_accounts_joined') }} sp
-        on s.workspace_id = sp.internal_workspace_id
+    cross join months m
+    where s.subscription_status in ('active', 'trialing', 'past_due')
+      and date_trunc('month', s.current_period_start_at)::date <= m.month_date
+      and date_trunc('month', s.current_period_end_at)::date   >= m.month_date
     group by 1, 2
 ),
 
--- Step 5: Join spine with actual MRR, compute previous month via LAG
+-- Step 6: Join spine with actual MRR, compute previous month via LAG
 mrr_history as (
     select
         ams.account_id,
@@ -92,8 +105,7 @@ mrr_history as (
         and ams.month_date = mm.month_date
 ),
 
--- Step 6: MRR Waterfall Movement Classification
--- Order matters: resurrection must be checked before new to avoid false signals
+-- Step 7: MRR Waterfall Movement Classification
 final as (
     select
         account_id,

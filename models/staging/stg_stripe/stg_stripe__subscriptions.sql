@@ -18,7 +18,7 @@ renamed as (
 
         cast(unit_amount as integer)                    as unit_amount,
         cast(quantity as integer)                       as quantity,
-        cast(quantity as integer)                       as seats_used,
+        cast(quantity as integer)                       as seats_purchased,
 
         -- booleans
         cast(cancel_at_period_end as boolean)           as is_cancel_at_period_end,

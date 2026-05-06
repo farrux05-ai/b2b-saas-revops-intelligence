@@ -31,7 +31,7 @@ accounts as (
         account_segment,
         mrr,
         current_plan,
-        seat_limit,
+        seats_purchased,
         seats_used,
         seat_utilization_pct,
         subscription_status,
@@ -76,7 +76,7 @@ final as (
         end                                             as activation_rate,
 
         -- Seat Utilization (Expansion Signal)
-        a.seat_limit,
+        a.seats_purchased,
         a.seats_used,
         a.seat_utilization_pct,
         a.is_ready_for_upsell,

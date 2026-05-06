@@ -39,7 +39,7 @@ final as (
         account_segment,
         latest_subscription_status                      as subscription_status,
         current_plan,
-        seat_limit,
+        seats_purchased,
         seats_used,
         seat_utilization_pct,
         is_ready_for_upsell,

@@ -17,6 +17,14 @@ spine as (
     select * from {{ ref('int_accounts_joined') }}
 ),
 
+user_counts as (
+    select
+        internal_workspace_id as workspace_id,
+        count(internal_user_id) as actual_seats_used
+    from {{ ref('int_users_joined') }}
+    group by 1
+),
+
 -- Compute MRR in the domain layer (not staging)
 subscriptions_with_mrr as (
     select
@@ -26,7 +34,13 @@ subscriptions_with_mrr as (
             when unit_amount > 0
             then (unit_amount * quantity) / 100.0
             else 0
-        end                                             as mrr_amount
+        end                                             as mrr_amount,
+        
+        -- Identify the latest subscription for status/plan extraction
+        row_number() over (
+            partition by workspace_id 
+            order by created_at desc
+        )                                               as recency_rank
     from subscriptions
 ),
 
@@ -45,8 +59,9 @@ final as (
         -- Total MRR: includes trialing (potential revenue signal)
         sum(s.mrr_amount)                               as total_mrr,
 
-        -- Seat utilization data (expansion blind spot)
-        sum(s.seats_used)                               as seats_used,
+        -- Actual Seat utilization from internal DB (not purchased quantity)
+        coalesce(uc.actual_seats_used, 0)                as seats_used,
+        sum(s.seats_purchased)                          as seats_purchased,
 
         -- Silent Churn Signal: payment failed but not yet canceled
         max(
@@ -58,8 +73,8 @@ final as (
             case when s.is_cancel_at_period_end then 1 else 0 end
         )                                               as is_churning_soon,
 
-        max(s.subscription_status)                      as latest_subscription_status,
-        max(s.plan_id)                                  as current_plan,
+        max(case when s.recency_rank = 1 then s.subscription_status end) as latest_subscription_status,
+        max(case when s.recency_rank = 1 then s.plan_id end)            as current_plan,
 
         -- Payment classification
         case
@@ -68,8 +83,9 @@ final as (
         end                                             as payment_status
 
     from subscriptions_with_mrr s
-    left join spine sp on s.workspace_id = sp.internal_workspace_id
-    group by 1, 2, 3
+    left join spine sp   on s.workspace_id = sp.internal_workspace_id
+    left join user_counts uc on s.workspace_id = uc.workspace_id
+    group by 1, 2, 3, uc.actual_seats_used
 )
 
 select * from final

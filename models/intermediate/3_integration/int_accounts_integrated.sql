@@ -65,18 +65,18 @@ final as (
         
         -- Seat Utilization (Expansion blind spot)
         -- Solving the problem where Sales missed upsell opportunities
-        w.seat_limit,
+        coalesce(f.seats_purchased, 0)                   as seats_purchased,
         coalesce(f.seats_used, 0)                        as seats_used,
         case 
-            when coalesce(w.seat_limit, 0) > 0 
-            then (coalesce(f.seats_used, 0)::float / w.seat_limit::float) 
+            when coalesce(f.seats_purchased, 0) > 0 
+            then (coalesce(f.seats_used, 0)::float / f.seats_purchased::float) 
             else 0 
         end                                             as seat_utilization_pct,
         
         -- Expansion Signal
         case 
-            when coalesce(w.seat_limit, 0) > 0 
-             and (coalesce(f.seats_used, 0)::float / w.seat_limit::float) >= 0.9 
+            when coalesce(f.seats_purchased, 0) > 0 
+             and (coalesce(f.seats_used, 0)::float / f.seats_purchased::float) >= 0.9 
             then true 
             else false 
         end                                             as is_ready_for_upsell,

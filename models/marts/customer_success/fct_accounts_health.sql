@@ -60,7 +60,7 @@ final as (
         -- Expansion Signals
         seat_utilization_pct,
         seats_used,
-        seat_limit,
+        seats_purchased,
         is_ready_for_upsell
 
     from accounts

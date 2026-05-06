@@ -1,3 +1,4 @@
+{{ config(materialized='view') }}
 with events as (
     select * from {{ ref('stg_posthog__events') }}
 ),
