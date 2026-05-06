@@ -22,6 +22,7 @@ hubspot as (
         hubspot_company_id,
         domain,
         company_name,
+        industry,
         -- GTM Enrichment fields
         annual_revenue,
         tech_stack,
@@ -39,6 +40,7 @@ product_accounts as (
         w.stripe_customer_id,
         coalesce(h.company_name, w.workspace_name)      as workspace_name,
         h.domain,
+        h.industry,
         -- Enrichment attributes
         h.annual_revenue,
         h.tech_stack,
@@ -57,6 +59,7 @@ crm_only as (
         null                                            as stripe_customer_id,
         h.company_name                                  as workspace_name,
         h.domain,
+        h.industry,
         -- Enrichment attributes
         h.annual_revenue,
         h.tech_stack,
@@ -85,6 +88,7 @@ final as (
         stripe_customer_id,
         workspace_name,
         domain,
+        industry,
         annual_revenue,
         tech_stack,
         headquarter_city,
