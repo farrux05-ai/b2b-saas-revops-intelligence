@@ -1,0 +1,7 @@
+stackflow_revops:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('STACKFLOW_DUCKDB_PATH', 'stackflow.duckdb') }}"
+      threads: 4
