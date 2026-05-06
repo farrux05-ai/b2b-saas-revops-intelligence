@@ -10,18 +10,50 @@ models:
       - name: account_id
         description: "Stable surrogate key. Use for all downstream joins."
         tests: [unique, not_null]
+        meta:
+          metrics:
+            total_accounts:
+              type: count_distinct
+              label: "Total Accounts"
+            pql_count:
+              type: count_distinct
+              label: "Total PQLs"
+              filters:
+                - field: is_pql
+                  operator: equals
+                  value: 'true'
       - name: domain
         tests: [not_null]
       - name: health_status
         tests:
           - accepted_values:
               values: ['Healthy', 'At Risk', 'Churned']
+        meta:
+          metrics:
+            churned_accounts:
+              type: count_distinct
+              sql: "${account_id}"
+              label: "Churned Accounts"
+              filters:
+                - field: health_status
+                  operator: equals
+                  value: "'Churned'"
       - name: account_segment
         tests:
           - accepted_values:
               values: ['Enterprise', 'Mid-Market', 'SMB', 'Trial/Free']
       - name: mrr
         tests: [not_null]
+      - name: is_pql
+        description: "Product Qualified Lead flag"
+      - name: seat_utilization_pct
+        description: "Seat utilization percentage"
+        meta:
+          metrics:
+            avg_seat_utilization:
+              type: average
+              label: "Average Seat Utilization"
+              format: "percent"
     tests:
       - dbt_expectations.expect_table_row_count_to_be_between:
           min_value: 1

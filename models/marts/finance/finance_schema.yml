@@ -13,6 +13,17 @@ models:
         tests: [not_null]
       - name: mrr
         tests: [not_null]
+        meta:
+          metrics:
+            total_mrr:
+              type: sum
+              label: "Total MRR"
+              format: "usd"
+            net_revenue_retention:
+              type: sum
+              label: "Net Revenue Retention (NRR)"
+              format: "percent"
+              description: "Requires advanced BI calculation, placeholder metric."
       - name: mrr_movement_type
         tests:
           - accepted_values:
@@ -39,3 +50,10 @@ models:
         tests: [unique, not_null]
       - name: account_id
         tests: [not_null]
+      - name: current_arr
+        meta:
+          metrics:
+            total_arr:
+              type: sum
+              label: "Total ARR"
+              format: "usd"
