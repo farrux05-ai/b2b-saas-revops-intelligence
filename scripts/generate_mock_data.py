@@ -248,13 +248,16 @@ for idx, (name, domain, industry, emp_count, segment) in enumerate(COMPANIES):
         })
 
     # ── HubSpot contacts (2-4 per company) ──
+    company_contact_emails = []
     roles = ["CTO", "VP Engineering", "Engineering Manager", "Lead Developer", "DevOps Lead"]
     for _ in range(random.randint(2, 4)):
         fname = random.choice(["Alex","Jordan","Taylor","Morgan","Casey","Riley","Drew","Quinn"])
         lname = random.choice(["Smith","Johnson","Lee","Brown","Davis","Wilson","Moore","Clark"])
+        email = f"{fname.lower()}.{lname.lower()}@{domain}"
+        company_contact_emails.append(email)
         hs_contacts.append({
             "hs_object_id":        uid("contact_"),
-            "email":               f"{fname.lower()}.{lname.lower()}@{domain}",
+            "email":               email,
             "firstname":           fname,
             "lastname":            lname,
             "jobtitle":            random.choice(roles),
@@ -386,7 +389,15 @@ for idx, (name, domain, industry, emp_count, segment) in enumerate(COMPANIES):
             last_seen = rand_date(NOW - timedelta(days=14), NOW)
 
         activated = created_at + timedelta(days=random.randint(1, 5))
-        email = f"user{u}@{domain}"
+        
+        # FIX: Real-world noise. Not all users match HubSpot (identity resolution leakage)
+        # 70% match probability for the first few users
+        if u < len(company_contact_emails) and random.random() < 0.7:
+            email = company_contact_emails[u]
+        else:
+            # Use random names or generic emails to simulate unmatched users
+            email = f"user{u}@{domain}" if random.random() < 0.5 else f"{uid('u')}@gmail.com"
+
         ws_users.append(user_id)
         int_users.append({
             "id":           user_id,
