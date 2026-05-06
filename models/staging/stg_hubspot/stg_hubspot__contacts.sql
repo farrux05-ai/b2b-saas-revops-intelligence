@@ -17,6 +17,10 @@ renamed as (
         cast(jobtitle as varchar)                       as job_title,
         cast(hs_lead_status as varchar)                 as lead_status,
 
+        -- GTM Engineering / Clay Enrichment Fields
+        cast(linkedin_url as varchar)                   as linkedin_profile_url,
+        cast(is_enriched as boolean)                    as is_gtm_enriched,
+
         -- timestamps
         cast(createdate as timestamp)                   as created_at,
         cast(lastmodifieddate as timestamp)             as updated_at

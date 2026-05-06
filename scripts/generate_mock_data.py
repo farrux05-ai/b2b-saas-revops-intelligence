@@ -224,6 +224,11 @@ for idx, (name, domain, industry, emp_count, segment) in enumerate(COMPANIES):
         "hubspot_owner_id":   str(random.randint(1, 8)),
         "utm_source":         utm_source,
         "utm_campaign":       utm_campaign,
+        "annual_revenue":     f"${random.randint(1, 500)}M",
+        "tech_stack":         random.choice(["AWS, Slack, Jira", "GCP, Notion, GitHub", "Azure, Teams, Linear"]),
+        "city":               random.choice(["San Francisco", "New York", "London", "Berlin"]),
+        "country":            random.choice(["USA", "UK", "Germany", "Canada"]),
+        "is_enriched":        True if random.random() < 0.9 else False,
         "createdate":         iso(created_at),
         "hs_lastmodifieddate": iso(rand_date(created_at, NOW)),
     })
@@ -263,6 +268,8 @@ for idx, (name, domain, industry, emp_count, segment) in enumerate(COMPANIES):
             "jobtitle":            random.choice(roles),
             "associated_company_id": hs_company_id if random.random() < 0.8 else None,
             "hs_lead_status":      LEAD_STATUSES[segment],
+            "linkedin_url":        f"https://linkedin.com/in/{fname.lower()}-{lname.lower()}-{uid('')}",
+            "is_enriched":         True if random.random() < 0.8 else False,
             "createdate":          iso(created_at),
             "lastmodifieddate":    iso(rand_date(created_at, NOW)),
         })

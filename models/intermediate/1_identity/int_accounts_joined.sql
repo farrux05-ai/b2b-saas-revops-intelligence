@@ -5,6 +5,7 @@
 -- DESCRIPTION: Global Account Identity Spine for B2B SaaS.
 -- This model consolidates identities from Product (Workspaces), Billing (Stripe),
 -- and CRM (HubSpot) into a single unique Account Spine.
+-- It also incorporates GTM Engineering enrichment (Clay/n8n).
 -- =============================================================================
 
 with workspaces as (
@@ -20,45 +21,54 @@ hubspot as (
     select
         hubspot_company_id,
         domain,
-        company_name
+        company_name,
+        -- GTM Enrichment fields
+        annual_revenue,
+        tech_stack,
+        headquarter_city,
+        headquarter_country,
+        is_gtm_enriched
     from {{ ref('stg_hubspot__companies') }}
 ),
 
 -- 1. ENRICHED PRODUCT ACCOUNTS
--- We join internal workspaces with HubSpot to get clean domain/company names.
--- Priority: Internal DB data enriched with CRM-verified attributes.
 product_accounts as (
     select
         w.internal_workspace_id,
         w.hubspot_company_id,
         w.stripe_customer_id,
-        -- Prioritize HubSpot name if available for cleaner reporting
         coalesce(h.company_name, w.workspace_name)      as workspace_name,
-        h.domain
+        h.domain,
+        -- Enrichment attributes
+        h.annual_revenue,
+        h.tech_stack,
+        h.headquarter_city,
+        h.headquarter_country,
+        h.is_gtm_enriched
     from workspaces w
     left join hubspot h on w.hubspot_company_id = h.hubspot_company_id
 ),
 
 -- 2. CRM-ONLY LEADS (ANTI-JOIN PATTERN)
--- Captures HubSpot companies that have not signed up for the product yet.
--- This ensures 'Leads' are visible in our account spine for GTM analysis.
--- The filter 'w.hubspot_company_id is null' prevents duplicate entries.
 crm_only as (
     select
         null                                            as internal_workspace_id,
         h.hubspot_company_id,
         null                                            as stripe_customer_id,
         h.company_name                                  as workspace_name,
-        h.domain
+        h.domain,
+        -- Enrichment attributes
+        h.annual_revenue,
+        h.tech_stack,
+        h.headquarter_city,
+        h.headquarter_country,
+        h.is_gtm_enriched
     from hubspot h
     left join workspaces w on h.hubspot_company_id = w.hubspot_company_id
     where w.hubspot_company_id is null 
 ),
 
 -- 3. GLOBAL CONSOLIDATION
--- We use UNION ALL because the anti-join logic in 'crm_only' guarantees 
--- that these two sets are Mutually Exclusive (no duplicates).
--- This is more performant than a standard UNION.
 all_accounts as (
     select * from product_accounts
     union all
@@ -67,9 +77,6 @@ all_accounts as (
 
 final as (
     select
-        -- SURROGATE KEY: Stable global anchor for all downstream models.
-        -- We prioritize hubspot_company_id to group multiple workspaces under
-        -- a single Parent Account, enabling true B2B 'Land & Expand' analysis.
         {{ dbt_utils.generate_surrogate_key([
             'coalesce(hubspot_company_id, internal_workspace_id)'
         ]) }}                                           as account_id,
@@ -77,7 +84,12 @@ final as (
         internal_workspace_id,
         stripe_customer_id,
         workspace_name,
-        domain
+        domain,
+        annual_revenue,
+        tech_stack,
+        headquarter_city,
+        headquarter_country,
+        is_gtm_enriched
     from all_accounts
 )
 
