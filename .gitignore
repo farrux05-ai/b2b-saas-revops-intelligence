@@ -1,61 +1,42 @@
-# ── dbt ───────────────────────────────────────────────
+# ── DBT ────────────────────────────────────────────────
+target/
 dbt_packages/
 logs/
 *.log
-target/
-.dbt/
 
-# ── Python virtual environments ───────────────────────
+# ── PYTHON ─────────────────────────────────────────────
 .venv/
 venv/
 env/
-dbt-venv/
-*.pyc
 __pycache__/
+*.pyc
 *.egg-info/
-dist/
-build/
 .pytest_cache/
 .coverage
 
-# ── Environment & Secrets (NEVER commit these) ────────
-.env
-.env.local
-.env.*.local
-dashboards/.env
-
-# ── IDE ───────────────────────────────────────────────
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# ── Streamlit ─────────────────────────────────────────
-.streamlit/
-.streamlit/secrets.toml
-
-# ── Database files (never commit binary DB files) ─────
+# ── DATABASE & DATA ────────────────────────────────────
 *.db
 *.duckdb
 *.sqlite
 *.sqlite3
-
-# ── Node ──────────────────────────────────────────────
-
-node_modules/
-package-lock.json
-yarn.lock
-
-# ── OS ────────────────────────────────────────────────
-Thumbs.db
-.AppleDouble
-package-lock.yml
-packages.yml
-
-PLAN.md
-
-# ── Project Data ──────────────────────────────────────
 data/raw/
-duckdb/md:*
+duckdb/
+
+# ── SECRETS & ENV (CRITICAL) ──────────────────────────
+.env
+.env.*
+*.local
+
+# ── IDE & OS ──────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# ── MISC ──────────────────────────────────────────────
+node_modules/
+dist/
+build/
+.streamlit/
