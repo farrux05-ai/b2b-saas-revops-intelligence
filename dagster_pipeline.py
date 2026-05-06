@@ -1,5 +1,5 @@
 import os
-from dagster import asset, Definitions, AssetExecutionContext
+from dagster import asset, Definitions, AssetExecutionContext, ScheduleDefinition, define_asset_job
 from dagster_dbt import DbtCliResource, dbt_assets
 from pathlib import Path
 
@@ -15,7 +15,7 @@ def ingestion_dlt(context: AssetExecutionContext):
     return "dlt_success"
 
 @dbt_assets(manifest=DBT_PROJECT_DIR.joinpath("target", "manifest.json"))
-def revops_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
+def revops_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource, ingestion_dlt):
     yield from dbt.cli(["build"], context=context).stream()
 
 @asset(group_name="reverse_etl", deps=[revops_dbt_assets])
@@ -25,8 +25,24 @@ def hubspot_reverse_etl(context: AssetExecutionContext):
     os.system("python scripts/sync_to_hubspot.py")
     return "hubspot_sync_success"
 
+@asset(group_name="reverse_etl", deps=[revops_dbt_assets])
+def zendesk_reverse_etl(context: AssetExecutionContext):
+    """Sync insights back to Zendesk Support."""
+    context.log.info("Starting Reverse ETL to Zendesk...")
+    os.system("python scripts/sync_to_zendesk.py")
+    return "zendesk_sync_success"
+
+# Define a daily job and schedule
+revops_daily_job = define_asset_job("revops_daily_job", selection="*")
+revops_daily_schedule = ScheduleDefinition(
+    job=revops_daily_job,
+    cron_schedule="0 7 * * *", # Run at 07:00 UTC every day
+    execution_timezone="UTC",
+)
+
 defs = Definitions(
-    assets=[ingestion_dlt, revops_dbt_assets, hubspot_reverse_etl],
+    assets=[ingestion_dlt, revops_dbt_assets, hubspot_reverse_etl, zendesk_reverse_etl],
+    schedules=[revops_daily_schedule],
     resources={
         "dbt": DbtCliResource(project_dir=os.fspath(DBT_PROJECT_DIR)),
     },

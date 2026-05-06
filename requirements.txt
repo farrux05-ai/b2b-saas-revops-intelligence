@@ -17,3 +17,8 @@ requests
 scikit-learn
 psycopg2-binary
 dlt[duckdb]
+
+# Orchestration
+dagster
+dagster-webserver
+dagster-dbt
