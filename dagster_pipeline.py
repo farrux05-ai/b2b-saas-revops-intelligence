@@ -1,5 +1,5 @@
 import os
-from dagster import asset, Definitions, AssetExecutionContext, ScheduleDefinition, define_asset_job
+from dagster import asset, Definitions, AssetExecutionContext, ScheduleDefinition, define_asset_job, AssetKey
 from dagster_dbt import DbtCliResource, dbt_assets
 from pathlib import Path
 
@@ -14,8 +14,11 @@ def ingestion_dlt(context: AssetExecutionContext):
     os.system("python ingestion/stackflow_pipeline.py")
     return "dlt_success"
 
-@dbt_assets(manifest=DBT_PROJECT_DIR.joinpath("target", "manifest.json"))
-def revops_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource, ingestion_dlt):
+@dbt_assets(
+    manifest=DBT_PROJECT_DIR.joinpath("target", "manifest.json"),
+    deps=[AssetKey("ingestion_dlt")]
+)
+def revops_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     yield from dbt.cli(["build"], context=context).stream()
 
 @asset(group_name="sync", deps=[revops_dbt_assets])
