@@ -18,14 +18,21 @@ def ingestion_dlt(context: AssetExecutionContext):
 def revops_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource, ingestion_dlt):
     yield from dbt.cli(["build"], context=context).stream()
 
-@asset(group_name="reverse_etl", deps=[revops_dbt_assets])
+@asset(group_name="sync", deps=[revops_dbt_assets])
+def motherduck_sync(context: AssetExecutionContext):
+    """Sync local DuckDB data to MotherDuck."""
+    context.log.info("Starting sync to MotherDuck...")
+    os.system("python scripts/sync_to_motherduck.py")
+    return "motherduck_sync_success"
+
+@asset(group_name="reverse_etl", deps=[motherduck_sync])
 def hubspot_reverse_etl(context: AssetExecutionContext):
     """Sync insights back to HubSpot CRM."""
     context.log.info("Starting Reverse ETL to HubSpot...")
     os.system("python scripts/sync_to_hubspot.py")
     return "hubspot_sync_success"
 
-@asset(group_name="reverse_etl", deps=[revops_dbt_assets])
+@asset(group_name="reverse_etl", deps=[motherduck_sync])
 def zendesk_reverse_etl(context: AssetExecutionContext):
     """Sync insights back to Zendesk Support."""
     context.log.info("Starting Reverse ETL to Zendesk...")
@@ -41,7 +48,7 @@ revops_daily_schedule = ScheduleDefinition(
 )
 
 defs = Definitions(
-    assets=[ingestion_dlt, revops_dbt_assets, hubspot_reverse_etl, zendesk_reverse_etl],
+    assets=[ingestion_dlt, revops_dbt_assets, motherduck_sync, hubspot_reverse_etl, zendesk_reverse_etl],
     schedules=[revops_daily_schedule],
     resources={
         "dbt": DbtCliResource(project_dir=os.fspath(DBT_PROJECT_DIR)),
