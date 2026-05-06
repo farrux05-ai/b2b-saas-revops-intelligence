@@ -47,6 +47,8 @@ final as (
         -- HubSpot info
         h.industry,
         h.company_name,
+        h.utm_source,
+        h.utm_campaign,
         
         -- Sales domain
         coalesce(sl.open_deals_count, 0)                 as open_deals_count,

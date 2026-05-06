@@ -25,6 +25,11 @@ sources:
         columns:
           - name: hs_object_id
             tests: [unique, not_null]
+      - name: engagements
+        description: "HubSpot engagement records (calls, emails, meetings)"
+        columns:
+          - name: hs_engagement_id
+            tests: [unique, not_null]
 
   - name: stripe
     schema: raw_data

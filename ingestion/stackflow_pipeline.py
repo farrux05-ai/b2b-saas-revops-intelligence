@@ -13,6 +13,7 @@ def hubspot_source():
         dlt.resource(load_json("hubspot_companies.json"), name="companies", write_disposition="replace"),
         dlt.resource(load_json("hubspot_deals.json"), name="deals", write_disposition="replace"),
         dlt.resource(load_json("hubspot_contacts.json"), name="contacts", write_disposition="replace"),
+        dlt.resource(load_json("hubspot_engagements.json"), name="engagements", write_disposition="replace"),
     ]
 
 @dlt.source(name="stripe")

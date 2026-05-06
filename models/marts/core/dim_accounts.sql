@@ -29,6 +29,8 @@ final as (
         workspace_name,
         company_name                                    as hubspot_company_name,
         industry,
+        utm_source,
+        utm_campaign,
 
         -- Revenue & Expansion
         mrr,

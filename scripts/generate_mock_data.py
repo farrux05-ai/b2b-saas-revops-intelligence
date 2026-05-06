@@ -147,6 +147,7 @@ TICKET_TAGS = {
 hs_companies   = []
 hs_deals       = []
 hs_contacts    = []
+hs_engagements = []
 stripe_subs    = []
 stripe_inv     = []
 stripe_pay     = []
@@ -200,6 +201,17 @@ for idx, (name, domain, industry, emp_count, segment) in enumerate(COMPANIES):
     else:
         seats_used = int(seat_limit * random.uniform(0.4, 0.75))
 
+    # ── Marketing Attribution ──
+    utm_source = random.choice(["Organic Search", "Google Ads", "LinkedIn", "Direct", "Referral"])
+    if utm_source == "Organic Search":
+        utm_campaign = "SEO_2023"
+    elif utm_source == "Google Ads":
+        utm_campaign = random.choice(["Q1_Competitor_Keywords", "Retargeting_V2"])
+    elif utm_source == "LinkedIn":
+        utm_campaign = "B2B_SaaS_Leaders"
+    else:
+        utm_campaign = "None"
+
     # ── HubSpot company ──
     hs_companies.append({
         "hs_object_id":       hs_company_id,
@@ -210,6 +222,8 @@ for idx, (name, domain, industry, emp_count, segment) in enumerate(COMPANIES):
         "hs_lead_status":     LEAD_STATUSES[segment],
         "lifecyclestage":     LIFECYCLE_STAGES[segment],
         "hubspot_owner_id":   str(random.randint(1, 8)),
+        "utm_source":         utm_source,
+        "utm_campaign":       utm_campaign,
         "createdate":         iso(created_at),
         "hs_lastmodifieddate": iso(rand_date(created_at, NOW)),
     })
@@ -248,6 +262,19 @@ for idx, (name, domain, industry, emp_count, segment) in enumerate(COMPANIES):
             "hs_lead_status":      LEAD_STATUSES[segment],
             "createdate":          iso(created_at),
             "lastmodifieddate":    iso(rand_date(created_at, NOW)),
+        })
+
+    # ── HubSpot Engagements (Sales Activities) ──
+    n_engagements = random.randint(3, 15) if segment != "pql" else random.randint(0, 2)
+    for _ in range(n_engagements):
+        eng_type = random.choices(["CALL", "EMAIL", "MEETING"], weights=[3, 6, 2])[0]
+        eng_time = rand_date(created_at, NOW)
+        hs_engagements.append({
+            "hs_engagement_id":      uid("eng_"),
+            "engagement_type":       eng_type,
+            "associated_company_id": hs_company_id,
+            "owner_id":              str(random.randint(1, 8)),
+            "created_at":            iso(eng_time)
         })
 
     # ── Stripe subscription ──
@@ -456,6 +483,7 @@ files = {
     "hubspot_companies.json":    hs_companies,
     "hubspot_deals.json":        hs_deals,
     "hubspot_contacts.json":     hs_contacts,
+    "hubspot_engagements.json":  hs_engagements,
     "stripe_subscriptions.json": stripe_subs,
     "stripe_invoices.json":      stripe_inv,
     "stripe_payments.json":      stripe_pay,
