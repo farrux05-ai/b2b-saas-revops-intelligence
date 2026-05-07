@@ -296,11 +296,10 @@ models:
   # ─── fct_pql_signals ───────────────────────────────────────────────────────
   - name: fct_pql_signals
     description: >
-      Actionable PQL (Product Qualified Lead) Signals for Sales and CS teams.
-      Identifies high-intent trial workspaces and recommends specific actions
-      (Outreach, Nurture, etc.) based on activation milestones and telemetry.
+      Unified PQL and ICP Signal model. Combines 'Intent' (Product usage) with 'Fit' (ICP)
+      to create a GTM Priority Matrix for Sales and CS.
     meta:
-      label: "PQL Signals"
+      label: "GTM Priority Signals"
       group_label: "Product"
     columns:
       - name: workspace_id
@@ -308,14 +307,21 @@ models:
         tests: [unique, not_null]
       - name: account_id
         description: "FK to dim_accounts."
-      - name: pql_tier
-        description: "Classification of intent: 🔥 HOT, warm WARM, ❄️ COLD."
+      - name: intent_tier
+        description: "Intent classification: HOT, WARM, COLD."
         tests:
           - accepted_values:
-              values: ['🔥 HOT', 'warm WARM', '❄️ COLD']
+              values: ['HOT', 'WARM', 'COLD']
+      - name: icp_tier
+        description: "ICP Fit classification: High Fit, Medium Fit, Low Fit."
+        tests:
+          - accepted_values:
+              values: ['High Fit', 'Medium Fit', 'Low Fit']
+      - name: gtm_priority
+        description: "Combined Priority Matrix: MUST WIN, ACTIVE, HIGH POTENTIAL, etc."
       - name: recommended_action
-        description: "Suggested next step for GTM teams."
+        description: "Suggested next step based on Fit + Intent."
       - name: activation_milestone
-        description: "Current level of product adoption (Signed Up -> Started -> Activated)."
+        description: "Current level of product adoption."
       - name: is_at_risk_of_not_converting
         description: "High-risk signal: Trial expiring soon with low activity."
