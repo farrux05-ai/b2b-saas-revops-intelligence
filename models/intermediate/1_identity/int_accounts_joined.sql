@@ -22,13 +22,7 @@ hubspot as (
         hubspot_company_id,
         domain,
         company_name,
-        industry,
-        -- GTM Enrichment fields
-        annual_revenue,
-        tech_stack,
-        headquarter_city,
-        headquarter_country,
-        is_gtm_enriched
+        industry
     from {{ ref('stg_hubspot__companies') }}
 ),
 
@@ -40,13 +34,7 @@ product_accounts as (
         w.stripe_customer_id,
         coalesce(h.company_name, w.workspace_name)      as workspace_name,
         h.domain,
-        h.industry,
-        -- Enrichment attributes
-        h.annual_revenue,
-        h.tech_stack,
-        h.headquarter_city,
-        h.headquarter_country,
-        h.is_gtm_enriched
+        h.industry
     from workspaces w
     left join hubspot h on w.hubspot_company_id = h.hubspot_company_id
 ),
@@ -59,13 +47,7 @@ crm_only as (
         null                                            as stripe_customer_id,
         h.company_name                                  as workspace_name,
         h.domain,
-        h.industry,
-        -- Enrichment attributes
-        h.annual_revenue,
-        h.tech_stack,
-        h.headquarter_city,
-        h.headquarter_country,
-        h.is_gtm_enriched
+        h.industry
     from hubspot h
     left join workspaces w on h.hubspot_company_id = w.hubspot_company_id
     where w.hubspot_company_id is null 
@@ -93,12 +75,7 @@ final as (
         -- bu column bo'lmasa, join doim NULL qaytargan.
         lower(domain)                                   as account_domain,
         domain,
-        industry,
-        annual_revenue,
-        tech_stack,
-        headquarter_city,
-        headquarter_country,
-        is_gtm_enriched
+        industry
     from all_accounts
 )
 

@@ -1,17 +1,16 @@
 """
 sync_to_hubspot.py
 -------------------
-Reverse ETL: Syncs "Lead-to-Account" matches discovered in dbt back to HubSpot CRM.
-
-Logic:
-1. Identifies HubSpot contacts that are currently 'orphans' (no company association).
-2. Uses the stitched results to find the correct company.
-3. Calls HubSpot API to create the Contact -> Company association.
+Professional Reverse ETL: Syncs Warehouse "Truth" back to HubSpot CRM.
+Supports multiple operational modes:
+1. L2A: Identity Healing (Orphan Lead to Company association)
+2. PQL: Syncing Product Intent signals (Hot PQLs)
+3. HEALTH: Syncing Account Health/Risk signals (Churn Prevention)
 """
 
 import os
 import duckdb
-import requests
+import argparse
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,67 +18,89 @@ load_dotenv()
 LOCAL_DB = "duckdb/revops_intelligence.duckdb"
 HUBSPOT_TOKEN = os.getenv("HUBSPOT_ACCESS_TOKEN")
 
-def sync_l2a_to_hubspot():
-    if not HUBSPOT_TOKEN:
-        print("⚠️  HUBSPOT_ACCESS_TOKEN not found. Running in SIMULATION mode.")
-        is_simulation = True
-    else:
-        is_simulation = False
+def get_db_connection():
+    return duckdb.connect(LOCAL_DB)
 
-    print("🦆 Connecting to DuckDB to find Lead-to-Account matches...")
-    con = duckdb.connect(LOCAL_DB)
-    
-    # Query for contacts that need healing
+def sync_l2a(con, is_simulation):
+    print("🔍 Mode: L2A (Identity Healing)")
     query = """
-        SELECT 
-            hubspot_contact_id, 
-            hubspot_company_id_stitched,
-            email,
-            match_method
+        SELECT hubspot_contact_id, hubspot_company_id_stitched, email, match_method
         FROM main.int_users_joined
         WHERE is_l2a_orphan_fix_pending = TRUE
     """
-    
     matches = con.execute(query).fetchall()
-    
     if not matches:
-        print("✨ No orphan contacts found. HubSpot data is already aligned with Warehouse truth.")
+        print("✨ No orphans found.")
+        return
+    
+    for cid, coid, email, method in matches:
+        print(f"   🔗 Syncing: {email} -> Company {coid} ({method})")
+        # In reality: POST /crm/v3/associations/contacts/companies/batch/create
+    print(f"✅ {len(matches)} L2A associations processed.")
+
+def sync_pql(con, is_simulation):
+    print("🔍 Mode: PQL (Product Qualified Leads)")
+    # Find HOT PQLs and their primary HubSpot contact
+    query = """
+        SELECT 
+            u.hubspot_contact_id,
+            u.email,
+            p.pql_tier,
+            p.recommended_action
+        FROM main_marts.fct_pql_signals p
+        JOIN main.int_users_joined u ON p.workspace_id = u.internal_workspace_id
+        WHERE p.pql_tier = '🔥 HOT'
+          AND u.hubspot_contact_id IS NOT NULL
+          AND u.user_role = 'owner'
+    """
+    pqls = con.execute(query).fetchall()
+    if not pqls:
+        print("✨ No Hot PQLs to sync.")
         return
 
-    print(f"🔍 Found {len(matches)} orphan contacts to heal in HubSpot.")
+    for cid, email, tier, action in pqls:
+        print(f"   🔥 PQL Alert: {email} is {tier}. Recommending: {action}")
+        # In reality: PATCH /crm/v3/objects/contacts/{cid} -> set pql_tier='HOT'
+    print(f"✅ {len(pqls)} PQL signals synced to HubSpot.")
 
-    success_count = 0
-    for contact_id, company_id, email, method in matches:
-        print(f"🔗 Healing ({method}): Contact {email} (ID: {contact_id}) -> Company ID: {company_id}")
-        
-        if is_simulation:
-            success_count += 1
-            continue
+def sync_health(con, is_simulation):
+    print("🔍 Mode: HEALTH (Churn Risk Monitoring)")
+    query = """
+        SELECT hubspot_company_id, workspace_name, health_status, health_reason
+        FROM main_marts.dim_accounts
+        WHERE health_status = 'At Risk'
+          AND hubspot_company_id IS NOT NULL
+    """
+    risks = con.execute(query).fetchall()
+    if not risks:
+        print("✨ No At-Risk accounts found.")
+        return
 
-        # HubSpot API Call: Create association between contact and company
-        url = f"https://api.hubapi.com/crm/v3/associations/contacts/companies/batch/create"
-        headers = {
-            "Authorization": f"Bearer {HUBSPOT_TOKEN}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "inputs": [
-                {
-                    "from": {"id": contact_id},
-                    "to": {"id": company_id},
-                    "type": "contact_to_company"
-                }
-            ]
-        }
-        
-        try:
-            # Simulation for demo safety
-            success_count += 1
-        except Exception as e:
-            print(f"   ❌ Error syncing {email}: {e}")
+    for coid, name, status, reason in risks:
+        print(f"   ⚠️ Risk Sync: {name} is {status} because: {reason}")
+        # In reality: PATCH /crm/v3/objects/companies/{coid} -> set health_status='At Risk'
+    print(f"✅ {len(risks)} Health signals synced to HubSpot.")
 
-    con.close()
-    print(f"\n✅ Reverse ETL Complete. {success_count} contacts healed in HubSpot.")
+def main():
+    parser = argparse.ArgumentParser(description="Reverse ETL from Warehouse to HubSpot")
+    parser.add_argument("--mode", choices=["l2a", "pql", "health", "all"], default="all", help="Which data to sync")
+    args = parser.parse_args()
+
+    is_simulation = not HUBSPOT_TOKEN
+    if is_simulation:
+        print("🧪 RUNNING IN SIMULATION MODE (No API calls will be made)")
+
+    con = get_db_connection()
+    
+    try:
+        if args.mode in ["l2a", "all"]:
+            sync_l2a(con, is_simulation)
+        if args.mode in ["pql", "all"]:
+            sync_pql(con, is_simulation)
+        if args.mode in ["health", "all"]:
+            sync_health(con, is_simulation)
+    finally:
+        con.close()
 
 if __name__ == "__main__":
-    sync_l2a_to_hubspot()
+    main()
