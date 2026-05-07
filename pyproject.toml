@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "b2b-saas-revops"
+version = "0.1.0"
+dependencies = [
+    "dagster",
+    "dagster-cloud",
+    "dagster-dbt",
+    "dlt[motherduck]",
+    "dbt-duckdb",
+    "duckdb",
+    "python-dotenv",
+    "requests",
+    "pandas",
+    "motherduck"
+]
+
+[tool.dagster]
+module_name = "dagster_pipeline"

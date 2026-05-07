@@ -2,6 +2,9 @@ import os
 from dagster import asset, Definitions, AssetExecutionContext, ScheduleDefinition, define_asset_job
 from dagster_dbt import DbtCliResource, dbt_assets
 from pathlib import Path
+from ingestion.stackflow_pipeline import run_pipeline as run_ingestion
+from scripts.sync_to_motherduck import sync_to_motherduck as run_motherduck_sync
+from scripts.reverse_etl_dlt import run_reverse_etl as run_reverse_etl_sync
 
 # Paths
 DBT_PROJECT_DIR = Path(__file__).parent.joinpath("").resolve()
@@ -10,7 +13,7 @@ DBT_PROJECT_DIR = Path(__file__).parent.joinpath("").resolve()
 def ingestion_dlt(context: AssetExecutionContext):
     """Run the dlt ingestion pipeline (HubSpot, Stripe, Zendesk, Internal DB)."""
     context.log.info("Starting dlt ingestion...")
-    os.system("python ingestion/stackflow_pipeline.py")
+    run_ingestion()
     return "dlt_success"
 
 # Note: @dbt_assets v0.29 does not support the `deps=` argument.
@@ -24,15 +27,14 @@ def revops_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
 def motherduck_sync(context: AssetExecutionContext):
     """Sync local DuckDB data to MotherDuck cloud warehouse."""
     context.log.info("Starting sync to MotherDuck...")
-    os.system("python scripts/sync_to_motherduck.py")
+    run_motherduck_sync()
     return "motherduck_sync_success"
 
 @asset(group_name="reverse_etl", deps=[motherduck_sync])
 def dlt_reverse_etl(context: AssetExecutionContext):
     """Unified Reverse ETL pipeline using dlt (HubSpot & Zendesk)."""
     context.log.info("Starting dlt Reverse ETL pipeline...")
-    # Using os.system to ensure it runs in a separate process with correct environment
-    os.system("python scripts/reverse_etl_dlt.py")
+    run_reverse_etl_sync()
     return "dlt_reverse_etl_success"
 
 # ---------------------------------------------------------------------------

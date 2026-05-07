@@ -1,0 +1,7 @@
+locations:
+  - location_name: revops-intelligence
+    code_source:
+      python_file: dagster_pipeline.py
+    build:
+      directory: .
+      registry: 657821118200.dkr.ecr.us-west-2.amazonaws.com/dagster-cloud-serverless-base-py3.10:latest

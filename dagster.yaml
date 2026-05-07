@@ -1,0 +1,6 @@
+telemetry:
+  enabled: false
+
+storage:
+  sqlite:
+    base_dir: .
