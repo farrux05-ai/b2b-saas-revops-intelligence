@@ -87,6 +87,11 @@ final as (
         internal_workspace_id,
         stripe_customer_id,
         workspace_name,
+        -- FIX #1: account_domain alias qo'shildi.
+        -- int_users_joined dagi L2A fuzzy join:
+        --   s_domain.account_domain = u.email_domain
+        -- bu column bo'lmasa, join doim NULL qaytargan.
+        lower(domain)                                   as account_domain,
         domain,
         industry,
         annual_revenue,

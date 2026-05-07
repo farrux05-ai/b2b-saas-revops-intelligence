@@ -39,7 +39,16 @@ hubspot_contacts as (
         lower(email)                            as normalized_email,
         first_name,
         last_name,
-        job_title
+        job_title,
+        -- FIX #2: HubSpot Deduplication — Fan-out xavfini oldini olish.
+        -- Bitta email HubSpot da 2+ marta bo'lsa (retargeting, test record),
+        -- JOIN natijasida duplicate rows paydo bo'lib, downstream
+        -- SUM(mrr) ikki baravar chiqishi mumkin edi.
+        -- updated_at DESC: eng so'nggi, eng ishonchli yozuvni olamiz.
+        row_number() over(
+            partition by lower(email)
+            order by updated_at desc nulls last
+        )                                       as rn
     from {{ ref('stg_hubspot__contacts') }}
 ),
 
@@ -101,8 +110,10 @@ user_account_stitching as (
     from internal_users u
     
     -- CRM STITCHING: Link to human attributes via normalized email
+    -- FIX #2 (davomi): rn = 1 → faqat dedup qilingan yozuv ulanadi
     left join hubspot_contacts h
         on u.normalized_email = h.normalized_email
+        and h.rn = 1
         
     -- ACCOUNT MATCH 1 (Direct): Link via Product Workspace
     left join account_spine s_direct

@@ -106,6 +106,12 @@ final as (
     left join hubspot h    on s.hubspot_company_id = h.hubspot_company_id
     left join sales sl     on s.hubspot_company_id = sl.hubspot_company_id
     left join finance f    on s.internal_workspace_id = f.workspace_id
+    -- FIX #3: "Phantom Join" tuzatildi.
+    -- Oldin: s.account_id = sp.account_id — lekin int_support_aggregated
+    --        account_id ni int_users_joined → u.account_id dan oladi.
+    --        int_accounts_joined dagi account_id boshqa surrogate key edi → doim NULL.
+    -- Endi: ikkala tomon ham int_users_joined.account_id → int_accounts_joined.account_id
+    --        bir xil surrogate key funksiyasidan kelgani uchun to'g'ri mos keladi.
     left join support sp   on s.account_id = sp.account_id
     left join usage u      on s.internal_workspace_id = u.workspace_id
 )
