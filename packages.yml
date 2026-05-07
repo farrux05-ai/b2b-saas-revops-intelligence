@@ -1,7 +1,10 @@
 packages:
-  - package: dbt-labs/codegen
-    version: 0.13.1
+  # Surrogate keys, pivot, other utility macros
   - package: dbt-labs/dbt_utils
     version: 1.3.0
+
+  # Great Expectations-style data quality tests
   - package: calogica/dbt_expectations
     version: 0.10.4
+
+

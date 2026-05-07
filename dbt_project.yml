@@ -2,6 +2,8 @@ name: "revops_intelligence_engine"
 version: '1.0.0'
 config-version: 2
 
+flags:
+  require_explicit_package_overrides_for_builtin_materializations: false
 profile: 'revops_intelligence_engine'
 
 model-paths: ["models"]
@@ -17,7 +19,7 @@ clean-targets:
   - "dbt_packages"
 
 models:
-  stackflow_revops:
+  revops_intelligence_engine:
     staging:
       +materialized: view
       +schema: staging

@@ -9,9 +9,9 @@
 
 ## 🏢 Executive Summary
 
-**RevOps Intelligence Engine** is an enterprise-grade, end-to-end data platform designed to solve the "Invisible Churn Crisis" and "Data Silo" problems inherent in modern B2B SaaS companies.
+**RevOps Intelligence Engine** is an enterprise-grade data platform designed to transform the Data Warehouse from a traditional **"Cost Center"** (just building dashboards) into a proactive **"Revenue Center"** (driving actual business outcomes).
 
-By stitching together fragmented data from **HubSpot** (CRM), **Stripe** (Billing), **Zendesk** (Support), and **Internal Databases** (Product Telemetry), this engine creates a single source of truth. It powers real-time health scoring, expansion opportunity detection (PQLs), accurate MRR calculations, and delivers insights directly to Go-To-Market (GTM) teams via **Reverse ETL** and an autonomous **Slack AI Bot**.
+By stitching together fragmented data from **HubSpot** (CRM), **Stripe** (Billing), **Zendesk** (Support), and **Internal Databases** (Product Telemetry), this engine creates a unified Lead-to-Account identity. It powers real-time health scoring, advanced Product-Qualified Lead (PQL) detection, and delivers actionable insights directly back to Go-To-Market (GTM) teams via **Reverse ETL**.
 
 ---
 
@@ -26,14 +26,14 @@ In B2B SaaS, the Revenue Operations (RevOps) team is responsible for driving rev
 3. **Missed Expansion (PLG Leakage):** Seat-limit utilization lives in the product DB; sales cannot see when an account is ready for an upsell.
 4. **Inaccurate MRR Reporting:** Traditional CRM reporting ignores mid-month upgrades, prorations, and complex billing logic.
 
-### Key Business Outcomes
+### Key Business Outcomes (Revenue Center Philosophy)
 
-This project delivers automated, actionable intelligence to solve these problems:
+This project moves beyond passive reporting by delivering automated, actionable intelligence:
 
-- **Accurate MRR Waterfall:** Tracks exact revenue movements (New, Expansion, Contraction, Churn) via `fct_mrr_waterfall`.
-- **Automated Health Scoring:** Generates an `At-Risk Score` based on payment failures, open support tickets, and low product usage.
-- **Product-Led Growth (PQL) Routing:** Identifies accounts with ≥ 90% seat utilization and instantly flags them in HubSpot for Sales to upsell.
-- **Data as a Service (DaaS):** Allows executives to ask natural language questions in Slack (e.g., _"What is our Total MRR by Segment?"_) and instantly receive Lightdash visualisations.
+- **Reverse ETL (Operational Analytics):** We don't just build dashboards. `sync_to_hubspot.py` pushes critical data back into the CRM, directly triggering Sales workflows.
+- **Product-Led Growth (PQL) Engine:** The `fct_pql_signals` model identifies high-intent trial accounts (e.g., connected Git, >50 events) and categorizes them into Tiers (🔥 HOT, WARM, COLD), instantly alerting Sales to upsell opportunities.
+- **Stopping "Invisible Churn":** Automated health scoring generates an `At-Risk` flag based on payment failures, support friction, and declining usage, enabling CS to intervene *before* the customer cancels.
+- **Accurate MRR Waterfall:** Tracks exact revenue movements (New, Expansion, Contraction, Churn, Resurrection) via `fct_mrr_waterfall`, providing Finance with a trustworthy, immutable ledger.
 
 ---
 

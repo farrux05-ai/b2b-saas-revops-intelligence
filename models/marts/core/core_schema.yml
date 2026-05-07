@@ -163,6 +163,10 @@ models:
 
       - name: seat_utilization_pct
         description: "Percentage of seats in use (0.0–1.0). Above 0.9 = upsell ready."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 1.0
         meta:
           dimension:
             hidden: true

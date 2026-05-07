@@ -41,7 +41,11 @@ models:
 
       - name: mrr
         description: "MRR at the end of this month."
-        tests: [not_null]
+        tests:
+          - not_null
+          # MRR hech qachon manfiy bo'lmasligi kerak — billing bug signali
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
         meta:
           dimension:
             hidden: true

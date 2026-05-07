@@ -5,8 +5,8 @@ revops_intelligence_engine:
     dev:
       type: duckdb
       path: 'md:revops_intelligence'
-      threads: 4
+      threads: 1
     local:
       type: duckdb
       path: 'duckdb/revops_intelligence.duckdb'
-      threads: 4
+      threads: 1
