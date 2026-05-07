@@ -10,12 +10,12 @@
 
 with date_spine as (
     select 
-        date_trunc('day', generated_date)::date as date_day
-    from generate_series(
-        '2020-01-01'::date,
+        range::date as date_day
+    from range(
+        date '2020-01-01',
         (current_date + interval '2 years')::date,
-        '1 day'::interval
-    ) as t(generated_date)
+        interval '1 day'
+    )
 ),
 
 holidays as (

@@ -41,7 +41,8 @@ final as (
         is_payment_failing,                             -- Silent churn: card declined
         is_churning_soon,                               -- Intent churn: cancel scheduled
         case
-            when last_activity_at < current_timestamp - interval '30 days'
+            when last_activity_at is null
+                or last_activity_at < current_timestamp - interval '30 days'
             then true else false
         end                                             as is_low_engagement,
 

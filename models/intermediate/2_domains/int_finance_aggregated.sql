@@ -60,7 +60,7 @@ final as (
         sum(s.mrr_amount)                               as total_mrr,
 
         -- Actual Seat utilization from internal DB (not purchased quantity)
-        coalesce(uc.actual_seats_used, 0)                as seats_used,
+        max(coalesce(uc.actual_seats_used, 0))           as seats_used,
         sum(s.seats_purchased)                          as seats_purchased,
 
         -- Silent Churn Signal: payment failed but not yet canceled
@@ -85,7 +85,7 @@ final as (
     from subscriptions_with_mrr s
     left join spine sp   on s.workspace_id = sp.internal_workspace_id
     left join user_counts uc on s.workspace_id = uc.workspace_id
-    group by 1, 2, 3, uc.actual_seats_used
+    group by 1, 2, 3
 )
 
 select * from final

@@ -36,7 +36,7 @@ accounts as (
         seat_utilization_pct,
         subscription_status,
         is_ready_for_upsell
-    from {{ ref('dim_accounts') }}
+    from {{ ref('int_accounts_integrated') }}
 ),
 
 -- User activation stats per workspace
@@ -46,7 +46,7 @@ user_stats as (
         count(*)                                        as total_users,
         count(*) filter (where is_activated)            as activated_users,
         count(*) filter (where is_active_last_30d)      as active_users_last_30d
-    from {{ ref('dim_users') }}
+    from {{ ref('int_users_joined') }}
     group by 1
 ),
 

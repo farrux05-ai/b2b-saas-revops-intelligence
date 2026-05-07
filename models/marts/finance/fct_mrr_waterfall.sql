@@ -77,7 +77,14 @@ monthly_mrr as (
     select
         s.account_id,
         m.month_date,
-        sum(s.mrr_amount)                               as mrr
+        sum(
+            case when s.subscription_status in ('active', 'trialing') 
+            then s.mrr_amount else 0 end
+        )                                               as mrr,
+        sum(
+            case when s.subscription_status = 'past_due' 
+            then s.mrr_amount else 0 end
+        )                                               as at_risk_mrr
     from subscriptions_with_mrr s
     cross join months m
     where s.subscription_status in ('active', 'trialing', 'past_due')
@@ -93,6 +100,7 @@ mrr_history as (
         ams.workspace_name,
         ams.month_date,
         coalesce(mm.mrr, 0)                             as mrr,
+        coalesce(mm.at_risk_mrr, 0)                      as at_risk_mrr,
         coalesce(
             lag(mm.mrr) over (
                 partition by ams.account_id
@@ -112,6 +120,7 @@ final as (
         workspace_name,
         month_date,
         mrr,
+        at_risk_mrr,
         previous_month_mrr,
         mrr - previous_month_mrr                        as mrr_change_amount,
 

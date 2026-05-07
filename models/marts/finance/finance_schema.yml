@@ -40,7 +40,7 @@ models:
             type: date
 
       - name: mrr
-        description: "MRR at the end of this month."
+        description: "MRR at the end of this month (excludes past_due/unpaid)."
         tests:
           - not_null
           # MRR hech qachon manfiy bo'lmasligi kerak — billing bug signali
@@ -54,6 +54,18 @@ models:
               type: sum
               label: "Total MRR"
               description: "Sum of MRR for the selected period."
+              format: "usd"
+
+      - name: at_risk_mrr
+        description: "MRR from subscriptions in past_due status (unpaid/at risk)."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            total_at_risk_mrr:
+              type: sum
+              label: "Total At-Risk MRR"
+              description: "Sum of unpaid MRR from past_due accounts."
               format: "usd"
 
       - name: previous_month_mrr

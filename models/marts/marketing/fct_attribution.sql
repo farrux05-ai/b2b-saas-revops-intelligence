@@ -18,8 +18,10 @@ with accounts as (
 ),
 
 deals as (
-    select * from {{ ref('stg_hubspot__deals') }}
-    where deal_stage = 'closed_won'
+    select 
+        hubspot_company_id,
+        won_deals_count
+    from {{ ref('int_sales_aggregated') }}
 ),
 
 final as (
@@ -36,13 +38,12 @@ final as (
         a.lifetime_revenue,
         
         -- Deal counts from this channel
-        count(d.hubspot_deal_id) as won_deals_count
+        coalesce(d.won_deals_count, 0)                  as won_deals_count
         
     from accounts a
     left join deals d
         on a.hubspot_company_id = d.hubspot_company_id
     where a.hubspot_company_id is not null
-    group by 1, 2, 3, 4, 5, 6
 )
 
 select * from final

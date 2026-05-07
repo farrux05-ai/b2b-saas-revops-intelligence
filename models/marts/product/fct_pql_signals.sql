@@ -47,7 +47,8 @@ pql_logic as (
         a.trial_started_at,
         a.trial_ended_at,
         case 
-            when a.trial_ended_at is not null then date_diff('day', current_timestamp, a.trial_ended_at)
+            when a.trial_ended_at is not null 
+            then greatest(0, date_diff('day', current_timestamp, a.trial_ended_at))
             else null
         end                                             as days_until_trial_expires,
 
@@ -60,7 +61,7 @@ pql_logic as (
         case
             when a.is_converted = false 
              and a.trial_ended_at is not null 
-             and date_diff('day', current_timestamp, a.trial_ended_at) < 3
+             and date_diff('day', current_timestamp, a.trial_ended_at) between 0 and 3
              and a.total_product_events < 20
             then true else false
         end                                             as is_at_risk_of_not_converting

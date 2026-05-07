@@ -1,4 +1,5 @@
 {{ config(materialized='view') }}
+-- Grain: one row per workspace
 with events as (
     select * from {{ ref('stg_posthog__events') }}
 ),

@@ -132,11 +132,16 @@ user_account_stitching as (
 ),
 
 -- 4. SURROGATE KEY GENERATION
-final as (
+    final as (
     select
         -- Stable anchor independent of PII (emails)
         {{ dbt_utils.generate_surrogate_key(['internal_user_id']) }} as global_user_id,
         *,
+        -- Activation status (Shared logic moved from marts to intermediate)
+        activated_at is not null                        as is_activated,
+        last_seen_at >= current_timestamp 
+            - interval '30 days'                        as is_active_last_30d,
+
         -- Logic for Reverse ETL: Is there a mismatch between HubSpot and our Truth?
         (hubspot_contact_id is not null 
          and hubspot_company_id_raw is null 

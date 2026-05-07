@@ -48,6 +48,8 @@ models:
     columns:
       - name: hubspot_company_id
         tests: [unique, not_null]
+      - name: won_deals_count
+        description: "Number of closed-won deals. Used for marketing attribution."
 
   - name: int_support_aggregated
     description: >

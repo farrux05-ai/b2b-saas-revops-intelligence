@@ -36,6 +36,10 @@ usage as (
     select * from {{ ref('int_usage_aggregated') }}
 ),
 
+icp as (
+    select * from {{ ref('int_icp_scoring') }}
+),
+
 final as (
     select
         s.account_id,
@@ -93,13 +97,10 @@ final as (
         u.last_activity_at,
         coalesce(u.is_pql, false)                       as is_pql,
 
-        -- Segmentation Logic
-        case
-            when coalesce(f.total_mrr, 0) * 12 >= 50000 then 'Enterprise'
-            when coalesce(f.total_mrr, 0) * 12 >= 10000 then 'Mid-Market'
-            when coalesce(f.total_mrr, 0) * 12 > 0 then 'SMB'
-            else 'Trial/Free'
-        end                                             as account_segment
+        -- ICP Scoring & Segmentation (Layer 2)
+        i.account_segment,
+        i.icp_score,
+        i.icp_tier
 
     from spine s
     left join workspaces w on s.internal_workspace_id = w.workspace_id
@@ -114,6 +115,7 @@ final as (
     --        bir xil surrogate key funksiyasidan kelgani uchun to'g'ri mos keladi.
     left join support sp   on s.account_id = sp.account_id
     left join usage u      on s.internal_workspace_id = u.workspace_id
+    left join icp i        on s.account_id = i.account_id
 )
 
 select * from final

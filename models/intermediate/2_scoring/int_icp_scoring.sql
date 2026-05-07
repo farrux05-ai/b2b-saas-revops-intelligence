@@ -1,22 +1,47 @@
+{{ config(materialized='view') }}
+-- Grain: one row per account
+
 -- =============================================================================
 -- MODEL: int_icp_scoring
 -- DESCRIPTION: Calculates the ICP (Ideal Customer Profile) Fit Score for each account.
--- High Fit = 70+ | Medium Fit = 30-70 | Low Fit = <30
+-- Layer: 2_scoring
 -- =============================================================================
 
-with accounts as (
-    -- Using the account dimension as the base
-    select * from {{ ref('int_accounts_scored') }}
+with spine as (
+    select * from {{ ref('int_accounts_joined') }}
+),
+
+hubspot as (
+    select * from {{ ref('stg_hubspot__companies') }}
+),
+
+finance as (
+    select * from {{ ref('int_finance_aggregated') }}
+),
+
+scoring_base as (
+    select
+        s.account_id,
+        h.company_name,
+        h.industry,
+        f.total_mrr                                     as mrr,
+        
+        -- Move segmentation logic here to keep it in Layer 2
+        case
+            when coalesce(f.total_mrr, 0) * 12 >= 50000 then 'Enterprise'
+            when coalesce(f.total_mrr, 0) * 12 >= 10000 then 'Mid-Market'
+            when coalesce(f.total_mrr, 0) * 12 > 0 then 'SMB'
+            else 'Trial/Free'
+        end                                             as account_segment
+
+    from spine s
+    left join hubspot h on s.hubspot_company_id = h.hubspot_company_id
+    left join finance f on s.internal_workspace_id = f.workspace_id
 ),
 
 scoring as (
     select
-        account_id,
-        company_name,
-        industry,
-        account_segment,
-        mrr,
-        
+        *,
         -- 1. Industry Fit (Technology & Finance are our sweet spots)
         case
             when industry in ('SaaS', 'Technology', 'Fintech', 'Software') then 40
@@ -38,12 +63,16 @@ scoring as (
             else 0
         end                                             as revenue_score
 
-    from accounts
+    from scoring_base
 ),
 
 final as (
     select
-        *,
+        account_id,
+        company_name,
+        industry,
+        account_segment,
+        mrr,
         (industry_score + segment_score + revenue_score) as icp_score,
         
         case

@@ -26,6 +26,11 @@ final as (
             sum(amount) filter (where deal_stage = 'closedwon'), 0
         )                                               as lifetime_revenue,
 
+        -- Total won deals count (reusable in marketing marts)
+        count(hubspot_deal_id) filter (
+            where deal_stage = 'closedwon'
+        )                                               as won_deals_count,
+
         -- Most recent win date: used to identify dormant customers
         max(closed_at) filter (where deal_stage = 'closedwon')
                                                         as last_won_date,
