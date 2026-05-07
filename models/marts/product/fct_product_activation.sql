@@ -34,7 +34,7 @@ accounts as (
         seats_purchased,
         seats_used,
         seat_utilization_pct,
-        subscription_status,
+        latest_subscription_status                      as subscription_status,
         is_ready_for_upsell
     from {{ ref('int_accounts_integrated') }}
 ),
