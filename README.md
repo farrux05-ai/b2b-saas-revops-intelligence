@@ -37,6 +37,37 @@ This project moves beyond passive reporting by delivering automated, actionable 
 
 ---
 
+## 💰 Business Logic & Revenue Model
+
+This project simulates a **B2B SaaS platform** with a **Hybrid GTM (Go-To-Market)** strategy, combining self-serve efficiency with enterprise sales precision.
+
+### 1. Pricing Structure (Seat-Based)
+The revenue model is based on **Per-User (Seat)** pricing across three distinct tiers. This creates a natural "Expansion" lever as customers grow.
+
+| Tier | Price (Per Seat/mo) | Seat Limit | Target Segment |
+| :--- | :--- | :--- | :--- |
+| **Starter** | $12.00 | 10 | Early-stage teams & individuals |
+| **Growth** | $25.00 | 50 | Rapidly scaling mid-market teams |
+| **Enterprise** | $60.00 | 500+ | Large organizations with complex needs |
+
+*   **Trial Period:** 14-day free trial on the Starter/Growth plans.
+*   **Expansion Trigger:** Accounts exceeding 85% of their seat limit are automatically flagged for an Upsell outreach.
+
+### 2. Sales Motion: Product-Led Sales (PLS)
+Instead of a traditional "cold" sales approach, this engine powers a **Product-Led Sales** motion. It uses product telemetry to prioritize human effort where it has the highest ROI.
+
+*   **PQL Scoring (Intent):**
+    *   **🔥 HOT:** User activated "Git Integration" AND performed >50 product events.
+    *   **⚡ WARM:** User started a "Sprint" AND performed >10 product events.
+    *   **🔘 COLD:** Signed up but hasn't reached key activation milestones.
+*   **GTM Priority Matrix (Intent x Fit):**
+    The engine combines **Product Intent** (from usage) with **ICP Fit** (from HubSpot company data like industry/size) to generate a Priority Score:
+    *   **MUST WIN:** High Fit + High Intent (Immediate Sales Outreach).
+    *   **NURTURE:** High Fit + Low Intent (Automated Marketing Emails).
+    *   **RECOVERY:** High Fit + Declining Usage (Customer Success Intervention).
+
+---
+
 ## 🛠️ Technical Context (The "How")
 
 This project implements the bleeding-edge **Modern Data Stack (MDS)** architecture, optimizing for compute efficiency, speed, and cloud-native deployment.
