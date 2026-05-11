@@ -11,9 +11,9 @@ The dbt documentation consists of static HTML and JSON files. You have two main 
 ### Option A: Single-File HTML (Recommended for Sharing)
 Generating a single HTML file is the easiest way to share the full documentation via email or Slack without needing a server.
 
-1.  Navigate to your dbt project:
+1.  Navigate to your dbt project (root directory):
     ```bash
-    cd revops_pipeline/revops_project
+    cd b2b-saas-revops
     ```
 2.  Install the `dbt-docs-to-single-file` tool:
     ```bash

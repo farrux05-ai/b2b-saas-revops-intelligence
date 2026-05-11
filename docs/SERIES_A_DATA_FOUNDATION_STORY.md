@@ -1,7 +1,7 @@
 # The Series A Data Chaos: Breaking Down SaaS Data Silos
 
-## Background: Meet FlowSync
-**FlowSync** is a rapidly growing B2B workflow automation SaaS platform. 
+## Background: Meet StackFlow AI
+**StackFlow AI** is a rapidly growing B2B workflow automation SaaS platform. 
 After successfully raising a $10M Series A round, the company is experiencing hyper-growth: headcount has grown from 15 to 60+, and Annual Recurring Revenue (ARR) has crossed the $3M mark. 
 
 However, this rapid growth has introduced a new, critical bottleneck: **Data Silos**.
