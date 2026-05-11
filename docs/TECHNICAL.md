@@ -107,7 +107,6 @@ dbt automatically:
 |------|-----------|------------|
 | **Evidence.dev** | Code-first, Git-native, beautiful defaults | Newer tool, smaller community |
 | **Tableau** | Enterprise features, drag-and-drop | Expensive ($70/user/mo), not code-first |
-| **Metabase** | Free, easy setup | Limited customization, manual SQL |
 | **Streamlit** | Python-native, infinite flexibility | State management needs care |
 
 **Why Streamlit won:**
@@ -121,11 +120,11 @@ dbt automatically:
 import streamlit as st
 import duckdb
 
-# Database connection
-conn = duckdb.connect('duckdb/revops.duckdb', read_only=True)
+# Database connection (MotherDuck or Local)
+conn = duckdb.connect('duckdb/revops_intelligence.duckdb', read_only=True)
 
 # Query
-data = conn.execute("SELECT month, SUM(mrr) FROM fct_revenue GROUP BY 1").df()
+data = conn.execute("SELECT month, SUM(mrr) FROM main_marts.fct_mrr_waterfall GROUP BY 1").df()
 
 # Viz
 st.line_chart(data, x='month', y='mrr')
@@ -209,7 +208,7 @@ LEFT JOIN tickets_agg t USING (account_id)
 
 Result: One row per account, metrics aggregated.
 
-**Implementation:** This pattern is in `models/intermediate/int_accounts.sql`
+**Implementation:** This pattern is in `models/intermediate/2_domains/int_finance_aggregated.sql`
 
 ---
 
@@ -254,55 +253,34 @@ WHERE deleted_at IS NULL                            -- Soft delete filter
 
 ---
 
-**Layer 2: Intermediate (Views)**
+**Layer 2: Intermediate (Views/Tables)**
 
-Purpose: Join sources, apply business logic
+Purpose: Join sources, apply **Identity Resolution** (Stitching), and business logic.
+
+**Sub-layers:**
+1.  **`1_identity`**: Stitching HubSpot IDs to internal User/Workspace IDs.
+2.  **`2_domains`**: Aggregating domain-specific metrics (Finance, Support, Product).
+3.  **`3_integration`**: Final combined views ready for Marts.
 
 {% raw %}
 ```sql
--- models/intermediate/int_accounts.sql
+-- models/intermediate/1_identity/int_users_joined.sql
 {{ config(materialized='view') }}
 
-WITH accounts AS (
-  SELECT * FROM {{ ref('stg_accounts') }}
-),
-subscriptions AS (
-  SELECT * FROM {{ ref('stg_subscriptions') }}
-),
--- Aggregate 1:N relationships
-tickets_agg AS (
-  SELECT account_id,
-         COUNT(*) AS open_tickets
-  FROM {{ ref('stg_tickets') }}
-  WHERE status IN ('open', 'pending')
-  GROUP BY account_id
-),
-usage_agg AS (
-  SELECT account_id,
-         MAX(event_timestamp) AS last_active_at
-  FROM {{ ref('stg_product_events') }}
-  GROUP BY account_id
-)
-
 SELECT 
-  a.account_id,
-  a.account_name,
-  s.mrr,
-  s.subscription_status,
-  s.is_past_due,
-  t.open_tickets,
-  u.last_active_at,
-  DATEDIFF('day', u.last_active_at, CURRENT_DATE) AS days_since_active
-FROM accounts a
-LEFT JOIN subscriptions s USING (account_id)
-LEFT JOIN tickets_agg t USING (account_id)
-LEFT JOIN usage_agg u USING (account_id)
+  u.user_id,
+  u.email,
+  h.hubspot_contact_id,
+  COALESCE(u.workspace_id, h.hubspot_company_id) as unified_account_id
+FROM {{ ref('stg_internal__users') }} u
+LEFT JOIN {{ ref('stg_hubspot__contacts') }} h ON u.email = h.email
 ```
 {% endraw %}
 
 **Why keep this as a view?**
-- Marts reference `{{ ref('int_accounts') }}` - if int is a table, marts rebuild is slow
-- Views let marts always pull fresh aggregations
+- Identity resolution logic changes often as we add more sources (e.g., Zendesk).
+- Views allow us to iterate on stitching logic without waiting for massive table rebuilds.
+- Marts always pull fresh aggregations
 
 ---
 
@@ -561,7 +539,7 @@ In B2B SaaS, data latency impacts business decisions differently depending on th
 Most raw tables have a global rule: warn after 24 hours, error after 48 hours. This handles typical daily batch syncs where a one-day delay is acceptable, but a two-day delay indicates a systemic pipeline failure.
 
 **2. Product Events (2h Warn)**
-Mixpanel product events (`product_events`) have a strict 2-hour warning threshold. Since product usage data is streaming, a 2-hour gap indicates that the ingestion pipeline is stuck. This must be alerted immediately before the delay cascades into downstream aggregations.
+Internal DB product events (`internal_events`) have a strict 2-hour warning threshold. Since product usage data is streaming (ingested via dlt), a 2-hour gap indicates that the ingestion pipeline is stuck. This must be alerted immediately before the delay cascades into downstream aggregations.
 
 **3. CRM & Marketing (6h Warn)**
 HubSpot entities like `leads` and `accounts` have a 6-hour warning threshold. Sales representatives rely on fast lead distribution algorithms. If leads are not surfacing in the warehouse for 6 hours, sales outreach SLAs will be breached.
@@ -696,19 +674,28 @@ columns:
 
 ---
 
-### Pitfall 5: dbt source freshness with DuckDB-Postgres scan
+### Pitfall 5: dlt Schema Evolution vs dbt
 
-**Error:**
-```
-Runtime Error in source activities (models/sources.yml)
-Binder Error: Catalog "revops_database" does not exist!
-```
+**Problem:** 
+dlt automatically adds new columns to DuckDB when they appear in HubSpot/Stripe. However, dbt staging models (`stg_*.sql`) use explicit column selections.
 
-**Cause:** The architecture uses a custom `postgres_source()` macro (which wraps DuckDB's `postgres_scan()`) to read data directly from Postgres during `dbt run`. However, `dbt source freshness` bypasses custom macros and tries to run a generic `SELECT MAX(_loaded_at)` natively against the catalog defined in `sources.yml`. Because the Postgres database isn't fully `ATTACH`ed to DuckDB internally (it's only read ad-hoc via the macro), DuckDB throws a Catalog error.
+**Effect:**
+A new field added in the source tool appears in the raw data but is **invisible** to the Marts until an engineer manually adds it to the dbt staging model.
 
 **Solution:**
-- **Option A (Skip):** Usually in this hybrid OLAP setup, data ingestion pipelines (like Fivetran/Airbyte) have their own freshness monitoring. You can safely skip running `dbt source freshness` and let `dbt run` proceed smoothly.
-- **Option B (Architectural Shift):** If dbt-level freshness checks are absolutely critical, you must refactor the architecture. Remove `postgres_scan()` macros and instead mount the Postgres database explicitly using the `attach:` configuration parameter in `profiles.yml` (available in dbt-duckdb 1.8+).
+- Use dbt's `{{ dbt_utils.get_filtered_columns_in_relation() }}` for critical source tables if you want full automation.
+- **Recommended:** Keep explicit selections in staging for data governance, but use dbt `source` testing to alert when schema changes are detected.
+
+---
+
+### Pitfall 6: DuckDB File Locking with Dagster
+
+**Problem:**
+When Dagster runs multiple assets in parallel, it might try to open the DuckDB file multiple times.
+
+**Solution:**
+- Configure Dagster to use a **single-threaded executor** for the dbt assets.
+- In `dashboard.py`, always use `read_only=True` to prevent blocking the pipeline runs.
 
 ---
 
