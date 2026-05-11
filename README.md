@@ -86,6 +86,25 @@ Instead of a traditional "cold" sales approach, this engine powers a **Product-L
 
 ---
 
+## 🖼️ Visual Pipeline & Dashboards
+
+### 1. Orchestration Layer (Dagster)
+The entire data lifecycle is orchestrated using **Dagster**. This asset-based approach ensures data lineage and observability across the entire stack.
+
+![Dagster Asset Graph](screenshots/dagster_pipeline.png)
+
+### 2. Business Intelligence (Lightdash)
+We use **Lightdash** as our primary BI tool. It connects directly to our dbt project, allowing us to define metrics in code and visualize them in real-time.
+
+![Lightdash Dashboard](screenshots/lightdash_dashboard.png)
+
+### 3. Operational Analytics (Reverse ETL)
+Closing the loop by pushing health scores and PQL signals back into **HubSpot** via a custom Reverse ETL pipeline.
+
+![Reverse ETL Sync](screenshots/reverse_etl_sync.png)
+
+---
+
 ## 🛠️ Technical Context (The "How")
 
 > [!TIP]

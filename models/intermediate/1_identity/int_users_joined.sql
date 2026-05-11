@@ -40,11 +40,10 @@ hubspot_contacts as (
         first_name,
         last_name,
         job_title,
-        -- FIX #2: HubSpot Deduplication — Fan-out xavfini oldini olish.
-        -- Bitta email HubSpot da 2+ marta bo'lsa (retargeting, test record),
-        -- JOIN natijasida duplicate rows paydo bo'lib, downstream
-        -- SUM(mrr) ikki baravar chiqishi mumkin edi.
-        -- updated_at DESC: eng so'nggi, eng ishonchli yozuvni olamiz.
+        -- FIX #2: HubSpot Deduplication — Prevent fan-out risks.
+        -- If an email exists 2+ times in HubSpot (e.g., test records, retargeting duplicates),
+        -- a direct JOIN would cause duplicate rows, leading to inflated downstream metrics (e.g., doubling SUM(mrr)).
+        -- We use row_number() with updated_at DESC to pick the most recent and reliable record.
         row_number() over(
             partition by lower(email)
             order by updated_at desc nulls last
@@ -110,7 +109,7 @@ user_account_stitching as (
     from internal_users u
     
     -- CRM STITCHING: Link to human attributes via normalized email
-    -- FIX #2 (davomi): rn = 1 → faqat dedup qilingan yozuv ulanadi
+    -- FIX #2 (continued): Join only the primary deduplicated contact record
     left join hubspot_contacts h
         on u.normalized_email = h.normalized_email
         and h.rn = 1

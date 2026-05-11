@@ -69,10 +69,10 @@ final as (
         internal_workspace_id,
         stripe_customer_id,
         workspace_name,
-        -- FIX #1: account_domain alias qo'shildi.
-        -- int_users_joined dagi L2A fuzzy join:
+        -- FIX #1: Added account_domain alias.
+        -- Required for the L2A (Lead-to-Account) fuzzy join in int_users_joined:
         --   s_domain.account_domain = u.email_domain
-        -- bu column bo'lmasa, join doim NULL qaytargan.
+        -- Without this column, the join would always return NULL.
         lower(domain)                                   as account_domain,
         domain,
         industry
