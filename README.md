@@ -1,5 +1,8 @@
 # 🚀 B2B SaaS RevOps Data Intelligence Engine
 
+> [!IMPORTANT]
+> **[View Live Data Documentation & Lineage Graph](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/)**
+
 ![dbt](https://img.shields.io/badge/dbt-FF694B?style=for-the-badge&logo=dbt&logoColor=white)
 ![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?style=for-the-badge&logo=duckdb&logoColor=black)
 ![MotherDuck](https://img.shields.io/badge/MotherDuck-FFD966?style=for-the-badge&logo=duckdb&logoColor=black)
