@@ -18,21 +18,36 @@ This document explains the **why** behind every architectural decision, with imp
 
 ## Stack Rationale
 
-### Why DuckDB over PostgreSQL/Snowflake?
+### 🦆 The "Hybrid" Choice: DuckDB + MotherDuck
 
-**Decision:** Use DuckDB for local storage
+**Decision:** Run heavy transformations on **Local DuckDB** and persist analytics to **MotherDuck (Cloud)**.
 
 **Reasoning:**
-- **Portability** - Single file (`revops.duckdb`) can be version-controlled (gitignored), backed up, shared
-- **Zero ops** - No server setup, no connection pooling, no authentication management
-- **Fast OLAP** - Columnar storage, vectorized execution → 10-100x faster than Postgres for aggregations
-- **Cost** - Free, no cloud data warehouse bills
+1.  **Compute Separation:** All the "heavy lifting" (running dbt build) happens on your local machine (using local CPU/RAM). This costs **$0** in cloud compute bills.
+2.  **Persistence & BI:** Once models are built locally, the final Marts are synced to **MotherDuck**. This allows **Lightdash** and other cloud tools to query the data without needing a local file connection.
+3.  **Hybrid Execution:** If you have a massive dataset in the cloud and a small one locally, you can join them seamlessly using MotherDuck's `ATTACH` mechanism.
 
-**Trade-off:** 
-- Limited to single-writer (dbt → Streamlit must coordinate)
-- No native replication (solved with file backups)
+**Cost Analysis:**
+*   **Infrastructure Cost:** $0/mo. (Using Free tiers of MotherDuck, Lightdash Cloud, and local compute).
+*   **Alternative (Snowflake/BigQuery):** Starting at $200-$500/mo for a similar small-scale setup due to storage and minimal compute charges.
 
-**When to migrate:** When concurrent users >5 or data >100GB. Migration path: DuckDB → MotherDuck (cloud DuckDB) or Snowflake
+**Scalability & Limits:**
+*   **How much can it handle?** DuckDB can easily process **100M+ rows** on a standard laptop. 
+*   **When to migrate?** This stack is sufficient for a SaaS startup from Seed to Series B (approx. $1M - $20M ARR). You only need to migrate to Snowflake if you have **concurrent writing** needs from 10+ different engineers or your raw data exceeds **1TB**.
+
+---
+
+### 🛠️ Tool-by-Tool Explanation
+
+| Tool | Role | Why this tool? |
+| :--- | :--- | :--- |
+| **dlt (data load tool)** | **Ingestion** | Unlike Fivetran ($$$), dlt is open-source and Python-native. It handles **Schema Evolution** (if HubSpot adds a column, dlt adds it to DuckDB automatically). |
+| **dbt** | **Transformation** | The industry standard for SQL modularity. It turns "spaghetti SQL" into a clean, tested, and documented DAG. |
+| **DuckDB** | **Storage/Compute** | The "SQLite for Analytics". It's incredibly fast for OLAP tasks and requires zero server management. |
+| **MotherDuck** | **Cloud Warehouse** | Provides a serverless cloud home for DuckDB. It solves the "sharing" problem of local files. |
+| **Dagster** | **Orchestration** | Unlike Airflow (task-based), Dagster is **Asset-based**. It tracks the *data* itself, not just the *scripts*. |
+| **Lightdash** | **Business Intelligence** | Lives inside the dbt project. It uses your dbt `YAML` files as the source of truth for metrics. |
+| **Reverse ETL (Python/dlt)** | **Activation** | Closes the loop by pushing data back into HubSpot. It ensures the "Data Warehouse" isn't a dead-end. |
 
 ---
 

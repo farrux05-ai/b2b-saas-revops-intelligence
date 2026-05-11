@@ -37,6 +37,21 @@ This project moves beyond passive reporting by delivering automated, actionable 
 
 ---
 
+## 📦 The Product: StackFlow AI
+
+To understand the data, we must understand the product. This engine simulates **StackFlow AI**, an enterprise-grade **Engineering Management Platform** designed for high-growth software teams.
+
+### Core Product Features:
+*   **AI Prioritization:** Automatically ranks engineering tasks based on business impact.
+*   **Git-Native Workflow:** Deep integration with GitHub/GitLab to track code velocity.
+*   **Sprint Orchestration:** Automated sprint planning and retrospective tools.
+*   **Team Capacity Planning:** Real-time visibility into engineering bandwidth.
+
+### The "Aha! Moment" (Activation):
+The product's value is fully realized when a team **connects their Git provider** and **starts their first AI-assisted Sprint**. These are the critical "Activation Milestones" tracked by our PQL engine.
+
+---
+
 ## 💰 Business Logic & Revenue Model
 
 This project simulates a **B2B SaaS platform** with a **Hybrid GTM (Go-To-Market)** strategy, combining self-serve efficiency with enterprise sales precision.
@@ -69,6 +84,9 @@ Instead of a traditional "cold" sales approach, this engine powers a **Product-L
 ---
 
 ## 🛠️ Technical Context (The "How")
+
+> [!TIP]
+> For a deep-dive into the architectural decisions, cost analysis, and scalability of this stack, see the **[Technical Deep-Dive](docs/TECHNICAL.md)**.
 
 This project implements the bleeding-edge **Modern Data Stack (MDS)** architecture, optimizing for compute efficiency, speed, and cloud-native deployment.
 
