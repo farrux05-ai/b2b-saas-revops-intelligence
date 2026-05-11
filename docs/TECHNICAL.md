@@ -60,10 +60,10 @@ This document explains the **why** behind every architectural decision, with imp
 | Requirement | Raw SQL | dbt |
 |-------------|---------|-----|
 | **Dependency management** | Manual ORDER BY execution | Automatic DAG resolution |
-| **Incrementality** | Custom `WHERE` logic | `{{ is_incremental() }}` macro |
+| **Incrementality** | Custom `WHERE` logic | {% raw %}`{{ is_incremental() }}`{% endraw %} macro |
 | **Testing** | Separate test scripts | Inline `schema.yml` tests |
 | **Documentation** | Separate docs | Auto-generated from YAML |
-| **Modularity** | Copy-paste reuse | `{{ ref('model') }}` |
+| **Modularity** | Copy-paste reuse | {% raw %}`{{ ref('model') }}`{% endraw %} |
 
 **Example:** Adding a new `stg_zendesk_tickets` model
 
@@ -328,6 +328,7 @@ For large fact tables, use incremental strategy:
 
 ```sql
 -- models/marts/fct_product_events.sql
+{% raw %}
 {{ config(
   materialized='incremental',
   unique_key='event_id'
@@ -339,6 +340,7 @@ SELECT
   event_type,
   event_timestamp
 FROM {{ ref('stg_product_events') }}
+{% endraw %}
 
 {% raw %}
 {% if is_incremental() %}
@@ -366,6 +368,7 @@ FROM {{ ref('stg_product_events') }}
 
 DuckDB automatically creates indexes on primary keys, but explicit indexes help:
 
+{% raw %}
 ```sql
 {{ config(
   materialized='table',
@@ -376,6 +379,7 @@ DuckDB automatically creates indexes on primary keys, but explicit indexes help:
   ]
 ) }}
 ```
+{% endraw %}
 
 **Rule of thumb:**
 - Index every foreign key
@@ -429,12 +433,14 @@ COPY raw.hubspot_accounts FROM 'data/accounts.csv'
 10x faster than `INSERT` statements.
 
 **Partition large tables:**
+{% raw %}
 ```sql
 {{ config(
   materialized='table',
   partition_by='date_trunc(\'month\', event_timestamp)'
 ) }}
 ```
+{% endraw %}
 
 Queries with `WHERE event_timestamp` only scan relevant partitions.
 
@@ -605,18 +611,22 @@ Compilation Error: Cycle detected in models:
 ### Pitfall 2: Snapshot Key Choice
 
 **Wrong:**
+{% raw %}
 ```sql
 {{ config(
   unique_key='account_name'  -- ❌ Names can change!
 ) }}
 ```
+{% endraw %}
 
 **Correct:**
+{% raw %}
 ```sql
 {{ config(
   unique_key='account_id'  -- ✅ Immutable ID
 ) }}
 ```
+{% endraw %}
 
 **Why:** If account name changes, dbt thinks it's a new account → duplicates.
 
@@ -683,7 +693,7 @@ dlt automatically adds new columns to DuckDB when they appear in HubSpot/Stripe.
 A new field added in the source tool appears in the raw data but is **invisible** to the Marts until an engineer manually adds it to the dbt staging model.
 
 **Solution:**
-- Use dbt's `{{ dbt_utils.get_filtered_columns_in_relation() }}` for critical source tables if you want full automation.
+- Use dbt's {% raw %}`{{ dbt_utils.get_filtered_columns_in_relation() }}`{% endraw %} for critical source tables if you want full automation.
 - **Recommended:** Keep explicit selections in staging for data governance, but use dbt `source` testing to alert when schema changes are detected.
 
 ---
