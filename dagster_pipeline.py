@@ -24,11 +24,7 @@ def revops_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     # 1. Run source freshness checks first. If stale, this will raise an error and halt the pipeline.
     yield from dbt.cli(["source", "freshness"], context=context).stream()
 
-    # 2. Capture SCD Type 2 snapshots BEFORE building models.
-    #    Snapshots must run on raw source data, not on derived models.
-    yield from dbt.cli(["snapshot"], context=context).stream()
-
-    # 3. Build the models if freshness passes
+    # 2. Build the models (includes seeds, snapshots, models, and tests) if freshness passes
     yield from dbt.cli(["build"], context=context).stream()
 
 @asset(group_name="sync", deps=[revops_dbt_assets])
