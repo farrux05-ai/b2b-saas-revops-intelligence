@@ -1,0 +1,125 @@
+version: 2
+
+# =============================================================================
+# SNAPSHOTS: SCD Type 2 (Slowly Changing Dimensions)
+# dbt v1.9+ YAML format (SQL fayllar shart emas)
+#
+# Maqsad: Manbadagi kritik qiymatlar o'zgarganda tarixni saqlash.
+# Strategiya: `check` — faqat belgilangan ustunlar o'zgarganda yangi
+#   satr ochadi. Bu `timestamp` strategiyasidan xavfsizroq.
+#
+# dbt o'zi qo'shadigan ustunlar (har bir snapshot jadvalida):
+#   dbt_scd_id      → har bir tarixiy satrning surrogate key
+#   dbt_updated_at  → bu satr qachon o'zgargani (dbt run vaqti)
+#   dbt_valid_from  → bu satr qachondan boshlab amal qilgan
+#   dbt_valid_to    → bu satr qachonga qadar (NULL = hozirgi holat)
+#
+# Relation sintaksis: source('source_name', 'table_name')
+#   — qo'shtirnoq yo Jinja bloki KERAK EMAS (dbt 1.9+ da sof string)
+# =============================================================================
+
+snapshots:
+
+  # ─── 1. Stripe Subscriptions ─────────────────────────────────────────────
+  # Nima uchun KRITIK:
+  #   - Plan upgrade/downgrade tarixini saqlash (cohort MRR analizi)
+  #   - "Qachon past_due ga tushgan?" → Churn prediction signali
+  #   - "Cancel flag qachon qo'yilgan?" → CS early warning
+  #
+  # Downstream foydalanish:
+  #   -- Hozirgi holat:
+  #   SELECT * FROM snapshots.snap_stripe_subscriptions WHERE dbt_valid_to IS NULL
+  #   -- Tarixiy plan o'zgarishlar (kim, qachon, qaysi plandan qaysi planga):
+  #   SELECT id, plan_id, status, dbt_valid_from, dbt_valid_to
+  #   FROM snapshots.snap_stripe_subscriptions ORDER BY id, dbt_valid_from
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: snap_stripe_subscriptions
+    relation: source('stripe', 'subscriptions')
+    description: >
+      SCD Type 2 snapshot of Stripe subscriptions.
+      Tracks plan migrations, status changes (active → past_due → canceled),
+      and cancel-at-period-end flags over time.
+    config:
+      target_schema: snapshots
+      strategy: check
+      unique_key: id
+      check_cols:
+        - status
+        - plan_id
+        - unit_amount
+        - quantity
+        - cancel_at_period_end
+    columns:
+      - name: dbt_valid_from
+        description: "Timestamp when this version of the row became active."
+      - name: dbt_valid_to
+        description: "Timestamp when this version was superseded. NULL means it's the current record."
+
+  # ─── 2. HubSpot Deals ────────────────────────────────────────────────────
+  # Nima uchun KRITIK:
+  #   - Deal stage regression: "Closedwon → Closedlost" o'tishlarni kuzatish
+  #   - Sales velocity: Har bir stage'da qancha vaqt o'tilgan?
+  #   - Forecast accuracy: Amount qanday o'zgardi? (discount berildimi?)
+  #
+  # Downstream foydalanish:
+  #   -- Har bir stage'da necha kun bo'lgan:
+  #   SELECT hs_object_id, dealstage, dbt_valid_from, dbt_valid_to,
+  #          datediff('day', dbt_valid_from, coalesce(dbt_valid_to, current_timestamp))
+  #          AS days_in_stage
+  #   FROM snapshots.snap_hubspot_deals ORDER BY hs_object_id, dbt_valid_from
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: snap_hubspot_deals
+    relation: source('hubspot', 'deals')
+    description: >
+      SCD Type 2 snapshot of HubSpot deals.
+      Tracks stage progressions and regressions, deal amount changes,
+      and close date revisions for sales velocity and pipeline integrity analysis.
+    config:
+      target_schema: snapshots
+      strategy: check
+      unique_key: hs_object_id
+      check_cols:
+        - dealstage
+        - amount
+        - closedate
+        - hs_deal_stage_probability
+    columns:
+      - name: dbt_valid_from
+        description: "Timestamp when this deal stage/amount version became active."
+      - name: dbt_valid_to
+        description: "Timestamp when this version was superseded. NULL means current record."
+
+  # ─── 3. HubSpot Companies (Lifecycle Stage) ──────────────────────────────
+  # Nima uchun KRITIK:
+  #   - "Lead → MQL → SQL → Customer" — Har bir o'tish qachon bo'ldi?
+  #   - Conversion time analitikasi (Lead to Customer necha kun?)
+  #   - Funnel attribution: "Qaysi kampaniya MQL ga aylantirdi?" — tarixiy holat kerak
+  #
+  # ESLATMA: industry, country QOSHILMADI — ular juda kam o'zgaradi,
+  #   snapshot storage uchun value bermaydi.
+  #
+  # Downstream foydalanish:
+  #   -- Lifecycle stage o'tish tarixini ko'rish:
+  #   SELECT hs_object_id, lifecyclestage, dbt_valid_from, dbt_valid_to,
+  #          datediff('day', dbt_valid_from, coalesce(dbt_valid_to, current_timestamp))
+  #          AS days_in_stage
+  #   FROM snapshots.snap_hubspot_companies ORDER BY hs_object_id, dbt_valid_from
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: snap_hubspot_companies
+    relation: source('hubspot', 'companies')
+    description: >
+      SCD Type 2 snapshot of HubSpot company lifecycle stages.
+      Tracks Lead → MQL → SQL → Customer progressions with timestamps
+      to enable funnel velocity and time-to-convert analysis.
+    config:
+      target_schema: snapshots
+      strategy: check
+      unique_key: hs_object_id
+      check_cols:
+        - lifecyclestage
+        - hs_lead_status
+    columns:
+      - name: dbt_valid_from
+        description: "Timestamp when this lifecycle stage became active."
+      - name: dbt_valid_to
+        description: "Timestamp when this stage was superseded. NULL means current record."
