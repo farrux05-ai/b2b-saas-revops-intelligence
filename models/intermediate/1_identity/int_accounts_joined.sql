@@ -1,4 +1,4 @@
-{{ config(materialized='view') }}
+{{ config(materialized='table') }}
 
 -- =============================================================================
 -- MODEL: int_accounts_joined

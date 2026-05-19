@@ -1,4 +1,4 @@
-{{ config(materialized='view') }}
+{{ config(materialized='table') }}
 
 -- =============================================================================
 -- int_sales_aggregated: CRM Sales Pipeline Metrics per Account

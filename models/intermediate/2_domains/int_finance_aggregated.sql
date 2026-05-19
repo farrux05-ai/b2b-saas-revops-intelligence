@@ -1,4 +1,4 @@
-{{ config(materialized='view') }}
+{{ config(materialized='table') }}
 
 -- =============================================================================
 -- int_finance_aggregated: Billing & Revenue Metrics per Account

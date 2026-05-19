@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 -- =============================================================================
 -- int_support_aggregated: Support Health Metrics per Account
 -- Layer: 2_domains

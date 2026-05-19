@@ -1,4 +1,4 @@
-{{ config(materialized='view') }}
+{{ config(materialized='table') }}
 
 -- =============================================================================
 -- int_subscriptions_enriched: Enriched Subscriptions with MRR

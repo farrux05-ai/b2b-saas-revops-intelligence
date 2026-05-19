@@ -1,4 +1,4 @@
-{{ config(materialized='view') }}
+{{ config(materialized='table') }}
 -- Grain: one row per account
 
 -- =============================================================================

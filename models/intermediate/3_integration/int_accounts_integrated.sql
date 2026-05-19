@@ -1,5 +1,3 @@
-{{ config(materialized='table') }}
-
 -- =============================================================================
 -- int_accounts_integrated: Full Account 360 View
 -- Layer: 3_integration
