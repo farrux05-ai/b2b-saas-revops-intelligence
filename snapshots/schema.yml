@@ -2,34 +2,34 @@ version: 2
 
 # =============================================================================
 # SNAPSHOTS: SCD Type 2 (Slowly Changing Dimensions)
-# dbt v1.9+ YAML format (SQL fayllar shart emas)
+# dbt v1.9+ YAML format (No SQL files required)
 #
-# Maqsad: Manbadagi kritik qiymatlar o'zgarganda tarixni saqlash.
-# Strategiya: `check` — faqat belgilangan ustunlar o'zgarganda yangi
-#   satr ochadi. Bu `timestamp` strategiyasidan xavfsizroq.
+# Goal: Maintain historical tracking when critical source attributes change.
+# Strategy: `check` — opens a new historical record only when specified check columns change.
+#   This is safer and more predictable than the `timestamp` strategy for API integrations.
 #
-# dbt o'zi qo'shadigan ustunlar (har bir snapshot jadvalida):
-#   dbt_scd_id      → har bir tarixiy satrning surrogate key
-#   dbt_updated_at  → bu satr qachon o'zgargani (dbt run vaqti)
-#   dbt_valid_from  → bu satr qachondan boshlab amal qilgan
-#   dbt_valid_to    → bu satr qachonga qadar (NULL = hozirgi holat)
+# Automatically appended dbt columns (included in every snapshot table):
+#   dbt_scd_id      → Surrogate key for each unique historical row version
+#   dbt_updated_at  → Timestamp when the row version was processed (dbt run time)
+#   dbt_valid_from  → Start timestamp when this row version became active
+#   dbt_valid_to    → End timestamp for this row version (NULL indicates active/current state)
 #
-# Relation sintaksis: source('source_name', 'table_name')
-#   — qo'shtirnoq yo Jinja bloki KERAK EMAS (dbt 1.9+ da sof string)
+# Relation Syntax: source('source_name', 'table_name')
+#   — Pure string format required in dbt 1.9+ (No quotes or Jinja delimiters needed)
 # =============================================================================
 
 snapshots:
 
   # ─── 1. Stripe Subscriptions ─────────────────────────────────────────────
-  # Nima uchun KRITIK:
-  #   - Plan upgrade/downgrade tarixini saqlash (cohort MRR analizi)
-  #   - "Qachon past_due ga tushgan?" → Churn prediction signali
-  #   - "Cancel flag qachon qo'yilgan?" → CS early warning
+  # Why it is CRITICAL:
+  #   - Track plan upgrades/downgrades (cohort MRR analysis)
+  #   - "When did status drop to past_due?" → Crucial churn prediction signal
+  #   - "When was the cancel flag set?" → Early warning indicator for CS
   #
-  # Downstream foydalanish:
-  #   -- Hozirgi holat:
+  # Downstream usage examples:
+  #   -- Retrieve current states:
   #   SELECT * FROM snapshots.snap_stripe_subscriptions WHERE dbt_valid_to IS NULL
-  #   -- Tarixiy plan o'zgarishlar (kim, qachon, qaysi plandan qaysi planga):
+  #   -- Track historical plan migrations (who, when, from which plan to which):
   #   SELECT id, plan_id, status, dbt_valid_from, dbt_valid_to
   #   FROM snapshots.snap_stripe_subscriptions ORDER BY id, dbt_valid_from
   # ──────────────────────────────────────────────────────────────────────────
@@ -56,13 +56,13 @@ snapshots:
         description: "Timestamp when this version was superseded. NULL means it's the current record."
 
   # ─── 2. HubSpot Deals ────────────────────────────────────────────────────
-  # Nima uchun KRITIK:
-  #   - Deal stage regression: "Closedwon → Closedlost" o'tishlarni kuzatish
-  #   - Sales velocity: Har bir stage'da qancha vaqt o'tilgan?
-  #   - Forecast accuracy: Amount qanday o'zgardi? (discount berildimi?)
+  # Why it is CRITICAL:
+  #   - Deal stage regressions: Track backward movements like "Closed Won → Closed Lost"
+  #   - Sales velocity: Measure actual time spent in each pipeline stage
+  #   - Forecast accuracy: Monitor changes in Deal Amount (e.g., discounts applied)
   #
-  # Downstream foydalanish:
-  #   -- Har bir stage'da necha kun bo'lgan:
+  # Downstream usage examples:
+  #   -- Days spent in each pipeline stage:
   #   SELECT hs_object_id, dealstage, dbt_valid_from, dbt_valid_to,
   #          datediff('day', dbt_valid_from, coalesce(dbt_valid_to, current_timestamp))
   #          AS days_in_stage
@@ -90,16 +90,16 @@ snapshots:
         description: "Timestamp when this version was superseded. NULL means current record."
 
   # ─── 3. HubSpot Companies (Lifecycle Stage) ──────────────────────────────
-  # Nima uchun KRITIK:
-  #   - "Lead → MQL → SQL → Customer" — Har bir o'tish qachon bo'ldi?
-  #   - Conversion time analitikasi (Lead to Customer necha kun?)
-  #   - Funnel attribution: "Qaysi kampaniya MQL ga aylantirdi?" — tarixiy holat kerak
+  # Why it is CRITICAL:
+  #   - Track timestamps for transitions: "Lead → MQL → SQL → Customer"
+  #   - Conversion time analytics (how many days from Lead to Customer?)
+  #   - Funnel attribution: Map campaigns to the exact historical window when MQL status was hit
   #
-  # ESLATMA: industry, country QOSHILMADI — ular juda kam o'zgaradi,
-  #   snapshot storage uchun value bermaydi.
+  # NOTE: Excluded static fields like industry or country since they rarely change
+  #   and do not provide value for historical snapshots.
   #
-  # Downstream foydalanish:
-  #   -- Lifecycle stage o'tish tarixini ko'rish:
+  # Downstream usage examples:
+  #   -- Lifecycle stage transition history:
   #   SELECT hs_object_id, lifecyclestage, dbt_valid_from, dbt_valid_to,
   #          datediff('day', dbt_valid_from, coalesce(dbt_valid_to, current_timestamp))
   #          AS days_in_stage
