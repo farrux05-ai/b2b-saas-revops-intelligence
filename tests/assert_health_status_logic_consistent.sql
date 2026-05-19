@@ -1,6 +1,6 @@
 -- tests/assert_health_status_logic_consistent.sql
 {{ config(
-    severity = 'warn',
+    severity = 'error',
     store_failures = true
 ) }}
 

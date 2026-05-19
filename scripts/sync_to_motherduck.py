@@ -36,17 +36,19 @@ def sync_to_motherduck():
         raise ValueError("MOTHERDUCK_TOKEN is not set in .env file!")
 
     os.environ["MOTHERDUCK_TOKEN"] = MOTHERDUCK_TOKEN
-
     try:
         print("☁️  Connecting to MotherDuck...")
         # Connecting directly to MotherDuck
         md_con = duckdb.connect(MOTHERDUCK_DB)
     except Exception as e:
         print("\n" + "="*85)
-        print("⚠️  WARNING: MotherDuck connection failed (e.g. trial ended or invalid token).")
+        print("⚠️  WARNING: MotherDuck connection failed.")
         print(f"Error details: {e}")
-        print("Skipping MotherDuck cloud synchronization. Pipeline will continue using local DuckDB.")
         print("="*85 + "\n")
+        if os.getenv("MOTHERDUCK_REQUIRED", "false").lower() == "true":
+            print("❌ MOTHERDUCK_REQUIRED is set to true! Raising connection exception.")
+            raise e
+        print("Skipping MotherDuck cloud synchronization. Pipeline will continue using local DuckDB.")
         return
 
     print(f"🔗 Attaching local database: {LOCAL_DB}")

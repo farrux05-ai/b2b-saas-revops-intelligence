@@ -63,7 +63,7 @@ account_month_spine as (
 ),
 
 -- Step 5: Actual MRR per account per month
--- FIXED: Cross-joins subscriptions with months and checks validity period
+-- FIXED: Joins subscriptions with months on range conditions to avoid CROSS JOIN fan-out
 monthly_mrr as (
     select
         s.account_id,
@@ -77,10 +77,10 @@ monthly_mrr as (
             then s.mrr_amount else 0 end
         )                                               as at_risk_mrr
     from subscriptions_with_mrr s
-    cross join months m
+    join months m
+      on date_trunc('month', s.current_period_start_at)::date <= m.month_date
+     and date_trunc('month', s.current_period_end_at)::date   >= m.month_date
     where s.subscription_status in ('active', 'trialing', 'past_due')
-      and date_trunc('month', s.current_period_start_at)::date <= m.month_date
-      and date_trunc('month', s.current_period_end_at)::date   >= m.month_date
     group by 1, 2
 ),
 
@@ -93,7 +93,7 @@ mrr_history as (
         coalesce(mm.mrr, 0)                             as mrr,
         coalesce(mm.at_risk_mrr, 0)                      as at_risk_mrr,
         coalesce(
-            lag(mm.mrr) over (
+            lag(coalesce(mm.mrr, 0)) over (
                 partition by ams.account_id
                 order by ams.month_date
             ), 0

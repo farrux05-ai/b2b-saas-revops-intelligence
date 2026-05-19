@@ -28,7 +28,7 @@ def revops_warehouse_source():
     def get_con():
         return duckdb.connect(db_path, read_only=True)
 
-    @dlt.resource(name="hubspot_l2a_associations", write_disposition="append")
+    @dlt.resource(name="hubspot_l2a_associations", write_disposition="merge", primary_key="email")
     def l2a_associations():
         """Identify leads that need to be mapped to companies in HubSpot."""
         con = get_con()
@@ -41,23 +41,23 @@ def revops_warehouse_source():
         """
         yield con.execute(query).df().to_dict('records')
 
-    @dlt.resource(name="hubspot_pql_signals", write_disposition="append")
+    @dlt.resource(name="hubspot_pql_signals", write_disposition="merge", primary_key="email")
     def pql_signals():
         """Identify HOT leads that need a PQL tag in HubSpot."""
         con = get_con()
         # For simplicity, we sync all HOT owner PQLs
         # In a real scenario, we'd use a state-based incremental cursor here too
         query = """
-            SELECT u.hubspot_contact_id, u.email, p.pql_tier, p.recommended_action
+            SELECT u.hubspot_contact_id, u.email, p.intent_tier, p.recommended_action
             FROM main_marts.fct_pql_signals p
             JOIN main_identity.int_users_joined u ON p.workspace_id = u.internal_workspace_id
-            WHERE p.pql_tier = '🔥 HOT'
+            WHERE p.intent_tier = 'HOT'
               AND u.hubspot_contact_id IS NOT NULL
               AND u.user_role = 'owner'
         """
         yield con.execute(query).df().to_dict('records')
 
-    @dlt.resource(name="hubspot_account_health", write_disposition="append")
+    @dlt.resource(name="hubspot_account_health", write_disposition="merge", primary_key="hubspot_company_id")
     def account_health(updated_at=dlt.sources.incremental("last_updated_at", initial_value=datetime(1970, 1, 1))):
         """Identify At-Risk accounts to alert CS in HubSpot. Uses incremental loading."""
         con = get_con()
@@ -70,7 +70,7 @@ def revops_warehouse_source():
         """
         yield con.execute(query).df().to_dict('records')
 
-    @dlt.resource(name="zendesk_org_enrichment", write_disposition="append")
+    @dlt.resource(name="zendesk_org_enrichment", write_disposition="merge", primary_key="domain")
     def zendesk_enrichment(updated_at=dlt.sources.incremental("last_updated_at", initial_value=datetime(1970, 1, 1))):
         """Enrich Zendesk Organizations with MRR and Health status. Uses incremental loading."""
         con = get_con()
