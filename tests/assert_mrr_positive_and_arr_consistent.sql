@@ -4,22 +4,23 @@
     store_failures = true
 ) }}
 --
--- Objective: Validate two business rules:
---   1. MRR should never be negative (signals a billing anomaly)
---   2. ARR = MRR × 12 (consistency check)
+-- Objective: Validate two core financial business rules:
+--   1. MRR should never be negative (signals a billing anomaly in Stripe)
+--   2. ARR = MRR × 12 (internal consistency check with $1 tolerance for float rounding)
 --
--- Allows 1 dollar tolerance for ARR due to float rounding.
+-- References: dim_accounts (int_accounts_scored → int_accounts_integrated)
 
-SELECT
+select
     account_id,
+    workspace_name,
     mrr,
     arr,
-    CASE
-        WHEN mrr < 0
-            THEN 'mrr_negative'
-        WHEN ABS(arr - mrr * 12) > 1
-            THEN 'arr_mrr_mismatch'
-    END AS failure_reason
-FROM {{ ref('dim_accounts') }}
-WHERE mrr < 0
-   OR ABS(arr - mrr * 12) > 1
+    case
+        when mrr < 0
+            then 'mrr_negative'
+        when abs(arr - mrr * 12) > 1
+            then 'arr_mrr_mismatch'
+    end as failure_reason
+from {{ ref('dim_accounts') }}
+where mrr < 0
+   or abs(arr - mrr * 12) > 1
