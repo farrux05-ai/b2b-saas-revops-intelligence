@@ -14,11 +14,7 @@
 -- Intended for: Activation funnels, PQL scoring, onboarding optimization.
 -- =============================================================================
 
-with workspaces as (
-    select * from {{ ref('stg_internal__workspaces') }}
-),
-
-usage as (
+with usage as (
     select * from {{ ref('int_usage_aggregated') }}
 ),
 
@@ -34,9 +30,14 @@ accounts as (
         seats_purchased,
         seats_used,
         seat_utilization_pct,
-        latest_subscription_status                      as subscription_status,
-        is_ready_for_upsell
-    from {{ ref('int_accounts_integrated') }}
+        subscription_status,
+        is_ready_for_upsell,
+        seat_limit,
+        workspace_created_at,
+        trial_started_at,
+        trial_ended_at,
+        converted_at
+    from {{ ref('dim_accounts') }}
 ),
 
 -- User activation stats per workspace
@@ -53,7 +54,7 @@ user_stats as (
 final as (
     select
         -- Identity
-        w.workspace_id,
+        a.internal_workspace_id                         as workspace_id,
         a.account_id,
         a.workspace_name,
         a.domain,
@@ -89,25 +90,23 @@ final as (
         u.last_activity_at,
 
         -- Onboarding Timestamps
-        w.created_at                                    as workspace_created_at,
-        w.trial_started_at,
-        w.trial_ended_at,
-        w.converted_at,
+        a.workspace_created_at,
+        a.trial_started_at,
+        a.trial_ended_at,
+        a.converted_at,
 
         -- Conversion Flags
-        w.converted_at is not null                      as is_converted,
+        a.converted_at is not null                      as is_converted,
         case
-            when w.trial_ended_at is not null
-             and w.trial_ended_at < current_timestamp
-             and w.converted_at is null
+            when a.trial_ended_at is not null
+             and a.trial_ended_at < current_timestamp
+             and a.converted_at is null
             then true else false
         end                                             as is_trial_expired_no_convert
 
-    from workspaces w
-    left join accounts a
-        on w.workspace_id = a.internal_workspace_id
+    from accounts a
     left join usage u
-        on w.workspace_id = u.workspace_id
+        on a.internal_workspace_id = u.workspace_id
     left join user_stats us
         on a.account_id = us.account_id
 )

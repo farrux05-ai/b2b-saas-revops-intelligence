@@ -48,6 +48,13 @@ final as (
         s.workspace_name,
         s.domain,
         
+        -- Workspace info
+        w.seat_limit,
+        w.created_at,
+        w.trial_started_at,
+        w.trial_ended_at,
+        w.converted_at,
+        
         -- HubSpot info
         h.industry,
         h.company_name,

@@ -55,7 +55,7 @@ final as (
 
     from users u
     left join tickets_with_resolution t
-        on lower(u.email) = lower(t.requester_email)
+        on u.normalized_email = t.normalized_email
     group by 1
 )
 

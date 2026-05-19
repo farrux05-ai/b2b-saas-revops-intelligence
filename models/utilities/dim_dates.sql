@@ -9,13 +9,11 @@
 -- Grain: one row = one calendar date
 
 with date_spine as (
-    select 
-        range::date as date_day
-    from range(
-        date '2020-01-01',
-        (current_date + interval '2 years')::date,
-        interval '1 day'
-    )
+    {{ dbt_utils.date_spine(
+        datepart="day",
+        start_date="cast('2020-01-01' as date)",
+        end_date="cast((current_date + interval '2 years') as date)"
+    ) }}
 ),
 
 holidays as (

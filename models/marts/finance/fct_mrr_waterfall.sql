@@ -30,23 +30,21 @@ subscriptions_with_mrr as (
         s.current_period_start_at,
         s.current_period_end_at,
         s.subscription_status,
-        case
-            when s.unit_amount > 0
-            then (s.unit_amount * s.quantity) / 100.0
-            else 0
-        end                                             as mrr_amount
-    from {{ ref('stg_stripe__subscriptions') }} s
+        s.mrr_amount
+    from {{ ref('int_subscriptions_enriched') }} s
     join spine sp on s.workspace_id = sp.internal_workspace_id
 ),
 
 -- Step 2: Create a Date Spine (last 2 years)
 months as (
     select
-        date_trunc('month', range)::date                as month_date
-    from range(
-        date_trunc('year', current_timestamp - interval '2 years'),
-        date_trunc('month', current_timestamp + interval '1 month'),
-        interval '1 month'
+        date_month as month_date
+    from (
+        {{ dbt_utils.date_spine(
+            datepart="month",
+            start_date="cast(date_trunc('year', current_date - interval '2 years') as date)",
+            end_date="cast(date_trunc('month', current_date + interval '1 month') as date)"
+        ) }}
     )
 ),
 
@@ -116,6 +114,8 @@ mrr_history as (
 -- Step 7: MRR Waterfall Movement Classification
 final as (
     select
+        -- Surrogate key for PK testing
+        {{ dbt_utils.generate_surrogate_key(['account_id', 'month_date']) }} as waterfall_id,
         account_id,
         workspace_name,
         month_date,

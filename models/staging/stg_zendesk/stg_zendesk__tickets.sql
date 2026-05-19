@@ -9,6 +9,7 @@ renamed as (
         -- ids
         cast(id as varchar)                             as ticket_id,
         cast(requester_email as varchar)                as requester_email,
+        lower(cast(requester_email as varchar))         as normalized_email,
         cast(assignee_id as varchar)                    as assignee_id,
 
         -- attributes

@@ -39,31 +39,33 @@ scoring_base as (
     left join finance f on s.internal_workspace_id = f.workspace_id
 ),
 
+industry_scores as (
+    select * from {{ ref('icp_industry_scores') }}
+),
+
+segment_scores as (
+    select * from {{ ref('icp_segment_scores') }}
+),
+
 scoring as (
     select
-        *,
+        sb.*,
         -- 1. Industry Fit (Technology & Finance are our sweet spots)
-        case
-            when industry in ('SaaS', 'Technology', 'Fintech', 'Software') then 40
-            when industry in ('Ecommerce', 'Healthcare', 'Consulting') then 20
-            else 5
-        end                                             as industry_score,
+        coalesce(ind.industry_score, 5)                 as industry_score,
         
         -- 2. Segment Fit (Enterprise/Mid-Market are priority)
-        case
-            when account_segment = 'Enterprise' then 40
-            when account_segment = 'Mid-Market' then 20
-            else 5
-        end                                             as segment_score,
+        coalesce(seg.segment_score, 5)                  as segment_score,
         
         -- 3. Revenue Fit (Already paying or has high potential)
         case
-            when mrr > 1000 then 20
-            when mrr > 500 then 10
+            when sb.mrr > 1000 then 20
+            when sb.mrr > 500 then 10
             else 0
         end                                             as revenue_score
 
-    from scoring_base
+    from scoring_base sb
+    left join industry_scores ind on sb.industry = ind.industry
+    left join segment_scores seg on sb.account_segment = seg.account_segment
 ),
 
 final as (

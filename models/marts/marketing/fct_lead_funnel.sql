@@ -66,7 +66,7 @@ final as (
         c.updated_at                                    as last_crm_activity_at,
 
         -- Lead Age: how long since this lead entered the funnel
-        date_diff('day', c.created_at, current_timestamp)
+        date_diff('day', cast(c.created_at as date), current_date)
                                                         as lead_age_days
 
     from companies c

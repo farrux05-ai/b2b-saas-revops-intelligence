@@ -17,7 +17,6 @@ renamed as (
         cast(plan_id as varchar)                        as plan_id,
 
         cast(unit_amount as integer)                    as unit_amount,
-        cast(quantity as integer)                       as quantity,
         cast(quantity as integer)                       as seats_purchased,
 
         -- booleans

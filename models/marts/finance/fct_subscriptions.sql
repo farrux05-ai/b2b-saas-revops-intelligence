@@ -15,7 +15,7 @@
 -- =============================================================================
 
 with subscriptions as (
-    select * from {{ ref('stg_stripe__subscriptions') }}
+    select * from {{ ref('int_subscriptions_enriched') }}
 ),
 
 spine as (
@@ -36,19 +36,11 @@ final as (
         s.subscription_status,
         s.plan_id,
 
-        -- Revenue (computed here per thin staging principle)
+        -- Revenue (computed centrally in int_subscriptions_enriched)
         s.unit_amount,
-        s.quantity                                      as seats,
-        case
-            when s.unit_amount > 0
-            then (s.unit_amount * s.quantity) / 100.0
-            else 0
-        end                                             as mrr_amount,
-        case
-            when s.unit_amount > 0
-            then (s.unit_amount * s.quantity) / 100.0 * 12
-            else 0
-        end                                             as arr_amount,
+        s.seats_purchased                               as seats,
+        s.mrr_amount,
+        s.mrr_amount * 12                               as arr_amount,
 
         -- Status Flags
         s.subscription_status = 'active'               as is_active,

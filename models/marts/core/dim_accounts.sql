@@ -32,6 +32,13 @@ final as (
         utm_source,
         utm_campaign,
 
+        -- Workspace Limits & Milestones
+        seat_limit,
+        created_at                                      as workspace_created_at,
+        trial_started_at,
+        trial_ended_at,
+        converted_at,
+
         -- Revenue & Expansion
         mrr,
         active_mrr,

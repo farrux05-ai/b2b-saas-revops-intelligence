@@ -9,8 +9,8 @@
 -- as per best practice: business logic belongs in Intermediate, not Staging.
 -- =============================================================================
 
-with subscriptions as (
-    select * from {{ ref('stg_stripe__subscriptions') }}
+with subscriptions_with_mrr as (
+    select * from {{ ref('int_subscriptions_enriched') }}
 ),
 
 spine as (
@@ -23,25 +23,6 @@ user_counts as (
         count(internal_user_id) as actual_seats_used
     from {{ ref('int_users_joined') }}
     group by 1
-),
-
--- Compute MRR in the domain layer (not staging)
-subscriptions_with_mrr as (
-    select
-        *,
-        -- Refund/credit case guard: unit_amount can be negative in Stripe
-        case
-            when unit_amount > 0
-            then (unit_amount * quantity) / 100.0
-            else 0
-        end                                             as mrr_amount,
-        
-        -- Identify the latest subscription for status/plan extraction
-        row_number() over (
-            partition by workspace_id 
-            order by created_at desc
-        )                                               as recency_rank
-    from subscriptions
 ),
 
 final as (
@@ -60,7 +41,7 @@ final as (
         sum(s.mrr_amount)                               as total_mrr,
 
         -- Actual Seat utilization from internal DB (not purchased quantity)
-        max(coalesce(uc.actual_seats_used, 0))           as seats_used,
+        coalesce(uc.actual_seats_used, 0)               as seats_used,
         sum(s.seats_purchased)                          as seats_purchased,
 
         -- Silent Churn Signal: payment failed but not yet canceled
@@ -85,7 +66,7 @@ final as (
     from subscriptions_with_mrr s
     left join spine sp   on s.workspace_id = sp.internal_workspace_id
     left join user_counts uc on s.workspace_id = uc.workspace_id
-    group by 1, 2, 3
+    group by 1, 2, 3, uc.actual_seats_used
 )
 
 select * from final

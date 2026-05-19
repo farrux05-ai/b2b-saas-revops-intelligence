@@ -62,13 +62,7 @@ account_spine as (
 
 -- 2. DEFENSIVE FILTERING: Define generic domains to prevent false-positive Account matching
 generic_domains as (
-    select 'gmail.com' as domain union all
-    select 'yahoo.com' union all
-    select 'hotmail.com' union all
-    select 'outlook.com' union all
-    select 'icloud.com' union all
-    select 'me.com' union all
-    select 'aol.com'
+    select * from {{ ref('generic_domains') }}
 ),
 
 -- 3. CORE LOGIC: Stitching users, accounts, and CRM data
@@ -77,6 +71,7 @@ user_account_stitching as (
         u.internal_user_id,
         u.internal_workspace_id,
         u.email,
+        u.normalized_email,
         u.user_role,
         u.created_at,
         u.activated_at,
