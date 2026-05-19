@@ -6,8 +6,17 @@
 -- HubSpot Engagements.
 -- =============================================================================
 
+{{ config(
+    materialized='incremental',
+    unique_key='activity_id',
+    incremental_strategy='merge'
+) }}
+
 with engagements as (
     select * from {{ ref('stg_hubspot__engagements') }}
+    {% if is_incremental() %}
+    where created_at > (select max(activity_at) from {{ this }})
+    {% endif %}
 ),
 
 final as (
