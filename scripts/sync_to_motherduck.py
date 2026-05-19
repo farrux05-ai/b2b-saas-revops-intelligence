@@ -37,9 +37,17 @@ def sync_to_motherduck():
 
     os.environ["MOTHERDUCK_TOKEN"] = MOTHERDUCK_TOKEN
 
-    print("☁️  Connecting to MotherDuck...")
-    # Connecting directly to MotherDuck
-    md_con = duckdb.connect(MOTHERDUCK_DB)
+    try:
+        print("☁️  Connecting to MotherDuck...")
+        # Connecting directly to MotherDuck
+        md_con = duckdb.connect(MOTHERDUCK_DB)
+    except Exception as e:
+        print("\n" + "="*85)
+        print("⚠️  WARNING: MotherDuck connection failed (e.g. trial ended or invalid token).")
+        print(f"Error details: {e}")
+        print("Skipping MotherDuck cloud synchronization. Pipeline will continue using local DuckDB.")
+        print("="*85 + "\n")
+        return
 
     print(f"🔗 Attaching local database: {LOCAL_DB}")
     # ATTACH the local database to the MotherDuck connection
