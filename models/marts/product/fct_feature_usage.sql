@@ -6,8 +6,17 @@
 -- workspaces. Helps identify stickiness and upsell opportunities.
 -- =============================================================================
 
+{{ config(
+    materialized='incremental',
+    unique_key='usage_id',
+    incremental_strategy='merge'
+) }}
+
 with events as (
     select * from {{ ref('stg_posthog__events') }}
+    {% if is_incremental() %}
+    where occurred_at > (select max(usage_week) from {{ this }})
+    {% endif %}
 ),
 
 accounts as (
