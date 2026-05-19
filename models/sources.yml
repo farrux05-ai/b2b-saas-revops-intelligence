@@ -73,7 +73,7 @@ sources:
           error_after: {count: 24, period: hour}
         columns:
           - name: id
-            tests: [unique, not_null]
+            tests: [not_null]
           - name: requester_email
             tests: [not_null]
 
