@@ -67,6 +67,10 @@ sources:
     tables:
       - name: tickets
         description: "Support tickets linked to workspaces"
+        loaded_at_field: "updated_at"
+        freshness:
+          warn_after: {count: 12, period: hour}
+          error_after: {count: 24, period: hour}
         columns:
           - name: id
             tests: [unique, not_null]
@@ -78,6 +82,10 @@ sources:
     tables:
       - name: events
         description: "Product analytics events from PostHog"
+        loaded_at_field: "occurred_at"
+        freshness:
+          warn_after: {count: 6, period: hour}
+          error_after: {count: 12, period: hour}
         columns:
           - name: id
             tests: [unique, not_null]

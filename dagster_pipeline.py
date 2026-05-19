@@ -21,6 +21,10 @@ def ingestion_dlt(context: AssetExecutionContext):
 @dbt_assets(manifest=DBT_PROJECT_DIR.joinpath("target", "manifest.json"))
 def revops_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     """Build all dbt models (staging → intermediate → marts)."""
+    # 1. Run source freshness checks first. If stale, this will raise an error and halt the pipeline.
+    yield from dbt.cli(["source", "freshness"], context=context).stream()
+    
+    # 2. Build the models if freshness passes
     yield from dbt.cli(["build"], context=context).stream()
 
 @asset(group_name="sync", deps=[revops_dbt_assets])
