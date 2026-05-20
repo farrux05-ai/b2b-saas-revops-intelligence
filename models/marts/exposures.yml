@@ -19,3 +19,7 @@ exposures:
       - ref('fct_accounts_health')
       - ref('fct_pipeline')
       - ref('fct_product_activation')
+      - ref('fct_retention_cohorts')
+      - ref('fct_trial_conversion')
+      - ref('fct_unit_economics')
+      - ref('fct_subscriptions')

@@ -210,3 +210,183 @@ models:
               label: "Total ARR (Movements)"
               description: "Sum of ARR from the movements table. Use for waterfall charts."
               format: "usd"
+
+  # ─── fct_subscriptions (seat utilization additions) ─────────────────────────
+  # NOTE: seat_utilization_pct, is_upsell_candidate, is_downsell_risk
+  #       were added to fct_subscriptions. Add meta here when used in BI.
+
+  # ─── fct_retention_cohorts ──────────────────────────────────────────────────
+  - name: fct_retention_cohorts
+    description: >
+      Monthly NRR (Net Revenue Retention) and GRR (Gross Revenue Retention)
+      cohort analysis. The #1 investor metric for B2B SaaS companies.
+      NRR > 100% means customers are growing faster than they churn.
+      GRR measures retention before any upsell/expansion (ceiling = 100%).
+    meta:
+      label: "Retention Cohorts"
+      group_label: "Finance"
+    columns:
+      - name: month_date
+        description: "First day of the calendar month."
+        tests: [not_null]
+        meta:
+          dimension:
+            label: "Month"
+            type: date
+
+      - name: nrr_pct
+        description: "Net Revenue Retention %. >100% means expansion > churn. Best-in-class SaaS = 120%+."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            avg_nrr:
+              type: average
+              label: "Avg NRR (%)"
+              description: "Average Net Revenue Retention over selected period."
+              round: 1
+
+      - name: grr_pct
+        description: "Gross Revenue Retention %. Excludes expansion. Healthy SaaS > 85%."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            avg_grr:
+              type: average
+              label: "Avg GRR (%)"
+              round: 1
+
+      - name: monthly_churn_rate_pct
+        description: "Churned MRR / Starting MRR for the month."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            avg_churn_rate:
+              type: average
+              label: "Avg Monthly Churn Rate (%)"
+              round: 2
+
+      - name: logo_churn_rate_pct
+        description: "Account count churn rate (not revenue-weighted)."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            avg_logo_churn:
+              type: average
+              label: "Avg Logo Churn Rate (%)"
+              round: 2
+
+      - name: churned_mrr
+        description: "MRR lost to churn this month."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            total_churned_mrr:
+              type: sum
+              label: "Total Churned MRR"
+              format: "usd"
+
+      - name: expansion_mrr
+        description: "Additional MRR from existing accounts paying more."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            total_expansion_mrr:
+              type: sum
+              label: "Total Expansion MRR"
+              format: "usd"
+
+      - name: new_mrr
+        description: "MRR from brand-new accounts."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            total_new_mrr:
+              type: sum
+              label: "Total New MRR"
+              format: "usd"
+
+      - name: ending_mrr
+        description: "Total MRR at end of the month."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            total_ending_mrr:
+              type: sum
+              label: "Ending MRR"
+              format: "usd"
+
+  # ─── fct_unit_economics ─────────────────────────────────────────────────────
+  - name: fct_unit_economics
+    description: >
+      LTV (Lifetime Value) estimates per account segment. Uses cohort-based
+      churn rate to estimate LTV = Avg MRR / Monthly Churn Rate.
+      LTV:ARR Ratio > 3x is a healthy SaaS benchmark.
+      NOTE: CAC not included — no marketing spend data available.
+    meta:
+      label: "Unit Economics"
+      group_label: "Finance"
+    columns:
+      - name: account_segment
+        description: "Account revenue segment: Enterprise, Mid-Market, SMB, Trial/Free."
+        meta:
+          dimension:
+            label: "Segment"
+
+      - name: estimated_ltv
+        description: "Estimated LTV in USD (Avg MRR / Monthly Churn Rate)."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            avg_ltv:
+              type: average
+              label: "Avg Estimated LTV"
+              format: "usd"
+
+      - name: ltv_arr_ratio
+        description: "LTV divided by ARR per account. Healthy SaaS target: > 3x."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            avg_ltv_arr_ratio:
+              type: average
+              label: "Avg LTV:ARR Ratio"
+              round: 2
+
+      - name: avg_nrr_pct
+        description: "Portfolio average NRR over last 3 months."
+        meta:
+          dimension:
+            label: "Avg NRR (%)"
+
+      - name: avg_grr_pct
+        description: "Portfolio average GRR over last 3 months."
+        meta:
+          dimension:
+            label: "Avg GRR (%)"
+
+      - name: total_segment_mrr
+        description: "Total active MRR for this segment."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            segment_mrr:
+              type: sum
+              label: "Segment MRR"
+              format: "usd"
+
+      - name: pct_of_total_mrr
+        description: "This segment's share of total portfolio MRR."
+        meta:
+          dimension:
+            label: "MRR Share (%)"

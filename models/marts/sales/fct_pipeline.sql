@@ -66,6 +66,34 @@ final as (
             then date_diff('day', d.created_at, current_timestamp)
         end                                             as days_open,
 
+        -- Sales Velocity: Stale open deal (> 90 days with no close)
+        (
+            d.deal_stage not in ('closedwon', 'closedlost')
+            and date_diff('day', d.created_at, current_timestamp) > 90
+        )                                               as is_stale,
+
+        -- Deal Age Bucket for reporting
+        case
+            when d.deal_stage in ('closedwon', 'closedlost')
+                then 'Closed'
+            when date_diff('day', d.created_at, current_timestamp) <= 30
+                then '0-30 days'
+            when date_diff('day', d.created_at, current_timestamp) <= 60
+                then '31-60 days'
+            when date_diff('day', d.created_at, current_timestamp) <= 90
+                then '61-90 days'
+            else '90+ days (Stale)'
+        end                                             as deal_age_bucket,
+
+        -- Benchmark: Average days to close for WON deals (window across all won deals)
+        avg(
+            case
+                when d.deal_stage = 'closedwon'
+                 and d.closed_at is not null
+                then date_diff('day', d.created_at, d.closed_at)
+            end
+        ) over ()                                       as avg_won_days_to_close,
+
         -- Account Context (from dim_accounts)
         a.mrr                                           as account_current_mrr,
         a.health_status                                 as account_health_status

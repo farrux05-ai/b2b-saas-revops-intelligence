@@ -179,6 +179,39 @@ models:
               label: "Avg Days Open"
               round: 0
 
+      - name: is_stale
+        description: "True if the deal has been open for more than 90 days without closing."
+        meta:
+          dimension:
+            label: "Stale Deal"
+            type: boolean
+          metrics:
+            stale_deals:
+              type: count_distinct
+              sql: "${hubspot_deal_id}"
+              label: "Stale Deals (90d+)"
+              filters:
+                - field: is_stale
+                  operator: "is"
+                  value: "true"
+
+      - name: deal_age_bucket
+        description: "Categorical bucket for deal age: 0-30 days, 31-60 days, 61-90 days, 90+ days (Stale), Closed."
+        meta:
+          dimension:
+            label: "Deal Age"
+
+      - name: avg_won_days_to_close
+        description: "Portfolio-wide average days to close for won deals. Window function — same value on every row."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            benchmark_days_to_close:
+              type: average
+              label: "Benchmark: Avg Days to Close (Won)"
+              round: 0
+
       - name: account_current_mrr
         description: "Current MRR of the account linked to this deal."
         meta:

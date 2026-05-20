@@ -318,10 +318,142 @@ models:
           - accepted_values:
               values: ['High Fit', 'Medium Fit', 'Low Fit']
       - name: gtm_priority
-        description: "Combined Priority Matrix: MUST WIN, ACTIVE, HIGH POTENTIAL, etc."
+        description: "Combined Priority Matrix: MUST WIN, ACTIVE, NOTIFY, HIGH POTENTIAL, NURTURE, MONITOR, INCUBATE."
+        meta:
+          dimension:
+            label: "GTM Priority"
+      - name: gtm_priority_rank
+        description: "Numeric sort key for gtm_priority (1=MUST WIN … 7=INCUBATE). Use for dashboard ordering."
+        meta:
+          dimension:
+            hidden: true
       - name: recommended_action
         description: "Suggested next step based on Fit + Intent."
+        meta:
+          dimension:
+            label: "Recommended Action"
       - name: activation_milestone
         description: "Current level of product adoption."
+        meta:
+          dimension:
+            label: "Activation Milestone"
       - name: is_at_risk_of_not_converting
         description: "High-risk signal: Trial expiring soon with low activity."
+        meta:
+          dimension:
+            label: "At Risk"
+            type: boolean
+
+  # ─── fct_trial_conversion ───────────────────────────────────────────────────
+  - name: fct_trial_conversion
+    description: >
+      Trial-to-Paid conversion funnel. One row per trialing subscription.
+      Tracks conversion status, time-to-convert, and at-risk signals.
+      Primary model for PLG funnel analysis and CS intervention targeting.
+    meta:
+      label: "Trial Conversion"
+      group_label: "Product"
+    columns:
+      - name: subscription_id
+        description: "Stripe subscription ID — primary key."
+        tests: [unique, not_null]
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            total_trials:
+              type: count_distinct
+              label: "Total Trials"
+
+      - name: workspace_id
+        description: "FK to internal workspace."
+        meta:
+          dimension:
+            hidden: true
+
+      - name: workspace_name
+        meta:
+          dimension:
+            label: "Workspace"
+
+      - name: plan_id
+        description: "Stripe plan ID."
+        meta:
+          dimension:
+            label: "Plan"
+
+      - name: subscription_status
+        description: "Current Stripe subscription status."
+        meta:
+          dimension:
+            label: "Status"
+
+      - name: is_converted
+        description: "True if the trial converted to paid (has a successful payment)."
+        meta:
+          dimension:
+            label: "Converted"
+            type: boolean
+          metrics:
+            converted_trials:
+              type: count_distinct
+              sql: "${subscription_id}"
+              label: "Converted Trials"
+              filters:
+                - field: is_converted
+                  operator: "is"
+                  value: "true"
+
+      - name: time_to_convert_days
+        description: "Days from trial start to first successful payment."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            avg_time_to_convert:
+              type: average
+              label: "Avg Time to Convert (Days)"
+              round: 0
+
+      - name: trial_days_remaining
+        description: "Days until trial expires (negative = already expired)."
+        meta:
+          dimension:
+            label: "Days Remaining"
+
+      - name: is_at_risk_of_expiring
+        description: "True if trial expires within 3 days and has not converted."
+        meta:
+          dimension:
+            label: "Expiring Soon"
+            type: boolean
+          metrics:
+            at_risk_trials:
+              type: count_distinct
+              sql: "${subscription_id}"
+              label: "At-Risk Trials"
+              filters:
+                - field: is_at_risk_of_expiring
+                  operator: "is"
+                  value: "true"
+
+      - name: is_expired_unconverted
+        description: "Trial expired without any successful payment."
+        meta:
+          dimension:
+            label: "Expired (No Conversion)"
+            type: boolean
+
+      - name: trial_started_at
+        description: "Trial start timestamp."
+        meta:
+          dimension:
+            label: "Trial Started"
+            type: timestamp
+
+      - name: converted_at
+        description: "First successful payment timestamp."
+        meta:
+          dimension:
+            label: "Converted At"
+            type: timestamp
