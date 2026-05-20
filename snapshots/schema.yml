@@ -43,6 +43,7 @@ snapshots:
       target_schema: snapshots
       strategy: check
       unique_key: id
+      invalidate_hard_deletes: true
       check_cols:
         - status
         - plan_id
@@ -78,6 +79,7 @@ snapshots:
       target_schema: snapshots
       strategy: check
       unique_key: hs_object_id
+      invalidate_hard_deletes: true
       check_cols:
         - dealstage
         - amount
@@ -115,6 +117,7 @@ snapshots:
       target_schema: snapshots
       strategy: check
       unique_key: hs_object_id
+      invalidate_hard_deletes: true
       check_cols:
         - lifecyclestage
         - hs_lead_status
