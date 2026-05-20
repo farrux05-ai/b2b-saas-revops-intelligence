@@ -11,7 +11,7 @@ This document explains the **why** behind every architectural decision, with imp
 3. [dbt Layer Strategy](#dbt-layer-strategy)
 4. [Performance Optimizations](#performance-optimizations)
 5. [Testing Philosophy](#testing-philosophy)
-6. [Streamlit Integration](#streamlit-integration)
+6. [Semantic Layer (Lightdash)](#semantic-layer-lightdash)
 7. [Common Pitfalls & Solutions](#common-pitfalls--solutions)
 
 ---
@@ -41,13 +41,13 @@ This document explains the **why** behind every architectural decision, with imp
 
 | Tool | Role | Why this tool? |
 | :--- | :--- | :--- |
-| **dlt (data load tool)** | **Ingestion** | Unlike Fivetran ($$$), dlt is open-source and Python-native. It handles **Schema Evolution** (if HubSpot adds a column, dlt adds it to DuckDB automatically). |
-| **dbt** | **Transformation** | The industry standard for SQL modularity. It turns "spaghetti SQL" into a clean, tested, and documented DAG. |
-| **DuckDB** | **Storage/Compute** | The "SQLite for Analytics". It's incredibly fast for OLAP tasks and requires zero server management. |
-| **MotherDuck** | **Cloud Warehouse** | Provides a serverless cloud home for DuckDB. It solves the "sharing" problem of local files. |
-| **Dagster** | **Orchestration** | Unlike Airflow (task-based), Dagster is **Asset-based**. It tracks the *data* itself, not just the *scripts*. |
-| **Lightdash** | **Business Intelligence** | Lives inside the dbt project. It uses your dbt `YAML` files as the source of truth for metrics. |
-| **Reverse ETL (Python/dlt)** | **Activation** | Closes the loop by pushing data back into HubSpot. It ensures the "Data Warehouse" isn't a dead-end. |
+| **dlt** | **Ingestion** | Open-source, Python-native. Handles schema evolution automatically — if HubSpot adds a column, dlt adds it to DuckDB without any intervention. |
+| **dbt** | **Transformation** | Industry-standard SQL DAG with built-in testing, documentation, and lineage. Turns fragmented SQL into a maintainable model graph. |
+| **DuckDB** | **Local Compute** | Zero-server OLAP engine. Processes 100M+ rows on a laptop. $0 compute cost during transformation. |
+| **MotherDuck** | **Cloud Warehouse** | Serverless DuckDB-in-the-cloud. Solves the file-sharing problem: Lightdash and other tools can query it without needing the local `.duckdb` file. |
+| **Dagster** | **Orchestration** | Asset-based DAG (vs. Airflow's task-based). Tracks the *data* produced, not just whether a script ran. Provides per-asset lineage and failure context. |
+| **Lightdash** | **Business Intelligence + Semantic Layer** | Reads dbt `meta` YAML directly. Metrics defined once in code appear in Lightdash automatically — no duplicate definitions, no drift. |
+| **dlt (Reverse ETL)** | **Activation** | Closes the loop. Custom `@dlt.destination` pushes PQL signals and health scores back into HubSpot, turning the warehouse into a revenue system. |
 
 ---
 
@@ -451,11 +451,13 @@ Queries with `WHERE event_timestamp` only scan relevant partitions.
 ### Test Pyramid
 
 ```
-      /\       3 custom assertions (business logic)
+      /\       ~15 custom assertions (business logic)
      /  \
-    /____\     20 relationship tests (FKs valid)
+    /____\     ~15 relationship tests (FKs valid)
    /      \
-  /________\   144 unique/not_null tests (data quality)
+  /________\   ~130 unique/not_null/accepted_values tests (data quality)
+
+                TOTAL: 160 tests — run on every dbt build
 ```
 
 **Bottom layer: Schema tests** (80% of tests)
@@ -518,9 +520,17 @@ WHERE ABS(net_change) > {{ var('revenue_waterfall_tolerance', 5) }}
 dbt test --select state:modified+  # Only test changed models
 ```
 
-**In production:**
+**In production (via Dagster):**
 ```bash
-dbt test --store-failures  # Log failures to test_failures schema
+dbt build --store-failures
+```
+
+`--store-failures` writes failing rows to the `main_dbt_test__audit` schema in DuckDB. This enables post-mortem investigation without re-running the full pipeline:
+
+```sql
+-- Inspect failures after a broken run
+SELECT * FROM main_dbt_test__audit.unique_combination_of_columns_fct_mrr_waterfall
+LIMIT 50;
 ```
 
 **Critical path tests** (tagged `critical`):
@@ -530,9 +540,9 @@ tests:
       tags: ['critical']
 ```
 
-Run critical tests first:
+Run critical tests first in CI:
 ```bash
-dbt test --select tag:critical  # Fail fast
+dbt test --select tag:critical  # Fail fast before running the full suite
 ```
 
 ---
@@ -555,38 +565,81 @@ Tables like `dead_letter` (used for capturing ingestion errors) are explicitly s
 
 ---
 
-## Streamlit Integration
+## Semantic Layer (Lightdash)
 
-### Connection Setup
+Lightdash reads the `meta` block inside every `*_schema.yml` file. No separate metric definitions are needed in the BI tool — dbt YAML is the single source of truth.
 
-**File:** `dashboard.py`
+### Metric Definition Pattern
 
-```python
-import streamlit as st
-import duckdb
-
-@st.cache_resource
-def get_connection():
-    return duckdb.connect('duckdb/revops_analytics.duckdb', read_only=True)
-
-conn = get_connection()
+```yaml
+# models/marts/customer_success/cs_schema.yml
+models:
+  - name: fct_accounts_health
+    meta:
+      label: "Account Health"
+      group_label: "Customer Success"
+    columns:
+      - name: account_id
+        meta:
+          metrics:
+            total_cs_accounts:
+              type: count_distinct
+              label: "Total Accounts (CS)"
+      - name: health_status
+        meta:
+          metrics:
+            at_risk_accounts:
+              type: count_distinct
+              sql: "${account_id}"
+              label: "At-Risk Accounts"
+              filters:
+                - field: health_status
+                  operator: "equals"
+                  value: "At Risk"
 ```
 
-**Why cache_resource?**
-- Prevents re-opening the database file on every user interaction or script rerun.
-- Drastically improves performance in multi-user environments.
+### Namespace Convention
 
----
+Metric names must be globally unique across all schema files. Collisions cause Lightdash to silently ignore one of the metrics.
 
-### Deployment (Streamlit Cloud)
+**Rule:** Finance-domain metrics that share a name with core metrics use the `_movements` suffix:
 
-Streamlit dashboards can be hosted easily on Streamlit Cloud:
+| Metric | File | Correct Name |
+|:-------|:-----|:------------|
+| Total ARR on accounts | `core_schema.yml` | `total_arr` |
+| Total ARR from movements fact | `finance_schema.yml` | `total_arr_movements` |
 
-1.  **Push to GitHub**: Ensure `dashboard.py` and `requirements.txt` are at the root or correctly linked.
-2.  **Connect Repo**: Point Streamlit Cloud to your repository.
-3.  **Secrets**: Add secrets for database paths if they are not relative.
+### Refreshing Lightdash After Schema Changes
 
-Every `git push` → auto-rebuild dashboard.
+```bash
+# 1. Verify YAML is valid
+dbt parse
+
+# 2. Check metric count
+dbt ls --resource-type test | wc -l
+
+# 3. Push to GitHub (Lightdash reads from GitHub)
+git push origin main
+
+# 4. In Lightdash UI:
+# Settings → Project → Refresh dbt
+```
+
+### Exposures
+
+`models/marts/exposures.yml` documents which Lightdash dashboard depends on which dbt models. This drives lineage in `dbt docs` and Dagster:
+
+```yaml
+exposures:
+  - name: revops_intelligence_dashboard
+    depends_on:
+      - ref('dim_accounts')
+      - ref('fct_accounts_health')
+      - ref('fct_pql_signals')
+      - ref('fct_pipeline')
+      - ref('fct_mrr_waterfall')
+      - ref('fct_product_activation')
+```
 
 ---
 
@@ -709,11 +762,78 @@ When Dagster runs multiple assets in parallel, it might try to open the DuckDB f
 
 ---
 
+### Pitfall 7: MotherDuck Schema Sync Order (Binder Error)
+
+**Error:**
+```
+Binder Error: Referenced column "linkedin_url" not found in FROM clause
+Candidate bindings: "lastname", "firstname", "email"
+```
+
+**Cause:** `main_staging` was being synced to MotherDuck *before* `raw_data`. When MotherDuck evaluates the staging view (`CREATE OR REPLACE TABLE main_staging.stg_hubspot__contacts AS SELECT * FROM local_db.main_staging.stg_hubspot__contacts`), the underlying raw table in MotherDuck's `raw_data` schema doesn't yet have the `linkedin_url` column — because `raw_data` hasn't been synced yet.
+
+**Fix applied in `sync_to_motherduck.py`:**
+```python
+# Enforce dependency order — raw_data must come before staging views
+SCHEMAS_TO_COPY = [
+    "raw_data",      # 1st: raw source tables (no dependencies)
+    "main_marts",    # 2nd: mart tables (depends on staging via dbt, but materialized as tables)
+    "main_staging",  # 3rd: staging views (reference raw_data columns)
+]
+
+schemas_to_sync = sorted(
+    [s for s in local_schemas if s in SCHEMAS_TO_COPY],
+    key=lambda x: SCHEMAS_TO_COPY.index(x)  # Preserve declared order
+)
+```
+
+---
+
+### Pitfall 8: Lightdash Metric Name Collision
+
+**Symptom:** A metric defined in `finance_schema.yml` silently disappears from Lightdash, or a different model's metric appears instead.
+
+**Cause:** Two schema files define a metric with the same name (e.g., `total_arr` in both `core_schema.yml` on `dim_accounts` and `finance_schema.yml` on `fct_arr_movements`). Lightdash's metric registry is global — the second definition overwrites the first without any error.
+
+**Fix:** Rename the finance metric to `total_arr_movements` to create a unique namespace:
+```yaml
+# finance_schema.yml
+metrics:
+  total_arr_movements:          # ✅ unique name
+    type: sum
+    label: "Total ARR (Movements)"
+```
+
+**Prevention rule:** Before adding a new metric, search all schema files:
+```bash
+grep -r "your_metric_name" models/
+```
+
+---
+
+### Pitfall 9: Reverse ETL Mock Mode Not Triggering
+
+**Symptom:** `401 Unauthorized` errors in `reverse_etl_dlt.py` during local development, even though the `.env` has a placeholder token.
+
+**Cause:** Original mock detection only checked for the literal string `"mock_token"`. A realistic-looking placeholder like `pat-na1-xxxx-xxxx-xxxx-xxxx` was not caught.
+
+**Fix applied in `reverse_etl_dlt.py`:**
+```python
+# Before
+is_mock = HUBSPOT_ACCESS_TOKEN == "mock_token"
+
+# After — catches all placeholder patterns
+is_mock = HUBSPOT_ACCESS_TOKEN == "mock_token" or "xxxx" in HUBSPOT_ACCESS_TOKEN
+```
+
+---
+
 ## Next Steps
 
-- **[Return to README](../README.md)** for quick start guide
-- **[Read Case Study](CASE_STUDY.md)** for business impact story
-- **Explore dbt Docs** - Run `dbt docs serve` to see model lineage
+- **[Return to README](../README.md)** — Quick start and architecture overview
+- **[Read Case Study](CASE_STUDY.md)** — Business impact: $45K ARR saved
+- **[Deployment Runbook](DEPLOYMENT.md)** — MotherDuck, Lightdash, Dagster setup
+- **Explore dbt Docs** — Run `dbt docs serve` to see the full model lineage graph
 
 ---
 
