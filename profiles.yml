@@ -10,3 +10,7 @@ revops_intelligence_engine:
       type: duckdb
       path: 'duckdb/revops_intelligence.duckdb'
       threads: 1
+    ci:
+      type: duckdb
+      path: "{{ env_var('DBT_DB_PATH', 'duckdb/revops_intelligence_ci.duckdb') }}"
+      threads: 4
