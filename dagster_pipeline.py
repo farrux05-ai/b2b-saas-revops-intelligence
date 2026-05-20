@@ -25,7 +25,7 @@ def revops_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     yield from dbt.cli(["source", "freshness"], context=context).stream()
 
     # 2. Build the models (includes seeds, snapshots, models, and tests) if freshness passes
-    yield from dbt.cli(["build"], context=context).stream()
+    yield from dbt.cli(["build", "--store-failures"], context=context).stream()
 
 @asset(group_name="sync", deps=[revops_dbt_assets])
 def motherduck_sync(context: AssetExecutionContext):
@@ -36,7 +36,7 @@ def motherduck_sync(context: AssetExecutionContext):
 
 @asset(group_name="reverse_etl", deps=[motherduck_sync])
 def dlt_reverse_etl(context: AssetExecutionContext):
-    """Unified Reverse ETL pipeline using dlt (HubSpot & Zendesk)."""
+    """Unified Reverse ETL pipeline using dlt (HubSpot)."""
     context.log.info("Starting dlt Reverse ETL pipeline...")
     run_reverse_etl_sync()
     return "dlt_reverse_etl_success"
