@@ -15,7 +15,7 @@
 with events as (
     select * from {{ ref('stg_posthog__events') }}
     {% if is_incremental() %}
-    where occurred_at > (select max(usage_week) from {{ this }})
+    where occurred_at >= (select max(usage_week) - interval '3 days' from {{ this }})
     {% endif %}
 ),
 

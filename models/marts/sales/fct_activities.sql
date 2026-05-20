@@ -15,7 +15,7 @@
 with engagements as (
     select * from {{ ref('stg_hubspot__engagements') }}
     {% if is_incremental() %}
-    where created_at > (select max(activity_at) from {{ this }})
+    where created_at >= (select max(activity_at) - interval '3 days' from {{ this }})
     {% endif %}
 ),
 
