@@ -80,26 +80,40 @@ final as (
     select
         *,
         -- GTM Priority Matrix (Intent x Fit)
+        -- NOTE: No emojis in data values — BI tools sort/filter on clean strings.
+        -- Use gtm_priority_rank for ordered sorting in dashboards.
         case
-            when intent_tier = 'HOT' and icp_tier = 'High Fit' then '🔥 MUST WIN'
-            when intent_tier = 'HOT' and icp_tier = 'Medium Fit' then '⚡ ACTIVE'
-            when intent_tier = 'HOT' and icp_tier = 'Low Fit' then '🟠 NOTIFY'
-            when intent_tier = 'WARM' and icp_tier = 'High Fit' then '🟢 HIGH POTENTIAL'
-            when intent_tier = 'WARM' and icp_tier = 'Medium Fit' then '🔵 NURTURE'
-            when icp_tier = 'Low Fit' then '⚪ MONITOR'
-            else '🔘 INCUBATE'
+            when intent_tier = 'HOT' and icp_tier = 'High Fit'     then 'MUST WIN'
+            when intent_tier = 'HOT' and icp_tier = 'Medium Fit'   then 'ACTIVE'
+            when intent_tier = 'HOT' and icp_tier = 'Low Fit'      then 'NOTIFY'
+            when intent_tier = 'WARM' and icp_tier = 'High Fit'    then 'HIGH POTENTIAL'
+            when intent_tier = 'WARM' and icp_tier = 'Medium Fit'  then 'NURTURE'
+            when icp_tier = 'Low Fit'                               then 'MONITOR'
+            else                                                         'INCUBATE'
         end                                             as gtm_priority,
+
+        -- Numeric rank for deterministic BI sorting (lower = higher priority)
+        case
+            when intent_tier = 'HOT' and icp_tier = 'High Fit'     then 1
+            when intent_tier = 'HOT' and icp_tier = 'Medium Fit'   then 2
+            when intent_tier = 'HOT' and icp_tier = 'Low Fit'      then 3
+            when intent_tier = 'WARM' and icp_tier = 'High Fit'    then 4
+            when intent_tier = 'WARM' and icp_tier = 'Medium Fit'  then 5
+            when icp_tier = 'Low Fit'                               then 6
+            else                                                          7
+        end                                             as gtm_priority_rank,
 
         -- Recommended Action for Sales
         case
-            when intent_tier = 'HOT' and icp_tier = 'High Fit' then 'Immediate Executive Outreach'
-            when intent_tier = 'HOT' then 'Sales Qualification Call'
-            when is_at_risk_of_not_converting and icp_tier != 'Low Fit' then 'High-Priority CS Recovery'
-            when intent_tier = 'WARM' and icp_tier = 'High Fit' then 'Personalized Demo Invite'
-            else 'Automated Nurture Sequence'
+            when intent_tier = 'HOT' and icp_tier = 'High Fit'                  then 'Immediate Executive Outreach'
+            when intent_tier = 'HOT'                                             then 'Sales Qualification Call'
+            when is_at_risk_of_not_converting and icp_tier != 'Low Fit'         then 'High-Priority CS Recovery'
+            when intent_tier = 'WARM' and icp_tier = 'High Fit'                 then 'Personalized Demo Invite'
+            else                                                                      'Automated Nurture Sequence'
         end                                             as recommended_action
 
     from scoring
 )
 
 select * from final
+
