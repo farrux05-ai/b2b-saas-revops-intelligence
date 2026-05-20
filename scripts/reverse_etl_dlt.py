@@ -85,7 +85,7 @@ def revops_warehouse_source():
 def hubspot_api_destination(items: TDataItems, table: TTableSchema) -> None:
     """Robust custom destination for HubSpot with batching and error handling."""
     table_name = table["name"]
-    is_mock = HUBSPOT_ACCESS_TOKEN == "mock_token"
+    is_mock = HUBSPOT_ACCESS_TOKEN == "mock_token" or "xxxx" in HUBSPOT_ACCESS_TOKEN
     
     logger.info(f"🚀 [HubSpot] Syncing {len(items)} records to {table_name} (Mock: {is_mock})")
     
