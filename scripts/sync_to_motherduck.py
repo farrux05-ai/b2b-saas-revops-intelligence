@@ -63,7 +63,10 @@ def sync_to_motherduck():
 
     print(f"📦 Local schemas found: {local_schemas}")
 
-    schemas_to_sync = [s for s in local_schemas if s in SCHEMAS_TO_COPY]
+    schemas_to_sync = sorted(
+        [s for s in local_schemas if s in SCHEMAS_TO_COPY],
+        key=lambda x: SCHEMAS_TO_COPY.index(x)
+    )
     print(f"📤 Syncing schemas: {schemas_to_sync}")
 
     total_tables = 0
