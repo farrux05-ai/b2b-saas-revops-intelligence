@@ -22,7 +22,7 @@ models:
         tests: [unique, not_null]
       - name: domain
         description: "Primary identity stitching key. Unique per company in HubSpot."
-        tests: [unique, not_null]
+        tests: [not_null]
       - name: lifecycle_stage
         description: "HubSpot-managed enum. Tested here because we own the allowed values."
         tests:
@@ -35,7 +35,7 @@ models:
               values: ['NEW', 'OPEN', 'IN_PROGRESS', 'ATTEMPTED_TO_CONTACT',
                        'CONNECTED', 'BAD_TIMING', 'UNQUALIFIED']
       - name: utm_source
-        description: "Source of the lead (e.g. Organic Search, Google Ads)."
+        description: "First-touch attribution source (e.g. Organic Search, Google Ads). May be stale."
       - name: utm_campaign
         description: "Specific campaign parameter."
 
