@@ -95,6 +95,11 @@ models:
           dimension:
             label: "Movement Type"
 
+    tests:
+      # account_id + month_date must be unique — each account has one row per month
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['account_id', 'month_date']
+
   # ─── fct_subscriptions ─────────────────────────────────────────────────────
   - name: fct_subscriptions
     description: >
@@ -146,7 +151,7 @@ models:
       group_label: "Finance"
     columns:
       - name: arr_snapshot_id
-        description: "Surrogate key for the ARR snapshot."
+        description: "Surrogate key for the ARR snapshot (account_id + month_date)."
         tests: [unique, not_null]
         meta:
           dimension:
@@ -159,14 +164,49 @@ models:
           dimension:
             hidden: true
 
-      - name: current_arr
-        description: "Current annualized recurring revenue."
+      - name: month_date
+        description: "First day of the calendar month. Time axis for ARR trend analysis."
+        tests: [not_null]
+        meta:
+          dimension:
+            label: "Month"
+            type: date
+
+      - name: arr_movement_type
+        description: "Movement classification mirroring MRR waterfall: new, expansion, contraction, churn, resurrection, retained."
+        tests:
+          - accepted_values:
+              values: ['new', 'expansion', 'contraction', 'churn', 'resurrection', 'retained']
+        meta:
+          dimension:
+            label: "ARR Movement Type"
+
+      - name: previous_arr
+        description: "ARR from the prior month (previous_month_mrr × 12)."
+        meta:
+          dimension:
+            hidden: true
+
+      - name: arr_amount
+        description: "ARR change from prior month (mrr_change_amount × 12)."
         meta:
           dimension:
             hidden: true
           metrics:
-            total_arr:
+            net_arr_change:
               type: sum
-              label: "Total ARR"
-              description: "Sum of ARR across all accounts."
+              label: "Net ARR Change"
+              description: "Net ARR expansion minus contraction minus churn."
+              format: "usd"
+
+      - name: current_arr
+        description: "Current annualized recurring revenue (mrr × 12)."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            total_arr_movements:
+              type: sum
+              label: "Total ARR (Movements)"
+              description: "Sum of ARR from the movements table. Use for waterfall charts."
               format: "usd"

@@ -98,3 +98,51 @@ models:
           - accepted_values:
               values: ['Healthy', 'Payment Failing', 'Support Critical',
                        'Low Engagement', 'Expansion Target', 'Churned']
+
+  # ---------------------------------------------------------------------------
+  # Layer 2 (extra): Enriched Subscriptions & ICP Scoring
+  # ---------------------------------------------------------------------------
+  - name: int_subscriptions_enriched
+    description: >
+      Stripe subscriptions enriched with MRR via the centralized calculate_mrr macro.
+      One row per subscription with a recency_rank window for extracting the latest
+      plan/status per workspace. DRY source for all marts that need subscription MRR.
+    columns:
+      - name: subscription_id
+        description: "Stripe subscription ID — primary key."
+        tests: [unique, not_null]
+      - name: workspace_id
+        description: "FK to internal workspace. Used to join with product data."
+        tests: [not_null]
+      - name: mrr_amount
+        description: "MRR computed via calculate_mrr macro (unit_amount × seats / 12)."
+        tests: [not_null]
+      - name: recency_rank
+        description: "1 = most recent subscription for this workspace. Used for current plan extraction."
+
+  - name: int_icp_scoring
+    description: >
+      ICP (Ideal Customer Profile) Fit Score per account.
+      Scores accounts by company attributes (industry, employee count, MRR tier)
+      to classify as High Fit / Medium Fit / Low Fit.
+      Used downstream in fct_pql_signals to build the GTM Priority Matrix.
+    columns:
+      - name: account_id
+        description: "Stable surrogate key — joins to dim_accounts."
+        tests: [unique, not_null]
+      - name: company_name
+        description: "HubSpot company name."
+      - name: industry
+        description: "Industry vertical from HubSpot."
+      - name: mrr
+        description: "MRR from int_finance_aggregated used for scoring."
+      - name: account_segment
+        description: "Revenue-based tier computed here: Enterprise / Mid-Market / SMB / Trial/Free."
+        tests:
+          - accepted_values:
+              values: ['Enterprise', 'Mid-Market', 'SMB', 'Trial/Free']
+      - name: icp_tier
+        description: "ICP Fit classification: High Fit / Medium Fit / Low Fit."
+        tests:
+          - accepted_values:
+              values: ['High Fit', 'Medium Fit', 'Low Fit']

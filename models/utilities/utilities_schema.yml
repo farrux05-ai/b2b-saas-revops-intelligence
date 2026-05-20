@@ -7,7 +7,8 @@ models:
       label: "Dates"
     columns:
       - name: date_day
-        description: "The calendar date."
+        description: "The calendar date. Primary key of the date dimension."
+        tests: [unique, not_null]
         meta:
           dimension:
             type: date

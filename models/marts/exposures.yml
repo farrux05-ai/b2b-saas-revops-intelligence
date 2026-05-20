@@ -15,3 +15,7 @@ exposures:
       - ref('fct_mrr_waterfall')
       - ref('dim_users')
       - ref('dim_dates')
+      - ref('fct_pql_signals')
+      - ref('fct_accounts_health')
+      - ref('fct_pipeline')
+      - ref('fct_product_activation')

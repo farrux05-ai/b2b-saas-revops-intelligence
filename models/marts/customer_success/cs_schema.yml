@@ -1,17 +1,306 @@
 version: 2
 
+# =============================================================================
+# SEMANTIC LAYER: Customer Success Domain
+#
+# Churn prevention, health monitoring, and support burden analysis.
+# Lightdash reads dimensions + metrics from this file.
+#
+# Source model: fct_accounts_health (selects from dim_accounts where billed)
+# Audience: CS team — QBRs, churn prevention workflows, escalation routing.
+# =============================================================================
+
 models:
+  # ─── fct_accounts_health ───────────────────────────────────────────────────
   - name: fct_accounts_health
     description: >
-      CS team mart. One row per paying account. Shows health status,
-      all three churn risk signals (payment, intent, engagement), and
-      support burden. Used for CS prioritization and churn prevention workflows.
+      CS team mart. One row per paying account (subscription_status IS NOT NULL).
+      Shows health status, all three churn risk signals (payment, intent,
+      engagement), support burden, and expansion signals.
+      Used for CS prioritization, churn prevention, and QBR prep.
+    meta:
+      label: "Account Health"
+      group_label: "Customer Success"
+
     columns:
+      # ── Identity ──
       - name: account_id
+        description: "Stable surrogate key. FK to dim_accounts."
         tests: [unique, not_null]
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            total_cs_accounts:
+              type: count_distinct
+              label: "Total Accounts (CS)"
+              description: "Count of all paying accounts tracked by CS."
+
+      - name: domain
+        description: "Company website domain (e.g. acme.com)."
+        meta:
+          dimension:
+            label: "Domain"
+
+      - name: workspace_name
+        description: "Internal workspace display name."
+        meta:
+          dimension:
+            label: "Account"
+
+      - name: account_segment
+        description: "Revenue-based tier: Enterprise, Mid-Market, SMB, Trial/Free."
+        tests:
+          - accepted_values:
+              values: ['Enterprise', 'Mid-Market', 'SMB', 'Trial/Free']
+        meta:
+          dimension:
+            label: "Segment"
+
+      - name: current_plan
+        description: "Active pricing plan (starter, growth, enterprise)."
+        meta:
+          dimension:
+            label: "Plan"
+
+      # ── Revenue Exposure ──
+      - name: mrr
+        description: "Monthly Recurring Revenue for this account (excludes past_due)."
+        tests: [not_null]
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            cs_total_mrr:
+              type: sum
+              label: "Total MRR (CS Book)"
+              description: "Total MRR across all accounts managed by CS."
+              format: "usd"
+
+      - name: arr
+        description: "Annualized Recurring Revenue (MRR × 12)."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            cs_total_arr:
+              type: sum
+              label: "Total ARR (CS Book)"
+              format: "usd"
+
+      - name: mrr_at_risk
+        description: "MRR from At-Risk (non-churned) accounts. Churn prevention target."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            total_mrr_at_risk:
+              type: sum
+              label: "MRR at Risk"
+              description: "Total MRR from accounts classified as At Risk."
+              format: "usd"
+
+      # ── Health ──
       - name: health_status
+        description: "Account health classification: Healthy, At Risk, Churned."
         tests:
           - accepted_values:
               values: ['Healthy', 'At Risk', 'Churned']
-      - name: mrr
-        tests: [not_null]
+        meta:
+          dimension:
+            label: "Health Status"
+          metrics:
+            at_risk_accounts:
+              type: count_distinct
+              sql: "${account_id}"
+              label: "At-Risk Accounts"
+              description: "Count of accounts classified as At Risk."
+              filters:
+                - field: health_status
+                  operator: "equals"
+                  value: "At Risk"
+            churned_accounts:
+              type: count_distinct
+              sql: "${account_id}"
+              label: "Churned Accounts"
+              description: "Count of accounts classified as Churned."
+              filters:
+                - field: health_status
+                  operator: "equals"
+                  value: "Churned"
+
+      - name: health_reason
+        description: "Specific reason: Healthy, Payment Failing, Support Critical, Low Engagement, Expansion Target, Churned."
+        meta:
+          dimension:
+            label: "Health Reason"
+
+      - name: subscription_status
+        description: "Current Stripe subscription status (active, trialing, past_due, canceled)."
+        meta:
+          dimension:
+            label: "Subscription Status"
+
+      # ── Churn Risk Signals ──
+      - name: is_payment_failing
+        description: "True when the latest invoice is past_due. Silent churn signal."
+        meta:
+          dimension:
+            label: "Payment Failing"
+            type: boolean
+          metrics:
+            payment_failing_accounts:
+              type: count_distinct
+              sql: "${account_id}"
+              label: "Payment Failing Accounts"
+              filters:
+                - field: is_payment_failing
+                  operator: "is"
+                  value: "true"
+
+      - name: is_churning_soon
+        description: "True when subscription is set to cancel at period end. Intent-to-churn signal."
+        meta:
+          dimension:
+            label: "Churning Soon"
+            type: boolean
+          metrics:
+            churning_soon_accounts:
+              type: count_distinct
+              sql: "${account_id}"
+              label: "Churning Soon Accounts"
+              filters:
+                - field: is_churning_soon
+                  operator: "is"
+                  value: "true"
+
+      - name: is_low_engagement
+        description: "True when last_activity_at is NULL or older than 30 days. Usage-drop churn signal."
+        meta:
+          dimension:
+            label: "Low Engagement"
+            type: boolean
+          metrics:
+            low_engagement_accounts:
+              type: count_distinct
+              sql: "${account_id}"
+              label: "Low Engagement Accounts"
+              filters:
+                - field: is_low_engagement
+                  operator: "is"
+                  value: "true"
+
+      # ── Support Burden ──
+      - name: total_tickets
+        description: "Lifetime support ticket count."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            sum_total_tickets:
+              type: sum
+              label: "Total Support Tickets"
+
+      - name: open_tickets
+        description: "Currently open support tickets."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            sum_open_tickets:
+              type: sum
+              label: "Open Support Tickets"
+
+      - name: high_priority_tickets
+        description: "Open high/urgent priority tickets."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            sum_high_priority_tickets:
+              type: sum
+              label: "High Priority Tickets"
+
+      - name: avg_resolution_hours
+        description: "Average hours to resolve a support ticket for this account."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            avg_resolution_hours_cs:
+              type: average
+              label: "Avg Resolution Time (hrs)"
+              round: 1
+
+      - name: last_ticket_at
+        description: "Date of the most recent support ticket."
+        meta:
+          dimension:
+            label: "Last Ticket Date"
+            type: timestamp
+
+      # ── Product Engagement ──
+      - name: product_events_count
+        description: "Total product telemetry events (from PostHog)."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            sum_product_events:
+              type: sum
+              label: "Total Product Events"
+
+      - name: last_activity_at
+        description: "Timestamp of most recent product event."
+        meta:
+          dimension:
+            label: "Last Active"
+            type: timestamp
+
+      - name: is_pql
+        description: "Product Qualified Lead flag."
+        meta:
+          dimension:
+            label: "Is PQL"
+            type: boolean
+
+      # ── Expansion Signals ──
+      - name: seat_utilization_pct
+        description: "Percentage of seats in use (0.0–1.0). Above 0.9 = upsell ready."
+        meta:
+          dimension:
+            hidden: true
+          metrics:
+            avg_seat_utilization_cs:
+              type: average
+              label: "Avg Seat Utilization"
+              format: "percent"
+
+      - name: seats_used
+        description: "Seats currently in use."
+        meta:
+          dimension:
+            hidden: true
+
+      - name: seats_purchased
+        description: "Total seats purchased under the current plan."
+        meta:
+          dimension:
+            hidden: true
+
+      - name: is_ready_for_upsell
+        description: "True when seat utilization ≥ 90%. Expansion opportunity signal."
+        meta:
+          dimension:
+            label: "Upsell Ready"
+            type: boolean
+          metrics:
+            upsell_ready_cs:
+              type: count_distinct
+              sql: "${account_id}"
+              label: "Upsell-Ready Accounts"
+              description: "CS accounts where seat usage ≥ 90%."
+              filters:
+                - field: is_ready_for_upsell
+                  operator: "is"
+                  value: "true"

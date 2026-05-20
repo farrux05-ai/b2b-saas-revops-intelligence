@@ -177,6 +177,12 @@ models:
               description: "Average seat utilization across all accounts."
               format: "percent"
 
+      - name: seats_purchased
+        description: "Total seats purchased under the current plan. Used to compute seat_utilization_pct."
+        meta:
+          dimension:
+            hidden: true
+
       - name: is_ready_for_upsell
         description: "True when seat utilization ≥ 90%. Expansion signal."
         meta:
