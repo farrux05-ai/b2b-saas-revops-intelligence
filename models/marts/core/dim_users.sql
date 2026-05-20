@@ -1,10 +1,11 @@
 -- =============================================================================
--- dim_users: Enriched User Directory
+-- dim_users: Enriched User Directory (PII Protected)
 -- Mart: core
 --
--- FIX: Replaced SELECT * anti-pattern with explicit column selection.
--- Internal/intermediate columns (internal_workspace_id, etc.) are excluded
--- from the mart to keep the BI surface clean.
+-- One row per user. Links internal product users to HubSpot contacts and parent accounts.
+-- PII PROTECTION: Email addresses are partially masked (e.g., j***e@domain.com) 
+-- and names are masked to initials (e.g., J*** D***) for GDPR/CCPA compliance.
+-- A secure deterministic MD5 hash (`hashed_email`) is provided for identity stitching.
 -- =============================================================================
 
 with users as (
@@ -17,11 +18,24 @@ final as (
         global_user_id,
         internal_user_id,
         account_id,
-        email,
+        
+        -- PII Masking: Mask email addresses (e.g., john.doe@company.com -> j***e@company.com)
+        regexp_replace(email, '^([^@]{1})[^@]*([^@]{1})@', '\1***\2@') as email,
+        
+        -- PII Hashing: Secure deterministic MD5 hash for downstream cross-system stitching
+        md5(lower(trim(email)))                         as hashed_email,
 
-        -- Profile
-        first_name,
-        last_name,
+        -- PII Masking: Mask names to initials (e.g., John -> J***)
+        case 
+            when first_name is not null then concat(substr(first_name, 1, 1), '***')
+            else null 
+        end                                             as first_name,
+        case 
+            when last_name is not null then concat(substr(last_name, 1, 1), '***')
+            else null 
+        end                                             as last_name,
+        
+        -- Profile & Attributes
         job_title,
         user_role,
 
@@ -34,9 +48,8 @@ final as (
         last_seen_at,
 
         -- Derived activation status (30-day active window)
-        activated_at is not null                        as is_activated,
-        last_seen_at >= current_timestamp
-            - interval '30 days'                        as is_active_last_30d
+        is_activated,
+        is_active_last_30d
 
     from users
 )

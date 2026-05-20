@@ -13,6 +13,7 @@ This document explains the **why** behind every architectural decision, with imp
 5. [Testing Philosophy](#testing-philosophy)
 6. [Semantic Layer (Lightdash)](#semantic-layer-lightdash)
 7. [Common Pitfalls & Solutions](#common-pitfalls--solutions)
+8. [PII & Compliance Strategy](#pii--compliance-strategy)
 
 ---
 
@@ -825,6 +826,45 @@ is_mock = HUBSPOT_ACCESS_TOKEN == "mock_token"
 # After — catches all placeholder patterns
 is_mock = HUBSPOT_ACCESS_TOKEN == "mock_token" or "xxxx" in HUBSPOT_ACCESS_TOKEN
 ```
+
+---
+
+## PII & Compliance Strategy
+
+### 🔒 Privacy-by-Design Architecture
+
+To comply with **GDPR** and **CCPA** regulations, our data platform implements a strict **PII (Personally Identifiable Information) masking and hashing policy** at the presentation layer while preserving utility in raw and intermediate stages.
+
+```mermaid
+graph TD
+    A[Raw Sources: HubSpot / Internal DB / Zendesk] -->|Raw Email & Names| B(Staging Layer: stg_*)
+    B -->|Raw Email & Names| C(Intermediate Layer: int_*)
+    C -->|Identity Resolution & Stitching| C
+    C -->|PII Masking & Hashing| D(Marts Layer: dim_users)
+    D -->|Masked Email: j***e@domain.com| E[BI Tools: Lightdash / Metabase]
+    D -->|Hashed Email: md5_hash| E
+```
+
+### 1. Retention of Raw PII in Staging/Intermediate Layers
+* **Why?** Domain-based stitching (e.g., Lead-to-Account fuzzy matching) and matching CRM contacts to internal product users requires joining on raw, normalized email addresses and extracting domain strings (e.g., `split_part(email, '@', 2)`). Hashing emails in staging would break these join paths.
+* **Access Control:** Staging and intermediate layers are kept restricted. Business users and BI tools **do not** have access to these schemas.
+
+### 2. Masking & Hashing in the Marts Layer (`dim_users`)
+At the presentation layer (`main_marts.dim_users`) which is directly exposed to BI tools:
+* **Email Masking:** Emails are masked using regex:
+  ```sql
+  regexp_replace(email, '^([^@]{1})[^@]*([^@]{1})@', '\1***\2@') as email
+  -- Input:  john.doe@company.com
+  -- Output: j***e@company.com
+  ```
+* **Name Masking:** First and last names are truncated to initials:
+  ```sql
+  case 
+      when first_name is not null then concat(substr(first_name, 1, 1), '***')
+      else null 
+  end as first_name
+  ```
+* **Hashed Identity Stitching (`hashed_email`):** A secure MD5 hash of the email address (`md5(lower(trim(email)))`) is provided. This allows downstream tools or technical analysts to stitch users across systems without ever exposing plain-text email addresses in the BI interface.
 
 ---
 

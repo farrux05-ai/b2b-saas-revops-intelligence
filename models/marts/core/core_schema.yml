@@ -398,11 +398,18 @@ models:
               label: "Total Users"
 
       - name: email
-        description: "User email address."
+        description: "Masked user email address (PII protected, e.g., j***e@domain.com)."
         tests: [not_null]
         meta:
           dimension:
             label: "Email"
+
+      - name: hashed_email
+        description: "Secure MD5 hash of the user email address for identity stitching."
+        tests: [not_null]
+        meta:
+          dimension:
+            label: "Hashed Email"
 
       - name: account_id
         description: "FK to dim_accounts."
@@ -412,13 +419,13 @@ models:
             hidden: true
 
       - name: first_name
-        description: "User first name."
+        description: "Masked user first name (PII protected, e.g., J***)."
         meta:
           dimension:
             label: "First Name"
 
       - name: last_name
-        description: "User last name."
+        description: "Masked user last name (PII protected, e.g., D***)."
         meta:
           dimension:
             label: "Last Name"
