@@ -1,44 +1,152 @@
 version: 2
 
-# STAGING PHILOSOPHY: Test source CONTRACT only.
-# Stripe always delivers: id (unique), customer_id, status.
-# We do NOT test amounts here — Stripe can legitimately send $0 or negative values.
+# =============================================================================
+# STAGING TESTING PHILOSOPHY:
+# Test the CONTRACT with the source system.
+# Staging tests answer: "Did the source deliver what it promised?"
+#
+# Rules:
+#   1. ALWAYS test: unique + not_null on the natural Primary Key
+#   2. ONLY test accepted_values for fields we control via enum/picklist (Stripe status values)
+#      Soft-check enums with warning severity to tolerate upstream enum changes without breaking CI.
+#   3. NEVER test business-derived metrics (amounts, counts) — that's Mart territory
+#   4. NEVER duplicate tests that will be re-tested downstream
+# =============================================================================
 
 models:
   - name: stg_stripe__subscriptions
-    description: "Cleaned Stripe subscription records. One row per subscription."
+    description: >
+      Thin staging for Stripe subscriptions. 1:1 grain with raw_data.subscriptions.
+      NO business logic. NO MRR computation. NO joins.
+    
     columns:
+      # --- Identity Contract ---
       - name: subscription_id
-        tests: [unique, not_null]
+        description: "Stripe subscription ID — natural PK from source."
+        tests: 
+          - unique
+          - not_null
+      
       - name: customer_id
-        tests: [not_null]
+        description: "Stripe customer ID — FK to customers table."
+        tests:
+          - not_null
+      
+      # --- External Mapping Contract ---
+      - name: workspace_id
+        description: "Internal workspace ID from metadata. NULL if not mapped."
+        # NOT NULL emas! — Stripe subscription workspace'siz yaratilishi mumkin
+      
+      # --- Status Contract (Stripe-managed enum) ---
       - name: subscription_status
-        description: "Stripe-managed enum. Tested here as source contract."
+        description: "Stripe subscription status."
         tests:
           - not_null
           - accepted_values:
               values: ['active', 'trialing', 'past_due', 'canceled',
                        'incomplete', 'incomplete_expired', 'unpaid']
+              config:
+                severity: warn
+      
+      # --- Financial Contract ---
+      - name: unit_amount
+        description: "Plan unit amount in USD dollars (cents/100)."
+        # NO > 0 test! — Stripe $0 plan yuborishi mumkin (trial, promo)
+      
+      - name: seats_purchased
+        description: "Quantity of seats purchased."
+        tests:
+          - not_null  # Lekin 0 bo'lishi mumkin!
+      
+      # --- Boolean Contract ---
+      - name: is_cancel_at_period_end
+        description: "True if subscription will cancel at period end."
+        tests:
+          - not_null
+      
+      # --- Timestamp Contract ---
+      - name: created_at
+        description: "Subscription creation timestamp."
+        tests:
+          - not_null
 
   - name: stg_stripe__invoices
-    description: "Cleaned Stripe invoice records. One row per invoice."
+    description: >
+      Thin staging for Stripe invoices. 1:1 grain with raw_data.invoices.
+      NO business logic. NO joins.
+    
     columns:
+      # --- Identity Contract ---
       - name: invoice_id
-        tests: [unique, not_null]
+        description: "Stripe invoice ID — natural PK from source."
+        tests:
+          - unique
+          - not_null
+      
+      - name: customer_id
+        description: "Stripe customer ID — FK to customers table."
+        tests:
+          - not_null
+      
+      # --- Status Contract (Stripe-managed enum) ---
       - name: invoice_status
+        description: "Stripe invoice status."
         tests:
           - not_null
           - accepted_values:
               values: ['draft', 'open', 'paid', 'uncollectible', 'void']
+              config:
+                severity: warn
+
+      # --- Financial Contract ---
+      - name: amount_due
+        description: "Total invoice amount due in USD dollars."
+      - name: amount_paid
+        description: "Invoice amount paid in USD dollars."
+      - name: amount_remaining
+        description: "Invoice amount remaining in USD dollars."
+
+      # --- Timestamp Contract ---
+      - name: created_at
+        description: "Invoice creation timestamp."
+        tests:
+          - not_null
 
   - name: stg_stripe__payments
-    description: "Cleaned Stripe payment intent records. One row per payment."
+    description: >
+      Thin staging for Stripe payments. 1:1 grain with raw_data.payments.
+      NO business logic. NO joins.
+    
     columns:
+      # --- Identity Contract ---
       - name: payment_id
-        tests: [unique, not_null]
+        description: "Stripe payment ID — natural PK from source."
+        tests:
+          - unique
+          - not_null
+      
+      - name: customer_id
+        description: "Stripe customer ID — FK to customers table."
+        tests:
+          - not_null
+
+      # --- Status Contract (Stripe-managed enum) ---
       - name: payment_status
+        description: "Stripe payment status."
         tests:
           - not_null
           - accepted_values:
               values: ['requires_payment_method', 'requires_confirmation',
                        'requires_action', 'processing', 'succeeded', 'canceled', 'failed']
+              config:
+                severity: warn
+
+      # --- Financial Contract ---
+      - name: amount
+        description: "Payment amount in USD dollars."
+
+      # --- Timestamp Contract ---
+      - name: created_at
+        description: "Payment creation timestamp."
+        tests:
+          - not_null
