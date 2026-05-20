@@ -42,6 +42,31 @@ models:
       - name: total_mrr
         tests: [not_null]
 
+  - name: int_payments_enriched
+    description: >
+      Payment-level enrichment with failure categorization (failure_category).
+      This is the canonical source of payment failure signals used for churn
+      prediction. One row per Stripe payment charge.
+    columns:
+      - name: payment_id
+        description: "Stripe payment charge ID — primary key."
+        tests: [unique, not_null]
+      - name: failure_code
+        description: "Raw Stripe failure code. NULL for successful payments."
+      - name: failure_category
+        description: >
+          Grouped failure category for churn signaling.
+          card_issue | funds_issue | fraud_risk | other | NULL (success).
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['card_issue', 'funds_issue', 'fraud_risk', 'other']
+              config:
+                severity: warn  # New Stripe codes should not break CI
+                where: "failure_category is not null"
+      - name: is_failed
+        description: "True when the payment has a failure_code. Convenience flag."
+
   - name: int_sales_aggregated
     description: >
       CRM pipeline metrics per account from HubSpot deals.
