@@ -14,6 +14,7 @@ This document explains the **why** behind every architectural decision, with imp
 6. [Semantic Layer (Lightdash)](#semantic-layer-lightdash)
 7. [Common Pitfalls & Solutions](#common-pitfalls--solutions)
 8. [PII & Compliance Strategy](#pii--compliance-strategy)
+9. [B2B SaaS Metrics Architecture](#b2b-saas-metrics-architecture)
 
 ---
 
@@ -865,6 +866,36 @@ At the presentation layer (`main_marts.dim_users`) which is directly exposed to 
   end as first_name
   ```
 * **Hashed Identity Stitching (`hashed_email`):** A secure MD5 hash of the email address (`md5(lower(trim(email)))`) is provided. This allows downstream tools or technical analysts to stitch users across systems without ever exposing plain-text email addresses in the BI interface.
+
+---
+
+## B2B SaaS Metrics Architecture
+
+To support Series A growth and complete the revenue intelligence foundation, we implemented three key SaaS metrics models:
+
+### 1. Cohort Retention (`fct_retention_cohorts`)
+* **Purpose:** Measures Net Revenue Retention (NRR) and Gross Revenue Retention (GRR).
+* **Granularity:** 1 row per calendar month.
+* **Logic:**
+  - Rolls up the monthly `fct_mrr_waterfall` movements (`new`, `expansion`, `contraction`, `churn`, `resurrection`).
+  - Estimates logo churn alongside revenue churn.
+  - Caps GRR at 100% (preventing upsells from skewing gross retention).
+
+### 2. Product Qualified Trial Conversions (`fct_trial_conversion`)
+* **Purpose:** Analyzes the Trial-to-Paid funnel.
+* **Granularity:** 1 row per trialing subscription.
+* **Logic:**
+  - Joins stripe subscription states with successful payments history (`int_payments_enriched`).
+  - Tracks conversion speed (`time_to_convert_days`).
+  - Flag accounts as `is_at_risk_of_expiring` (within 3 days of trial end, no conversion yet).
+
+### 3. Unit Economics & Segmented LTV (`fct_unit_economics`)
+* **Purpose:** Estimates Lifetime Value (LTV) across segments.
+* **Granularity:** 1 row per account segment (Enterprise, Mid-Market, SMB).
+* **Logic:**
+  - Calculates LTV using the formula: `Avg MRR per Account / Churn Rate`.
+  - Churn rate is based on the average monthly churn rate over the last 3 months for stability.
+  - Computes `ltv_arr_ratio` to validate unit economics health.
 
 ---
 

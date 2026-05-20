@@ -187,10 +187,13 @@ Raw source data normalized, type-cast, and renamed.
 | `fct_mrr_waterfall` | 1 row/account/month | `new_mrr`, `expansion_mrr`, `contraction_mrr`, `churn_mrr` |
 | `fct_arr_movements` | 1 row/account/month | `arr_start`, `arr_end`, `arr_change_type` |
 | `fct_pql_signals` | 1 row/workspace | `intent_tier` (HOT/WARM/COLD), `recommended_action` |
-| `fct_pipeline` | 1 row/deal | `deal_stage`, `amount`, `win_probability` |
-| `fct_subscriptions` | 1 row/subscription | Current subscription state with plan enrichment |
+| `fct_pipeline` | 1 row/deal | `deal_stage`, `amount`, `win_probability`, `avg_won_days_to_close` |
+| `fct_subscriptions` | 1 row/subscription | Current subscription state, `seat_utilization_pct`, `is_upsell_candidate` |
 | `fct_product_activation` | 1 row/account | Activation milestones, `activation_rate` |
 | `fct_activities` | 1 row/engagement | HubSpot engagement history |
+| `fct_retention_cohorts` | 1 row/month | Monthly cohorts: NRR (Net Revenue Retention), GRR (Gross Revenue Retention), Logo Churn |
+| `fct_trial_conversion` | 1 row/trial subscription | Trial-to-paid funnel: `is_converted`, `time_to_convert_days`, `is_at_risk_of_expiring` |
+| `fct_unit_economics` | 1 row/account segment | Segment level economics: LTV (Lifetime Value), LTV:ARR ratio, avg NRR/GRR |
 
 ---
 
@@ -289,9 +292,32 @@ icp_tier = CASE
 END
 ```
 
-> **Alert:** If ICP scores are updated in the seed CSVs, run `dbt seed && dbt build --select int_icp_scoring+` to re-propagate changes downstream.
+### 6. NRR / GRR Cohort calculations (`fct_retention_cohorts`)
+
+Net Revenue Retention (NRR) and Gross Revenue Retention (GRR) are measured monthly:
+
+```sql
+-- GRR: Revenue retained without expansions (capped at 100%)
+grr_pct = LEAST((starting_mrr - churned_mrr - contraction_mrr) / starting_mrr, 1.0) * 100
+
+-- NRR: Revenue retained including expansions (can exceed 100%)
+nrr_pct = (starting_mrr - churned_mrr - contraction_mrr + expansion_mrr) / starting_mrr * 100
+```
+
+### 7. Unit Economics / LTV Estimation (`fct_unit_economics`)
+
+Since marketing CAC spend is unavailable, we estimate Customer Lifetime Value (LTV) using historical churn benchmarks:
+
+```sql
+-- Churn-based LTV estimate
+estimated_ltv = avg_mrr_per_account / (avg_monthly_churn_rate_pct / 100.0)
+
+-- LTV to ARR Ratio (Target: > 3.0x for healthy SaaS)
+ltv_arr_ratio = estimated_ltv / (avg_mrr_per_account * 12)
+```
 
 ---
+
 
 ## 🔄 Pipeline Execution Order
 
@@ -443,8 +469,9 @@ All metrics and dimensions are defined in `*_schema.yml` files using dbt `meta` 
 |:------------|:--------------|:------------|
 | `core_schema.yml` | `dim_accounts`, `dim_users`, `dim_dates` | `total_arr`, `total_mrr`, `avg_seat_utilization` |
 | `cs_schema.yml` | `fct_accounts_health` | `at_risk_accounts`, `total_mrr_at_risk`, `upsell_ready_cs`, `low_engagement_accounts` |
-| `finance_schema.yml` | `fct_mrr_waterfall`, `fct_arr_movements` | `total_arr_movements`, `total_new_mrr`, `total_churn_mrr` |
-| `sales_schema.yml` | `fct_pipeline` | `total_pipeline_value`, `weighted_pipeline_value` |
+| `finance_schema.yml` | `fct_mrr_waterfall`, `fct_arr_movements`, `fct_retention_cohorts`, `fct_unit_economics` | `total_arr_movements`, `total_new_mrr`, `total_churn_mrr`, `avg_nrr`, `avg_grr`, `avg_ltv` |
+| `sales_schema.yml` | `fct_pipeline` | `total_pipeline_value`, `weighted_pipeline_value`, `benchmark_days_to_close`, `stale_deals` |
+| `product_schema.yml` | `fct_product_activation`, `fct_feature_usage`, `fct_trial_conversion` | `total_workspaces`, `pql_workspaces`, `total_trials`, `converted_trials`, `avg_time_to_convert` |
 | `marketing_schema.yml` | `fct_lead_funnel`, `fct_attribution` | `total_leads`, `mqls`, `conversion_rate` |
 
 > **Metric naming convention:** Finance metrics use the `_movements` suffix (e.g., `total_arr_movements`) to avoid collision with the `total_arr` metric defined on `dim_accounts` in `core_schema.yml`.
