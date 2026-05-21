@@ -107,6 +107,9 @@ jobs:
       - name: Install dbt-duckdb
         run: pip install dbt-duckdb
 
+      - name: Install dbt packages (dbt deps)
+        run: dbt deps
+
       - name: Generate dbt manifest.json
         run: dbt parse --target ci
         # If your profiles.yml does not have a 'ci' target, fall back to default:
