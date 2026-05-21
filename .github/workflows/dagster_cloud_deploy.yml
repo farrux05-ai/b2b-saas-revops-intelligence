@@ -3,14 +3,14 @@
 # SentinelGuard RevOps — Dagster+ Serverless Deploy
 #
 # RASMIY MANBA: dagster-io/dagster-cloud-serverless-quickstart
-# ACTION VERSIYASI: @v1 (2024 yildan hozirga qadar barqaror va rasmiy)
+# ACTION VERSIYASI: @v1.13.5 (2026-may holatida GitHub'dagi eng yangi tag)
+#   github.com/dagster-io/dagster-cloud-action/tags sahifasida tekshirildi.
 #
-# ESLATMA: Eski @0.1.34 versiya arxiv qilingan va ishlamaydi.
-# Yangi arxitektura: dagster-cloud-action/actions/utils/* yo'lidan foydalanadi.
+# ESLATMA: @0.1.34 va @v1 tag'lari mavjud EMAS — ishlamaydi.
+# To'g'ri format: dagster-cloud-action/actions/utils/STEP_NOMI@vX.Y.Z
 #
 # QACHON ISHLAYDI:
 #   - main'ga push: production deployment
-#   - PR ochilganda/yangilanganda: branch deployment (ixtiyoriy, hozir o'chirilgan)
 #
 # KERAKLI GITHUB SECRETS:
 #   DAGSTER_CLOUD_API_TOKEN — dagster.cloud → Settings → Tokens → User Token
@@ -56,7 +56,7 @@ jobs:
       # Agar token noto'g'ri bo'lsa — bu qadamda xato beradi (tez xabar).
       # -----------------------------------------------------------------
       - name: Dagster Cloud prerun checks
-        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v1
+        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v1.13.5
 
       # -----------------------------------------------------------------
       # 3. Kodni Dagster Cloud'ga yuklash (Deploy)
@@ -67,7 +67,7 @@ jobs:
       #   d) Deploy natijasini GitHub Actions UI'da ko'rsatadi
       # -----------------------------------------------------------------
       - name: Deploy to Dagster Cloud
-        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.13.5
         with:
           # "ci deploy" — rasmiy Dagster deploy buyrug'i
           # dagster_cloud.yaml'dagi barcha location'larni deploy qiladi
