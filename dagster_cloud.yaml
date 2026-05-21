@@ -1,39 +1,40 @@
 # dagster_cloud.yaml
 # ==================
-# Bu fayl Dagster Cloud'ga loyihamizning qayerda va qanday ishlashini aytadi.
+# Tells Dagster Cloud where and how to load your Dagster code location.
 #
-# ASOSIY TUSHUNCHALAR:
-#   location (Code Location) — Dagster Cloud'da bir "loyiha bloki".
-#   Bir repository'da bir nechta location bo'lishi mumkin (monorepo uchun).
-#   Bizda bitta location: "revops-intelligence"
+# KEY CONCEPTS:
+#   location (Code Location) — An isolated package of Dagster code in a repository.
+#   A repository can have multiple code locations (e.g. monorepo setups).
+#   Our location is "revops-intelligence".
 #
 # build.directory:
-#   "." — bu fayl turgan papka = loyiha ildizi.
-#   Dagster Cloud bu papkadan Dockerfile topadi yoki o'zi image yaratadi.
+#   "." — Current directory = repository root.
+#   Dagster Cloud will build the environment based on this directory's dependencies.
 #
 # SERVERLESS vs HYBRID:
-#   Serverless (hozirgi): Dagster Cloud o'z AWS Lambda'sida ishlatadi.
-#     + Biz server boshqarmaymiz, Dagster o'zi scale qiladi
-#     + Bepul boshlash mumkin, kichik loyihalar uchun ideal
-#   Hybrid: Siz o'z Kubernetes/Docker serveringizda agent ishlatib,
-#     Dagster Cloud faqat UI va scheduling uchun ishlatiladi.
-#     + Ma'lumot sizning serveringizda qoladi (GDPR, xavfsizlik)
-#     + Katta hajm uchun mos
+#   Serverless (Current): Dagster Cloud hosts the execution in managed environments.
+#     + No infrastructure to manage; scale to zero automatically.
+#     + Ideal for standard pipelines and quickstarts.
+#   Hybrid: You host an agent in your own infrastructure (Kubernetes, ECS, Docker).
+#     + Data never leaves your network (important for compliance/GDPR).
+#     + Ideal for heavy workloads and custom networking.
 
 locations:
   - location_name: revops-intelligence
 
     code_source:
-      # Dagster bu fayldan Definitions ob'ektini o'qiydi.
-      # pyproject.toml'dagi [tool.dagster] module_name bilan mos kelishi kerak.
+      # File where your Definitions object is instantiated.
+      # Must align with module_name in pyproject.toml under [tool.dagster].
       python_file: dagster_pipeline.py
 
     build:
-      # Dagster Cloud Docker image qurish uchun shu papkadan foydalanadi.
-      # Bu papkadagi requirements.txt yoki pyproject.toml o'qiladi.
+      # Directory used by Dagster Cloud CI to build the code location.
+      # This directory contains requirements.txt or pyproject.toml.
       directory: .
 
-      # registry: Agar o'z AWS ECR/GCR image registringiz bo'lsa bu yerga yozing.
-      # Serverless rejimida Dagster o'z registridan foydalanadi, bu qator kerak emas.
-      # Hybrid rejimga o'tganda:
+      # registry: Used only in Hybrid deployment model.
+      # If you build and push Docker images to your own ECR/GCR/DockerRegistry,
+      # specify your image registry path here.
+      # Serverless deployments use Dagster's built-in registry, so this is omitted.
+      # Example:
       #   registry: 123456789.dkr.ecr.us-east-1.amazonaws.com/my-dagster-image:latest
