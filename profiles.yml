@@ -12,5 +12,7 @@ revops_intelligence_engine:
       threads: 1
     ci:
       type: duckdb
-      path: "{{ env_var('DBT_DB_PATH', 'duckdb/revops_intelligence_ci.duckdb') }}"
+      # In-memory DuckDB: no file path or credentials needed.
+      # Used in GitHub Actions CI for `dbt parse` (manifest.json generation only).
+      path: ":memory:"
       threads: 4

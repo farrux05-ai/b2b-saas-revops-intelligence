@@ -83,6 +83,36 @@ jobs:
           fetch-depth: 0
 
       # -----------------------------------------------------------------
+      # 3. GENERATE manifest.json — Required by @dbt_assets decorator
+      #
+      # Why is this needed?
+      #   target/ is in .gitignore, so manifest.json is never committed.
+      #   Dagster's @dbt_assets reads manifest.json at import time to discover
+      #   all dbt models. Without it, the Cloud agent raises:
+      #   DagsterDbtManifestNotFoundError: .../target/manifest.json does not exist.
+      #
+      # `dbt parse` (not `dbt compile`) — parses the dbt project structure and
+      #   generates manifest.json WITHOUT connecting to any database.
+      #   It's fast, safe, and side-effect free.
+      #
+      # profiles.yml: The ci profile uses duckdb with an in-memory database
+      #   (path=":memory:") so no credentials are needed in CI.
+      # -----------------------------------------------------------------
+      - name: Set up Python for dbt
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install dbt-duckdb
+        run: pip install dbt-duckdb
+
+      - name: Generate dbt manifest.json
+        run: dbt parse --target ci
+        # If your profiles.yml does not have a 'ci' target, fall back to default:
+        # run: dbt parse
+
+      # -----------------------------------------------------------------
       # 3. CI INIT — Initializes build session (Creates DAGSTER_BUILD_STATEDIR)
       #
       # Resolves the "--statedir" error.
