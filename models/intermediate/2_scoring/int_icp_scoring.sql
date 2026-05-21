@@ -25,7 +25,7 @@ scoring_base as (
         h.company_name,
         h.industry,
         f.total_mrr                                     as mrr,
-        
+
         -- Move segmentation logic here to keep it in Layer 2
         case
             when coalesce(f.total_mrr, 0) * 12 >= 50000 then 'Enterprise'
@@ -52,10 +52,10 @@ scoring as (
         sb.*,
         -- 1. Industry Fit (Technology & Finance are our sweet spots)
         coalesce(ind.industry_score, 5)                 as industry_score,
-        
+
         -- 2. Segment Fit (Enterprise/Mid-Market are priority)
         coalesce(seg.segment_score, 5)                  as segment_score,
-        
+
         -- 3. Revenue Fit (Already paying or has high potential)
         case
             when sb.mrr > 1000 then 20
@@ -76,13 +76,14 @@ final as (
         account_segment,
         mrr,
         (industry_score + segment_score + revenue_score) as icp_score,
-        
+
         case
             when (industry_score + segment_score + revenue_score) >= 70 then 'High Fit'
             when (industry_score + segment_score + revenue_score) >= 30 then 'Medium Fit'
             else 'Low Fit'
         end                                             as icp_tier
     from scoring
+
 )
 
 select * from final

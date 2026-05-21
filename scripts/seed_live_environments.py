@@ -1,22 +1,16 @@
 """
 seed_live_environments.py
 -------------------------
-A utility script to populate actual HubSpot (test account) and Zendesk (trial account)
-using the local mock data stored in JSON files.
+Populates actual HubSpot (using API) with local mock data,
+and updates the local JSON files with the generated real HubSpot IDs.
 
-This enables you to show a REAL data flow in your portfolio video:
-1. Seed raw data into HubSpot and Zendesk APIs.
-2. Ingest it via dlt/Dagster (requires changing dlt pipelines to use actual APIs).
-3. Run transformations.
-4. Push enriched health/MRR/PQL metrics back using Reverse ETL!
+This ensures that:
+  1. The raw data contains actual HubSpot object IDs.
+  2. The dlt ingestion loads real HubSpot IDs into DuckDB.
+  3. Downstream dbt models and reverse ETL work flawlessly with actual CRM records.
 
 Usage:
-  1. Set environment variables in .env:
-     HUBSPOT_ACCESS_TOKEN=your_token
-     ZENDESK_SUBDOMAIN=your_subdomain
-     ZENDESK_EMAIL=your_email
-     ZENDESK_API_TOKEN=your_api_token
-  2. Run: python scripts/seed_live_environments.py
+  python scripts/seed_live_environments.py
 """
 
 import os
@@ -27,31 +21,56 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# API Configuration
 HUBSPOT_ACCESS_TOKEN = os.getenv("HUBSPOT_ACCESS_TOKEN", "")
 ZENDESK_SUBDOMAIN = os.getenv("ZENDESK_SUBDOMAIN", "")
 ZENDESK_EMAIL = os.getenv("ZENDESK_EMAIL", "")
 ZENDESK_API_TOKEN = os.getenv("ZENDESK_API_TOKEN", "")
 
-# Limits for seeding (reduces API call overhead, 15 records is plenty for a beautiful UI demo)
-SEED_LIMIT = 15
-
-# HubSpot API endpoints
 HS_HEADERS = {
     "Authorization": f"Bearer {HUBSPOT_ACCESS_TOKEN}",
     "Content-Type": "application/json"
 }
 
+ALLOWED_INDUSTRIES = [
+    "ACCOUNTING", "AIRLINES_AVIATION", "ALTERNATIVE_DISPUTE_RESOLUTION", "ALTERNATIVE_MEDICINE", "ANIMATION", 
+    "APPAREL_FASHION", "ARCHITECTURE_PLANNING", "ARTS_AND_CRAFTS", "AUTOMOTIVE", "AVIATION_AEROSPACE", "BANKING", 
+    "BIOTECHNOLOGY", "BROADCAST_MEDIA", "BUILDING_MATERIALS", "BUSINESS_SUPPLIES_AND_EQUIPMENT", "CAPITAL_MARKETS", 
+    "CHEMICALS", "CIVIC_SOCIAL_ORGANIZATION", "CIVIL_ENGINEERING", "COMMERCIAL_REAL_ESTATE", "COMPUTER_NETWORK_SECURITY", 
+    "COMPUTER_GAMES", "COMPUTER_HARDWARE", "COMPUTER_NETWORKING", "COMPUTER_SOFTWARE", "INTERNET", "CONSTRUCTION", 
+    "CONSUMER_ELECTRONICS", "CONSUMER_GOODS", "CONSUMER_SERVICES", "COSMETICS", "DAIRY", "DEFENSE_SPACE", "DESIGN", 
+    "EDUCATION_MANAGEMENT", "E_LEARNING", "ELECTRICAL_ELECTRONIC_MANUFACTURING", "ENTERTAINMENT", "ENVIRONMENTAL_SERVICES", 
+    "EVENTS_SERVICES", "EXECUTIVE_OFFICE", "FACILITIES_SERVICES", "FARMING", "FINANCIAL_SERVICES", "FINE_ART", "FISHERY", 
+    "FOOD_BEVERAGES", "FOOD_PRODUCTION", "FUND_RAISING", "FURNITURE", "GAMBLING_CASINOS", "GLASS_CERAMICS_CONCRETE", 
+    "GOVERNMENT_ADMINISTRATION", "GOVERNMENT_RELATIONS", "GRAPHIC_DESIGN", "HEALTH_WELLNESS_AND_FITNESS", "HIGHER_EDUCATION", 
+    "HOSPITAL_HEALTH_CARE", "HOSPITALITY", "HUMAN_RESOURCES", "IMPORT_AND_EXPORT", "INDIVIDUAL_FAMILY_SERVICES", 
+    "INDUSTRIAL_AUTOMATION", "INFORMATION_SERVICES", "INFORMATION_TECHNOLOGY_AND_SERVICES", "INSURANCE", "INTERNATIONAL_AFFAIRS", 
+    "INTERNATIONAL_TRADE_AND_DEVELOPMENT", "INVESTMENT_BANKING", "INVESTMENT_MANAGEMENT", "JUDICIARY", "LAW_ENFORCEMENT", 
+    "LAW_PRACTICE", "LEGAL_SERVICES", "LEGISLATIVE_OFFICE", "LEISURE_TRAVEL_TOURISM", "LIBRARIES", "LOGISTICS_AND_SUPPLY_CHAIN", 
+    "LUXURY_GOODS_JEWELRY", "MACHINERY", "MANAGEMENT_CONSULTING", "MARITIME", "MARKET_RESEARCH", "MARKETING_AND_ADVERTISING", 
+    "MECHANICAL_OR_INDUSTRIAL_ENGINEERING", "MEDIA_PRODUCTION", "MEDICAL_DEVICES", "MEDICAL_PRACTICE", "MENTAL_HEALTH_CARE", 
+    "MILITARY", "MINING_METALS", "MOTION_PICTURES_AND_FILM", "MUSEUMS_AND_INSTITUTIONS", "MUSIC", "NANOTECHNOLOGY", 
+    "NEWSPAPERS", "NON_PROFIT_ORGANIZATION_MANAGEMENT", "OIL_ENERGY", "ONLINE_MEDIA", "OUTSOURCING_OFFSHORING", 
+    "PACKAGE_FREIGHT_DELIVERY", "PACKAGING_AND_CONTAINERS", "PAPER_FOREST_PRODUCTS", "PERFORMING_ARTS", "PHARMACEUTICALS", 
+    "PHILANTHROPY", "PHOTOGRAPHY", "PLASTICS", "POLITICAL_ORGANIZATION", "PRIMARY_SECONDARY_EDUCATION", "PRINTING", 
+    "PROFESSIONAL_TRAINING_COACHING", "PROGRAM_DEVELOPMENT", "PUBLIC_POLICY", "PUBLIC_RELATIONS_AND_COMMUNICATIONS", 
+    "PUBLIC_SAFETY", "PUBLISHING", "RAILROAD_MANUFACTURE", "RANCHING", "REAL_ESTATE", "RECREATIONAL_FACILITIES_AND_SERVICES", 
+    "RELIGIOUS_INSTITUTIONS", "RENEWABLES_ENVIRONMENT", "RESEARCH", "RESTAURANTS", "RETAIL", "SECURITY_AND_INVESTIGATIONS", 
+    "SEMICONDUCTORS", "SHIPBUILDING", "SPORTING_GOODS", "SPORTS", "STAFFING_AND_RECRUITING", "SUPERMARKETS", 
+    "TELECOMMUNICATIONS", "TEXTILES", "THINK_TANKS", "TOBACCO", "TRANSLATION_AND_LOCALIZATION", "TRANSPORTATION_TRUCKING_RAILROAD", 
+    "UTILITIES", "VENTURE_CAPITAL_PRIVATE_EQUITY", "VETERINARY", "WAREHOUSING", "WHOLESALE", "WINE_AND_SPIRITS", "WIRELESS", 
+    "WRITING_AND_EDITING", "MOBILE_GAMES"
+]
+
 def seed_hubspot():
     if not HUBSPOT_ACCESS_TOKEN or HUBSPOT_ACCESS_TOKEN == "mock_token":
         print("⏭️  Skipping HubSpot seeding: HUBSPOT_ACCESS_TOKEN is missing or mock.")
-        return {}
+        return
 
-    print("\n🚀 Starting HubSpot seeding (First 15 records)...")
+    print("\n🚀 Starting HubSpot seeding for ALL local mock data...")
     
     # 1. Load data
     with open("data/raw/hubspot_companies.json", "r") as f:
-        companies = json.load(f)[:SEED_LIMIT]
+        companies = json.load(f)
     with open("data/raw/hubspot_contacts.json", "r") as f:
         contacts = json.load(f)
     with open("data/raw/hubspot_deals.json", "r") as f:
@@ -61,11 +80,18 @@ def seed_hubspot():
     company_mappings = {}
     print(f"🏢 Seeding {len(companies)} companies to HubSpot...")
     for co in companies:
+        industry = co.get("industry", "COMPUTER_SOFTWARE").upper()
+        normalized_industry = "COMPUTER_SOFTWARE"
+        for ind in ALLOWED_INDUSTRIES:
+            if ind in industry or industry in ind:
+                normalized_industry = ind
+                break
+
         payload = {
             "properties": {
                 "name": co["name"],
                 "domain": co["domain"],
-                "industry": co["industry"],
+                "industry": normalized_industry,
                 "lifecyclestage": co["lifecyclestage"],
                 "hs_lead_status": co["hs_lead_status"]
             }
@@ -74,72 +100,73 @@ def seed_hubspot():
         if res.status_code == 201:
             real_id = res.json()["id"]
             company_mappings[co["hs_object_id"]] = real_id
+            co["hs_object_id"] = real_id  # Update local JSON model with real ID
             print(f"  ✅ Created Company: {co['name']} (ID: {real_id})")
         else:
             print(f"  ❌ Failed to create Company {co['name']}: {res.text}")
-        time.sleep(0.1)  # Respect rate limit
+        time.sleep(0.15)  # Respect rate limits
+
+    # Save companies with updated real IDs
+    with open("data/raw/hubspot_companies.json", "w") as f:
+        json.dump(companies, f, indent=2)
 
     # 3. Seed Contacts (and associate with real Company IDs)
-    seeded_contact_count = 0
-    print(f"\n👤 Seeding contacts for seeded companies...")
+    print(f"\n👤 Seeding {len(contacts)} contacts to HubSpot...")
     for ct in contacts:
-        # Only seed contacts that belong to a company we actually seeded
         mock_co_id = ct.get("associated_company_id")
-        if not mock_co_id or mock_co_id not in company_mappings:
-            continue
+        real_co_id = company_mappings.get(mock_co_id)
         
-        real_co_id = company_mappings[mock_co_id]
         payload = {
             "properties": {
                 "email": ct["email"],
                 "firstname": ct["firstname"],
                 "lastname": ct["lastname"],
                 "jobtitle": ct["jobtitle"]
-            },
-            "associations": [
+            }
+        }
+        
+        # Add association if matched
+        if real_co_id:
+            payload["associations"] = [
                 {
                     "to": {"id": real_co_id},
                     "types": [
                         {
                             "associationCategory": "HUBSPOT_DEFINED",
-                            "associationTypeId": 1 # Contact to Company
+                            "associationTypeId": 1  # Contact to Company
                         }
                     ]
                 }
             ]
-        }
+            ct["associated_company_id"] = real_co_id
+
         res = requests.post("https://api.hubapi.com/crm/v3/objects/contacts", headers=HS_HEADERS, json=payload)
         if res.status_code == 201:
             real_id = res.json()["id"]
-            print(f"  ✅ Created Contact: {ct['email']} (Real ID: {real_id}) associated with Company ID {real_co_id}")
-            seeded_contact_count += 1
+            ct["hs_object_id"] = real_id  # Update local JSON model with real ID
+            print(f"  ✅ Created Contact: {ct['email']} (Real ID: {real_id})")
+        elif res.status_code == 409:
+            # Already exists — fetch their ID and update local JSON
+            existing_id = res.json().get("message", "").split("ID: ")[-1].strip()
+            ct["hs_object_id"] = existing_id
+            print(f"  ℹ️  Contact already exists: {ct['email']} (Real ID: {existing_id})")
         else:
             print(f"  ❌ Failed to create Contact {ct['email']}: {res.text}")
-        time.sleep(0.1)
-        if seeded_contact_count >= SEED_LIMIT:
-            break
+        time.sleep(0.15)
+
+    # Save contacts with updated real IDs
+    with open("data/raw/hubspot_contacts.json", "w") as f:
+        json.dump(contacts, f, indent=2)
 
     # 4. Seed Deals (and associate with real Company IDs)
-    seeded_deal_count = 0
-    print(f"\n💸 Seeding deals for seeded companies...")
+    print(f"\n💸 Seeding {len(deals)} deals to HubSpot...")
     for dl in deals:
         mock_co_id = dl.get("associated_company_id")
-        if not mock_co_id or mock_co_id not in company_mappings:
-            continue
+        real_co_id = company_mappings.get(mock_co_id)
         
-        real_co_id = company_mappings[mock_co_id]
-        
-        # Format closedate to ISO8601 if present
-        close_date = dl.get("closedate")
-        
-        # HubSpot requires stage in lower case or standard pipeline stage codes (e.g. closedwon)
         stage = dl["dealstage"]
-        if stage == "closedwon":
-            stage = "closedwon"
-        elif stage == "closedlost":
-            stage = "closedlost"
-        else:
-            stage = "appointmentscheduled" # Fallback to default first stage
+        if stage not in ["closedwon", "closedlost"]:
+            stage = "appointmentscheduled"
             
         payload = {
             "properties": {
@@ -147,33 +174,38 @@ def seed_hubspot():
                 "dealstage": stage,
                 "amount": str(dl["amount"]),
                 "pipeline": "default",
-                "closedate": close_date
-            },
-            "associations": [
+                "closedate": dl.get("closedate")
+            }
+        }
+        
+        if real_co_id:
+            payload["associations"] = [
                 {
                     "to": {"id": real_co_id},
                     "types": [
                         {
                             "associationCategory": "HUBSPOT_DEFINED",
-                            "associationTypeId": 5 # Deal to Company
+                            "associationTypeId": 5  # Deal to Company
                         }
                     ]
                 }
             ]
-        }
+            dl["associated_company_id"] = real_co_id
+
         res = requests.post("https://api.hubapi.com/crm/v3/objects/deals", headers=HS_HEADERS, json=payload)
         if res.status_code == 201:
             real_id = res.json()["id"]
-            print(f"  ✅ Created Deal: {dl['dealname']} (Real ID: {real_id}) associated with Company ID {real_co_id}")
-            seeded_deal_count += 1
+            dl["hs_object_id"] = real_id  # Update local JSON model with real ID
+            print(f"  ✅ Created Deal: {dl['dealname']} (Real ID: {real_id})")
         else:
             print(f"  ❌ Failed to create Deal {dl['dealname']}: {res.text}")
-        time.sleep(0.1)
-        if seeded_deal_count >= SEED_LIMIT:
-            break
+        time.sleep(0.15)
+
+    # Save deals with updated real IDs
+    with open("data/raw/hubspot_deals.json", "w") as f:
+        json.dump(deals, f, indent=2)
             
-    print("🎉 HubSpot seeding complete.")
-    return company_mappings
+    print("🎉 HubSpot seeding and ID synchronization complete.")
 
 
 def seed_zendesk():
@@ -182,18 +214,13 @@ def seed_zendesk():
         return
 
     print("\n🚀 Starting Zendesk seeding...")
-    
-    # Load zendesk ticket data
     with open("data/raw/zendesk_tickets.json", "r") as f:
-        tickets = json.load(f)[:SEED_LIMIT]
+        tickets = json.load(f)
 
-    # Zendesk authentication (requires email + /token appended to username)
     auth = (f"{ZENDESK_EMAIL}/token", ZENDESK_API_TOKEN)
     url = f"https://{ZENDESK_SUBDOMAIN}.zendesk.com/api/v2/tickets.json"
 
-    print(f"Ticket count to seed: {len(tickets)}")
     for tk in tickets:
-        # Map raw status & priority (ensuring compatibility)
         status = tk["ticket_status"]
         if status not in ["new", "open", "pending", "hold", "solved", "closed"]:
             status = "new"
@@ -206,7 +233,7 @@ def seed_zendesk():
             "ticket": {
                 "subject": tk["subject"],
                 "comment": {
-                    "body": f"System generated ticket for {tk.get('requester_email')}. Created for local dbt/Dagster pipeline tests."
+                    "body": f"System generated ticket for {tk.get('requester_email')}."
                 },
                 "requester": {
                     "name": tk.get("requester_email", "Requester").split("@")[0].capitalize(),
@@ -220,16 +247,19 @@ def seed_zendesk():
         res = requests.post(url, auth=auth, json=payload)
         if res.status_code == 201:
             ticket_id = res.json()["ticket"]["id"]
-            print(f"  ✅ Created Zendesk Ticket #{ticket_id}: \"{tk['subject']}\" for {tk['requester_email']}")
+            tk["ticket_id"] = ticket_id  # Update local JSON model
+            print(f"  ✅ Created Zendesk Ticket #{ticket_id}: \"{tk['subject']}\"")
         else:
             print(f"  ❌ Failed to create Ticket \"{tk['subject']}\": {res.text}")
-        time.sleep(0.2) # Avoid hitting Zendesk rate limits (normally 100/min)
+        time.sleep(0.2)
 
+    with open("data/raw/zendesk_tickets.json", "w") as f:
+        json.dump(tickets, f, indent=2)
     print("🎉 Zendesk seeding complete.")
 
 
 if __name__ == "__main__":
-    print("🌟 GTM Seeding Utility started.")
-    company_maps = seed_hubspot()
+    print("🌟 GTM Seeding and ID Sync Utility started.")
+    seed_hubspot()
     seed_zendesk()
-    print("\n✨ Seeding process finished. You can now configure your pipeline to read/write real data.")
+    print("\n✨ Seeding process finished. Local raw data files synced with real HubSpot IDs.")

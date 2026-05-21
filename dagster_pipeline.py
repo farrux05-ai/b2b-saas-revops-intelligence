@@ -4,7 +4,7 @@ from dagster_dbt import DbtCliResource, dbt_assets
 from pathlib import Path
 from ingestion.stackflow_pipeline import run_pipeline as run_ingestion
 from scripts.sync_to_motherduck import sync_to_motherduck as run_motherduck_sync
-from scripts.reverse_etl_dlt import run_reverse_etl as run_reverse_etl_sync
+from scripts.reverse_etl_dlt import run as run_reverse_etl_sync
 
 # Paths
 DBT_PROJECT_DIR = Path(__file__).parent.joinpath("").resolve()
@@ -51,7 +51,7 @@ revops_ingestion_job = define_asset_job(
 
 revops_transform_job = define_asset_job(
     "revops_transform_job",
-    selection=[revops_dbt_assets, motherduck_sync, dlt_reverse_etl]
+    selection=[revops_dbt_assets, motherduck_sync]
 )
 
 # Daily schedule: 07:00 UTC — ingestion, then transform
@@ -66,6 +66,9 @@ defs = Definitions(
     jobs=[revops_ingestion_job, revops_transform_job],
     schedules=[revops_daily_schedule],
     resources={
-        "dbt": DbtCliResource(project_dir=os.fspath(DBT_PROJECT_DIR)),
+        "dbt": DbtCliResource(
+            project_dir=os.fspath(DBT_PROJECT_DIR),
+            dbt_executable=os.fspath(DBT_PROJECT_DIR.joinpath(".venv", "bin", "dbt")),
+        ),
     },
 )
