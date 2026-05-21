@@ -37,7 +37,7 @@ concurrency:
 # Barcha qadamlar uchun umumiy o'zgaruvchilar
 env:
   DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
-  DAGSTER_CLOUD_ORGANIZATION: ${{ vars.DAGSTER_CLOUD_ORGANIZATION }}
+  DAGSTER_CLOUD_ORGANIZATION: 'farrux-inc'
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # DAGSTER_CLOUD_YAML_PATH: dagster_cloud.yaml qaysi papkada turganini ko'rsatadi.
