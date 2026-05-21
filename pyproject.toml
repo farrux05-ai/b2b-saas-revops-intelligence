@@ -20,3 +20,8 @@ dependencies = [
 
 [tool.dagster]
 module_name = "dagster_pipeline"
+
+[tool.setuptools]
+py-modules = ["dagster_pipeline"]
+packages = ["ingestion", "scripts"]
+
