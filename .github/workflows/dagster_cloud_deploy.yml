@@ -2,73 +2,181 @@
 # ===========================================
 # SentinelGuard RevOps — Dagster+ Serverless Deploy
 #
-# RASMIY MANBA: dagster-io/dagster-cloud-serverless-quickstart
-# ACTION VERSIYASI: @v1.13.5 (2026-may holatida GitHub'dagi eng yangi tag)
-#   github.com/dagster-io/dagster-cloud-action/tags sahifasida tekshirildi.
+# MANBA: dagster-io/dagster-cloud-serverless-quickstart (rasmiy template)
+# ACTION VERSIYASI: @v1.13.5 (2026-may — GitHub tags'dan tasdiqlangan)
 #
-# ESLATMA: @0.1.34 va @v1 tag'lari mavjud EMAS — ishlamaydi.
-# To'g'ri format: dagster-cloud-action/actions/utils/STEP_NOMI@vX.Y.Z
+# NIMA UCHUN 5 TA QADAM?
+#   Dagster CI/CD jarayoni state machine'ga o'xshaydi:
+#   prerun → checkout → ci-init (state yaratadi) → build → deploy
+#   "statedir" xatosi aynan ci-init qadami o'tkazib yuborilganligi uchun chiqdi.
+#   Har bir qadam oldingi qadamning natijasiga bog'liq.
 #
-# QACHON ISHLAYDI:
-#   - main'ga push: production deployment
-#
-# KERAKLI GITHUB SECRETS:
+# KERAKLI GITHUB SECRETS (Repository → Settings → Secrets → Actions → Secrets):
 #   DAGSTER_CLOUD_API_TOKEN — dagster.cloud → Settings → Tokens → User Token
-#                             Token prefiksi: dagster_cloud_user_...
+#                             Prefiksi: dagster_cloud_user_...
 #
-# KERAKLI GITHUB ENV VAR (Secrets emas, Variables bo'limiga):
-#   DAGSTER_CLOUD_ORGANIZATION — dagster.cloud'dagi org nomingiz (URL'da ko'rinadi)
-#   Masalan: https://my-company.dagster.cloud → "my-company"
+# KERAKLI ENV VAR (Repository → Settings → Secrets → Actions → Variables):
+#   DAGSTER_CLOUD_ORGANIZATION — dagster.cloud URL'ingizdagi org nomi
+#   Masalan: https://acme.dagster.cloud → "acme"
 
-name: Dagster Cloud — Production Deploy
+name: Dagster Cloud — Serverless Deploy
 
 on:
   push:
     branches:
       - main
+      - master
 
-# Barcha workflow bosqichlari uchun umumiy env o'zgaruvchilar.
-# secrets.* → GitHub Secrets bo'limidan o'qiladi (xavfsiz).
-# vars.*    → GitHub Variables bo'limidan o'qiladi (ommaviy, tokenlar emas).
+# concurrency: Bir vaqtda bir nechta deploy bo'lmasin.
+# Masalan siz tez-tez push qilsangiz — oldingi deploy bekor qilinadi,
+# faqat eng yangi kod deploy bo'ladi. Bu Dagster Cloud'da conflict oldini oladi.
+concurrency:
+  group: ${{ github.ref }}/deploy
+  cancel-in-progress: true
+
+# Barcha qadamlar uchun umumiy o'zgaruvchilar
 env:
   DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
   DAGSTER_CLOUD_ORGANIZATION: ${{ vars.DAGSTER_CLOUD_ORGANIZATION }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # DAGSTER_CLOUD_YAML_PATH: dagster_cloud.yaml qaysi papkada turganini ko'rsatadi.
+  # "." = repository ildizi (root), bu bizning holat.
+  DAGSTER_CLOUD_YAML_PATH: '.'
+  DAGSTER_CLOUD_FILE: 'dagster_cloud.yaml'
+
+  # ENABLE_FAST_DEPLOYS: "pex-deploy" strategiyasini yoqadi.
+  # PEX (Python EXecutable) — Docker'dan tezroq: faqat Python kodi paketlanadi.
+  # Docker build: ~3-5 daqiqa | PEX build: ~30-60 soniya
+  ENABLE_FAST_DEPLOYS: 'true'
+  PYTHON_VERSION: '3.10'
 
 jobs:
   dagster_cloud_default_deploy:
-    name: Deploy to Dagster Cloud (Serverless)
-    runs-on: ubuntu-latest
+    name: Dagster Serverless Deploy
+    runs-on: ubuntu-22.04
 
     steps:
       # -----------------------------------------------------------------
-      # 1. Kodni GitHub'dan tortib olish
-      # fetch-depth: 0 — to'liq git tarixi kerak (Dagster CI tools uchun)
+      # 1. PRERUN — Qaysi deploy strategiyasi ishlatilishini aniqlaydi
+      #
+      # Bu qadam Dagster Cloud API ga bog'lanib tekshiradi:
+      #   - Token to'g'rimi?
+      #   - Bu push'mi yoki PR'mi?
+      #   - PEX build ishlatilsinmi yo Docker?
+      #
+      # Natija (steps.prerun.outputs.result):
+      #   "pex-deploy"    → Python EXecutable bilan deploy (tez)
+      #   "docker-deploy" → Docker image bilan deploy (to'liq)
+      #   "skip"          → Hech narsa qilish kerak emas (masalan yopilgan PR)
+      # -----------------------------------------------------------------
+      - name: Prerun Checks
+        id: prerun
+        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v1.13.5
+
+      # -----------------------------------------------------------------
+      # 2. CHECKOUT — Kodni GitHub'dan tortib olish
+      #
+      # ref: github.head_ref — PR uchun PR branch'ini oladi,
+      # oddiy push uchun esa main branch'ini oladi.
+      # fetch-depth: 0 — to'liq git tarixini oladi (Dagster CI bunga muhtoj).
       # -----------------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
 
       # -----------------------------------------------------------------
-      # 2. Oldindan tekshirish (Prerun Checks)
-      # Bu action Dagster Cloud'ga ulanish mumkinligini, token to'g'riligini
-      # va deployment konfiguratsiyasini tekshiradi.
-      # Agar token noto'g'ri bo'lsa — bu qadamda xato beradi (tez xabar).
+      # 3. CI INIT — Deploy sessiyasini boshlash (STATEDIR yaratadi)
+      #
+      # Bu qadam oldingi "statedir" xatosini hal qiladi!
+      # ci-init qadami:
+      #   a) Noyob build sessiyasi yaratadi (state directory = DAGSTER_BUILD_STATEDIR)
+      #   b) dagster_cloud.yaml ni tahlil qiladi
+      #   c) Bu push oddiy deploy yoki branch deployment (PR) ekanini aniqlaydi
+      #
+      # deployment: 'prod' — production deployment nomini belgilaydi.
+      # Bu Dagster Cloud UI'da ko'rinadigan deployment nomi.
       # -----------------------------------------------------------------
-      - name: Dagster Cloud prerun checks
-        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v1.13.5
+      - name: Initialize build session
+        id: ci-init
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/ci-init@v1.13.5
+        with:
+          project_dir: ${{ env.DAGSTER_CLOUD_YAML_PATH }}
+          dagster_cloud_yaml_path: ${{ env.DAGSTER_CLOUD_FILE }}
+          deployment: 'prod'
 
       # -----------------------------------------------------------------
-      # 3. Kodni Dagster Cloud'ga yuklash (Deploy)
-      # "ci deploy" buyrug'i:
-      #   a) dagster_cloud.yaml'ni o'qib, code location'larni aniqlaydi
-      #   b) Docker image quradi (requirements.txt / pyproject.toml asosida)
-      #   c) Serverless muhitda yangi image'ni ishga tushiradi
-      #   d) Deploy natijasini GitHub Actions UI'da ko'rsatadi
+      # 4a. PEX BUILD (Tez deploy) — Docker o'rniga Python arxivi
+      #
+      # Faqat steps.prerun.outputs.result == 'pex-deploy' bo'lsa ishlaydi.
+      # ENABLE_FAST_DEPLOYS=true bo'lganda Dagster odatda PEX tanlaydi.
+      #
+      # PEX nima? — Barcha Python paketlarni bitta arxivga yig'adi.
+      # Docker image'dan farqi: OS qatlamlari yo'q, faqat Python kodi.
+      # Bu loyiha uchun eng maqbul usul.
       # -----------------------------------------------------------------
-      - name: Deploy to Dagster Cloud
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        id: setup-python
+        if: steps.prerun.outputs.result == 'pex-deploy'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install setuptools (PEX dependency)
+        if: steps.prerun.outputs.result == 'pex-deploy'
+        run: ${{ steps.setup-python.outputs.python-path }} -m pip install setuptools
+        shell: bash
+
+      - name: Build PEX artifact
+        id: run-pex-build
+        if: steps.prerun.outputs.result == 'pex-deploy'
         uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.13.5
         with:
-          # "ci deploy" — rasmiy Dagster deploy buyrug'i
-          # dagster_cloud.yaml'dagi barcha location'larni deploy qiladi
+          command: "ci build --build-strategy=python-executable --python-version ${{ env.PYTHON_VERSION }}"
+
+      # -----------------------------------------------------------------
+      # 4b. DOCKER BUILD (To'liq deploy) — Fallback strategiyasi
+      #
+      # Faqat steps.prerun.outputs.result == 'docker-deploy' bo'lsa ishlaydi.
+      # Bu loyiha uchun kamdan-kam ishlatiladi (PEX odatda tezroq).
+      # -----------------------------------------------------------------
+      - name: Set up Docker Buildx
+        if: steps.prerun.outputs.result == 'docker-deploy'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        id: run-docker-build
+        if: steps.prerun.outputs.result == 'docker-deploy'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.13.5
+        with:
+          command: "ci build --build-strategy=docker --python-version ${{ env.PYTHON_VERSION }}"
+
+      # -----------------------------------------------------------------
+      # 5. CI DEPLOY — Qurilgan artifact'ni Dagster Cloud'ga yuklash
+      #
+      # Bu qadam "ci-init" da yaratilgan sessiyani yakunlaydi va
+      # Dagster Cloud'ga xabar beradi: "yangi kod tayyor".
+      # Dagster Cloud serverless muhitda yangi kodni ishga tushiradi.
+      # -----------------------------------------------------------------
+      - name: Deploy to Dagster Cloud
+        id: ci-deploy
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.13.5
+        with:
           command: "ci deploy"
+
+      # -----------------------------------------------------------------
+      # 6. SUMMARY — Deploy natijasini GitHub Actions sahifasida ko'rsatish
+      #
+      # Bu qadam har doim ishlaydi (muvaffaqiyatli yoki xato bo'lsa ham).
+      # GitHub Actions "Summary" sahifasida deploy natijasi markdown'da chiqadi.
+      # -----------------------------------------------------------------
+      - name: Generate deploy summary
+        id: ci-summary
+        if: steps.prerun.outputs.result != 'skip'
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1.13.5
+        with:
+          command: "ci status --output-format=markdown >> $GITHUB_STEP_SUMMARY"
