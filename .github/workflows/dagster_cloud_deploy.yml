@@ -1,26 +1,74 @@
-name: Dagster Cloud Deploy
+# .github/workflows/dagster_cloud_deploy.yml
+# ===========================================
+# SentinelGuard RevOps — Dagster+ Serverless Deploy
+#
+# RASMIY MANBA: dagster-io/dagster-cloud-serverless-quickstart
+# ACTION VERSIYASI: @v1 (2024 yildan hozirga qadar barqaror va rasmiy)
+#
+# ESLATMA: Eski @0.1.34 versiya arxiv qilingan va ishlamaydi.
+# Yangi arxitektura: dagster-cloud-action/actions/utils/* yo'lidan foydalanadi.
+#
+# QACHON ISHLAYDI:
+#   - main'ga push: production deployment
+#   - PR ochilganda/yangilanganda: branch deployment (ixtiyoriy, hozir o'chirilgan)
+#
+# KERAKLI GITHUB SECRETS:
+#   DAGSTER_CLOUD_API_TOKEN — dagster.cloud → Settings → Tokens → User Token
+#                             Token prefiksi: dagster_cloud_user_...
+#
+# KERAKLI GITHUB ENV VAR (Secrets emas, Variables bo'limiga):
+#   DAGSTER_CLOUD_ORGANIZATION — dagster.cloud'dagi org nomingiz (URL'da ko'rinadi)
+#   Masalan: https://my-company.dagster.cloud → "my-company"
+
+name: Dagster Cloud — Production Deploy
+
 on:
   push:
     branches:
       - main
-      - master
+
+# Barcha workflow bosqichlari uchun umumiy env o'zgaruvchilar.
+# secrets.* → GitHub Secrets bo'limidan o'qiladi (xavfsiz).
+# vars.*    → GitHub Variables bo'limidan o'qiladi (ommaviy, tokenlar emas).
+env:
+  DAGSTER_CLOUD_API_TOKEN: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
+  DAGSTER_CLOUD_ORGANIZATION: ${{ vars.DAGSTER_CLOUD_ORGANIZATION }}
 
 jobs:
-  dagster_cloud_deploy:
+  dagster_cloud_default_deploy:
+    name: Deploy to Dagster Cloud (Serverless)
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
 
-      - name: Dagster Cloud Deploy
-        uses: dagster-io/dagster-cloud-action@0.1.34
+    steps:
+      # -----------------------------------------------------------------
+      # 1. Kodni GitHub'dan tortib olish
+      # fetch-depth: 0 — to'liq git tarixi kerak (Dagster CI tools uchun)
+      # -----------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          dagster_cloud_api_token: ${{ secrets.DAGSTER_CLOUD_API_TOKEN }}
-          location: |
-            {
-              "name": "revops-intelligence",
-              "directory": ".",
-              "file": "dagster_pipeline.py"
-            }
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      # -----------------------------------------------------------------
+      # 2. Oldindan tekshirish (Prerun Checks)
+      # Bu action Dagster Cloud'ga ulanish mumkinligini, token to'g'riligini
+      # va deployment konfiguratsiyasini tekshiradi.
+      # Agar token noto'g'ri bo'lsa — bu qadamda xato beradi (tez xabar).
+      # -----------------------------------------------------------------
+      - name: Dagster Cloud prerun checks
+        uses: dagster-io/dagster-cloud-action/actions/utils/prerun@v1
+
+      # -----------------------------------------------------------------
+      # 3. Kodni Dagster Cloud'ga yuklash (Deploy)
+      # "ci deploy" buyrug'i:
+      #   a) dagster_cloud.yaml'ni o'qib, code location'larni aniqlaydi
+      #   b) Docker image quradi (requirements.txt / pyproject.toml asosida)
+      #   c) Serverless muhitda yangi image'ni ishga tushiradi
+      #   d) Deploy natijasini GitHub Actions UI'da ko'rsatadi
+      # -----------------------------------------------------------------
+      - name: Deploy to Dagster Cloud
+        uses: dagster-io/dagster-cloud-action/actions/utils/dagster-cloud-cli@v1
+        with:
+          # "ci deploy" — rasmiy Dagster deploy buyrug'i
+          # dagster_cloud.yaml'dagi barcha location'larni deploy qiladi
+          command: "ci deploy"

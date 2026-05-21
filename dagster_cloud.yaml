@@ -1,7 +1,39 @@
+# dagster_cloud.yaml
+# ==================
+# Bu fayl Dagster Cloud'ga loyihamizning qayerda va qanday ishlashini aytadi.
+#
+# ASOSIY TUSHUNCHALAR:
+#   location (Code Location) — Dagster Cloud'da bir "loyiha bloki".
+#   Bir repository'da bir nechta location bo'lishi mumkin (monorepo uchun).
+#   Bizda bitta location: "revops-intelligence"
+#
+# build.directory:
+#   "." — bu fayl turgan papka = loyiha ildizi.
+#   Dagster Cloud bu papkadan Dockerfile topadi yoki o'zi image yaratadi.
+#
+# SERVERLESS vs HYBRID:
+#   Serverless (hozirgi): Dagster Cloud o'z AWS Lambda'sida ishlatadi.
+#     + Biz server boshqarmaymiz, Dagster o'zi scale qiladi
+#     + Bepul boshlash mumkin, kichik loyihalar uchun ideal
+#   Hybrid: Siz o'z Kubernetes/Docker serveringizda agent ishlatib,
+#     Dagster Cloud faqat UI va scheduling uchun ishlatiladi.
+#     + Ma'lumot sizning serveringizda qoladi (GDPR, xavfsizlik)
+#     + Katta hajm uchun mos
+
 locations:
   - location_name: revops-intelligence
+
     code_source:
+      # Dagster bu fayldan Definitions ob'ektini o'qiydi.
+      # pyproject.toml'dagi [tool.dagster] module_name bilan mos kelishi kerak.
       python_file: dagster_pipeline.py
+
     build:
+      # Dagster Cloud Docker image qurish uchun shu papkadan foydalanadi.
+      # Bu papkadagi requirements.txt yoki pyproject.toml o'qiladi.
       directory: .
-      registry: 657821118200.dkr.ecr.us-west-2.amazonaws.com/dagster-cloud-serverless-base-py3.10:latest
+
+      # registry: Agar o'z AWS ECR/GCR image registringiz bo'lsa bu yerga yozing.
+      # Serverless rejimida Dagster o'z registridan foydalanadi, bu qator kerak emas.
+      # Hybrid rejimga o'tganda:
+      #   registry: 123456789.dkr.ecr.us-east-1.amazonaws.com/my-dagster-image:latest
