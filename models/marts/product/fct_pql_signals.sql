@@ -37,6 +37,7 @@ pql_logic as (
         end                                             as activation_milestone,
 
         -- Trial Context
+        a.workspace_created_at,
         a.trial_started_at,
         a.trial_ended_at,
         case 

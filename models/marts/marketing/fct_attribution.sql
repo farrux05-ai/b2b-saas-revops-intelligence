@@ -31,7 +31,10 @@ final as (
         a.lifetime_revenue,
         
         -- Deal counts from this channel
-        coalesce(d.won_deals_count, 0)                  as won_deals_count
+        coalesce(d.won_deals_count, 0)                  as won_deals_count,
+
+        -- MetricFlow requires a time dimension
+        cast(a.workspace_created_at as date)            as account_created_at
         
     from accounts a
     left join deals d

@@ -111,7 +111,10 @@ final as (
         round(
             sm.total_segment_mrr / nullif(o.total_active_mrr, 0) * 100,
             2
-        )                                           as pct_of_total_mrr
+        )                                           as pct_of_total_mrr,
+
+        -- MetricFlow requires a time dimension for all measures
+        cast(current_date as date)                  as snapshot_date
 
     from segment_mrr sm
     cross join recent_cohorts rc
