@@ -1,0 +1,159 @@
+version: 2
+
+# =============================================================================
+# SEMANTIC LAYER — Marketing Domain
+#
+# Entities: leads (fct_lead_funnel), channel_attribution (fct_attribution)
+# =============================================================================
+
+semantic_models:
+
+  # ─── LEADS ─────────────────────────────────────────────────────────────────
+  # Entity grain: one row per HubSpot company (lead).
+  - name: leads
+    description: >
+      Marketing lead funnel entity. One row per HubSpot company.
+      Tracks the full journey: Lead → MQL → SQL → Opportunity → Customer.
+    model: ref('fct_lead_funnel')
+    defaults:
+      agg_time_dimension: became_lead_at
+
+    entities:
+      - name: lead
+        type: primary
+        expr: hubspot_company_id
+
+      - name: account
+        type: foreign
+        expr: account_id
+
+    dimensions:
+      - name: company_name
+        type: categorical
+        label: "Company"
+
+      - name: domain
+        type: categorical
+        label: "Domain"
+
+      - name: industry
+        type: categorical
+        label: "Industry"
+
+      - name: lifecycle_stage
+        type: categorical
+        label: "Lifecycle Stage"
+        description: "subscriber → lead → MQL → SQL → opportunity → customer."
+
+      - name: lead_status
+        type: categorical
+        label: "Lead Status"
+
+      - name: is_customer
+        type: categorical
+        label: "Customer"
+
+      - name: is_mql_or_beyond
+        type: categorical
+        label: "MQL+"
+
+      - name: is_sql_or_beyond
+        type: categorical
+        label: "SQL+"
+
+      - name: is_pql
+        type: categorical
+        label: "Is PQL"
+
+      - name: became_lead_at
+        type: time
+        label: "Became Lead"
+        type_params:
+          time_granularity: day
+
+    measures:
+      - name: lead_count
+        agg: count_distinct
+        expr: hubspot_company_id
+        label: "Lead Count (raw)"
+
+      - name: mql_count
+        agg: count_distinct
+        expr: case when is_mql_or_beyond = true then hubspot_company_id end
+        label: "MQL Count (raw)"
+
+      - name: sql_count
+        agg: count_distinct
+        expr: case when is_sql_or_beyond = true then hubspot_company_id end
+        label: "SQL Count (raw)"
+
+      - name: customer_count
+        agg: count_distinct
+        expr: case when is_customer = true then hubspot_company_id end
+        label: "Customer Count (raw)"
+
+      - name: pipeline_mrr
+        agg: sum
+        expr: current_mrr
+        label: "Pipeline MRR (raw)"
+
+      - name: avg_lead_age
+        agg: average
+        expr: lead_age_days
+        label: "Avg Lead Age Days (raw)"
+
+  # ─── CHANNEL ATTRIBUTION ───────────────────────────────────────────────────
+  # Entity grain: one row per account (first-touch attribution).
+  - name: channel_attribution
+    description: >
+      First-touch marketing attribution model mapping won deals and
+      revenue back to their original acquisition channels and campaigns.
+    model: ref('fct_attribution')
+    defaults:
+      agg_time_dimension: account_created_at
+
+    entities:
+      - name: attributed_account
+        type: primary
+        expr: account_id
+
+    dimensions:
+      - name: acquisition_channel
+        type: categorical
+        label: "Channel"
+        description: "Organic Search, Google Ads, LinkedIn, etc."
+
+      - name: first_touch_campaign
+        type: categorical
+        label: "First Touch Campaign"
+
+      - name: workspace_name
+        type: categorical
+        label: "Account"
+
+      - name: account_created_at
+        type: time
+        label: "Account Created"
+        type_params:
+          time_granularity: day
+
+    measures:
+      - name: attributed_mrr
+        agg: sum
+        expr: mrr
+        label: "Attributed MRR (raw)"
+
+      - name: attributed_revenue
+        agg: sum
+        expr: lifetime_revenue
+        label: "Attributed Revenue (raw)"
+
+      - name: total_won_deals
+        agg: sum
+        expr: won_deals_count
+        label: "Won Deals (raw)"
+
+      - name: attributed_account_count
+        agg: count_distinct
+        expr: account_id
+        label: "Attributed Account Count (raw)"

@@ -35,3 +35,8 @@ models:
     marts:
       +materialized: table
       +schema: marts
+      semantic_models:
+        +materialized: table
+        +schema: semantic_layer
+        +tags:
+          - semantic_layer

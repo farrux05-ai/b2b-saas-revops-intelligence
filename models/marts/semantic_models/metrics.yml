@@ -1,0 +1,975 @@
+version: 2
+
+# =============================================================================
+# METRICS — B2B SaaS RevOps Intelligence
+#
+# Standard MetricFlow metric definitions. Tool-agnostic:
+#   - dbt Cloud Semantic Layer API
+#   - Lightdash (reads semantic_models natively)
+#   - Any BI tool via dbt Cloud
+#
+# Metric types:
+#   simple  → single measure aggregation from a semantic model
+#   derived → formula combining multiple simple metrics (used for rates/ratios)
+#             expr: "metric('a') / nullif(metric('b'), 0)"
+#
+# NOTE (dbt 1.9+):
+#   ratio type numerator/denominator reference OTHER METRICS, not measures.
+#   We use 'derived' type instead — more flexible and future-proof.
+#
+# Convention:
+#   All "raw" measures live in sm_*.yml files.
+#   Simple metrics   → direct business numbers (counts, sums, avgs)
+#   Derived metrics  → rates, ratios, calculated KPIs
+# =============================================================================
+
+metrics:
+
+  # ===========================================================================
+  # CORE — Account & Revenue (Simple)
+  # ===========================================================================
+
+  - name: total_accounts
+    label: "Total Accounts"
+    description: "Count of all unique B2B accounts."
+    type: simple
+    type_params:
+      measure:
+        name: account_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Core"
+      team: "RevOps"
+
+  - name: total_mrr
+    label: "Total MRR"
+    description: "Monthly Recurring Revenue across all active accounts (USD)."
+    type: simple
+    type_params:
+      measure:
+        name: accounts_mrr
+        fill_nulls_with: 0
+    meta:
+      group_label: "Core"
+      format: "usd"
+      team: "Finance"
+
+  - name: total_arr
+    label: "Total ARR"
+    description: "Annualized Recurring Revenue (MRR × 12) across all accounts (USD)."
+    type: simple
+    type_params:
+      measure:
+        name: accounts_arr
+        fill_nulls_with: 0
+    meta:
+      group_label: "Core"
+      format: "usd"
+      team: "Finance"
+
+  - name: total_active_mrr
+    label: "Total Active MRR"
+    description: "MRR from non-canceled subscriptions only (USD)."
+    type: simple
+    type_params:
+      measure:
+        name: accounts_active_mrr
+        fill_nulls_with: 0
+    meta:
+      group_label: "Core"
+      format: "usd"
+      team: "Finance"
+
+  - name: total_mrr_at_risk
+    label: "MRR at Risk"
+    description: "MRR tied to accounts classified as At Risk (USD)."
+    type: simple
+    type_params:
+      measure:
+        name: accounts_mrr_at_risk
+        fill_nulls_with: 0
+    meta:
+      group_label: "Core"
+      format: "usd"
+      team: "CS"
+
+  # Filtered account counts — used as numerators in derived rates
+  - name: at_risk_accounts
+    label: "At-Risk Accounts"
+    description: "Count of accounts classified as At Risk."
+    type: simple
+    type_params:
+      measure:
+        name: at_risk_account_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Core"
+      team: "CS"
+
+  - name: churned_accounts
+    label: "Churned Accounts"
+    description: "Count of accounts classified as Churned."
+    type: simple
+    type_params:
+      measure:
+        name: churned_account_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Core"
+      team: "CS"
+
+  - name: total_pqls
+    label: "PQL Accounts"
+    description: "Count of accounts classified as Product Qualified Leads."
+    type: simple
+    type_params:
+      measure:
+        name: pql_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Core"
+      team: "Product"
+
+  - name: upsell_ready_accounts
+    label: "Upsell-Ready Accounts"
+    description: "Accounts with seat utilization ≥ 90%."
+    type: simple
+    type_params:
+      measure:
+        name: accounts_upsell_ready
+        fill_nulls_with: 0
+    meta:
+      group_label: "Core"
+      team: "CS"
+
+  # ===========================================================================
+  # CORE — Health Rates (Derived)
+  # ===========================================================================
+
+  - name: at_risk_rate
+    label: "At-Risk Rate (%)"
+    description: "Percentage of accounts classified as At Risk."
+    type: derived
+    type_params:
+      expr: "metric('at_risk_accounts') / nullif(metric('total_accounts'), 0)"
+      metrics:
+        - name: at_risk_accounts
+        - name: total_accounts
+    meta:
+      group_label: "Core"
+      format: "percent"
+      team: "CS"
+
+  - name: churn_rate_accounts
+    label: "Account Churn Rate (%)"
+    description: "Percentage of accounts classified as Churned."
+    type: derived
+    type_params:
+      expr: "metric('churned_accounts') / nullif(metric('total_accounts'), 0)"
+      metrics:
+        - name: churned_accounts
+        - name: total_accounts
+    meta:
+      group_label: "Core"
+      format: "percent"
+      team: "CS"
+
+  - name: pql_rate
+    label: "PQL Rate (%)"
+    description: "Percentage of accounts that are Product Qualified Leads."
+    type: derived
+    type_params:
+      expr: "metric('total_pqls') / nullif(metric('total_accounts'), 0)"
+      metrics:
+        - name: total_pqls
+        - name: total_accounts
+    meta:
+      group_label: "Core"
+      format: "percent"
+      team: "Product"
+
+  - name: upsell_readiness_rate
+    label: "Upsell Readiness Rate (%)"
+    description: "Percentage of accounts with seat utilization ≥ 90%."
+    type: derived
+    type_params:
+      expr: "metric('upsell_ready_accounts') / nullif(metric('total_accounts'), 0)"
+      metrics:
+        - name: upsell_ready_accounts
+        - name: total_accounts
+    meta:
+      group_label: "Core"
+      format: "percent"
+      team: "CS"
+
+  # ===========================================================================
+  # SALES — Pipeline (Simple)
+  # ===========================================================================
+
+  - name: total_deals
+    label: "Total Deals"
+    description: "Count of all deals in the pipeline."
+    type: simple
+    type_params:
+      measure:
+        name: deal_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Sales"
+      team: "Sales"
+
+  - name: total_pipeline_value
+    label: "Total Pipeline Value"
+    description: "Sum of all deal amounts (USD)."
+    type: simple
+    type_params:
+      measure:
+        name: total_pipeline_value
+        fill_nulls_with: 0
+    meta:
+      group_label: "Sales"
+      format: "usd"
+      team: "Sales"
+
+  - name: weighted_pipeline
+    label: "Weighted Pipeline"
+    description: "Sum of deal_amount × win_probability. Revenue forecast (USD)."
+    type: simple
+    type_params:
+      measure:
+        name: total_weighted_pipeline
+        fill_nulls_with: 0
+    meta:
+      group_label: "Sales"
+      format: "usd"
+      team: "Sales"
+
+  - name: won_deals
+    label: "Won Deals"
+    description: "Count of closed-won deals."
+    type: simple
+    type_params:
+      measure:
+        name: won_deal_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Sales"
+      team: "Sales"
+
+  - name: stale_deals
+    label: "Stale Deals (90d+)"
+    description: "Count of deals open for more than 90 days."
+    type: simple
+    type_params:
+      measure:
+        name: stale_deal_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Sales"
+      team: "Sales"
+
+  - name: avg_deal_size
+    label: "Avg Deal Size"
+    description: "Average deal value in USD."
+    type: simple
+    type_params:
+      measure:
+        name: avg_deal_size
+    meta:
+      group_label: "Sales"
+      format: "usd"
+      team: "Sales"
+
+  - name: avg_sales_cycle_days
+    label: "Avg Sales Cycle (Days)"
+    description: "Average days from deal creation to close."
+    type: simple
+    type_params:
+      measure:
+        name: avg_days_to_close
+    meta:
+      group_label: "Sales"
+      team: "Sales"
+
+  # ===========================================================================
+  # SALES — Pipeline Rates (Derived)
+  # ===========================================================================
+
+  - name: win_rate
+    label: "Win Rate (%)"
+    description: >
+      Percentage of deals that closed as won.
+      Formula: Won Deals / Total Deals × 100.
+      Best-in-class B2B SaaS benchmark: 20–30%.
+    type: derived
+    type_params:
+      expr: "metric('won_deals') / nullif(metric('total_deals'), 0)"
+      metrics:
+        - name: won_deals
+        - name: total_deals
+    meta:
+      group_label: "Sales"
+      format: "percent"
+      team: "Sales"
+
+  - name: stale_deal_rate
+    label: "Stale Deal Rate (%)"
+    description: "Percentage of deals open for more than 90 days."
+    type: derived
+    type_params:
+      expr: "metric('stale_deals') / nullif(metric('total_deals'), 0)"
+      metrics:
+        - name: stale_deals
+        - name: total_deals
+    meta:
+      group_label: "Sales"
+      format: "percent"
+      team: "Sales"
+
+  # ===========================================================================
+  # SALES — Activity (Simple)
+  # ===========================================================================
+
+  - name: total_activities
+    label: "Total Activities"
+    description: "Count of all sales activities (calls + emails + meetings)."
+    type: simple
+    type_params:
+      measure:
+        name: activity_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Sales"
+      team: "Sales"
+
+  - name: total_calls
+    label: "Total Calls"
+    description: "Count of call engagements."
+    type: simple
+    type_params:
+      measure:
+        name: call_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Sales"
+      team: "Sales"
+
+  - name: total_emails
+    label: "Total Emails"
+    description: "Count of email engagements."
+    type: simple
+    type_params:
+      measure:
+        name: email_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Sales"
+      team: "Sales"
+
+  - name: total_meetings
+    label: "Total Meetings"
+    description: "Count of meeting engagements."
+    type: simple
+    type_params:
+      measure:
+        name: meeting_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Sales"
+      team: "Sales"
+
+  # ===========================================================================
+  # FINANCE — Revenue (Simple)
+  # ===========================================================================
+
+  - name: net_mrr_change
+    label: "Net MRR Change"
+    description: "Net MRR change (expansion − contraction − churn) for the period (USD)."
+    type: simple
+    type_params:
+      measure:
+        name: net_mrr_change
+        fill_nulls_with: 0
+    meta:
+      group_label: "Finance"
+      format: "usd"
+      team: "Finance"
+
+  - name: new_mrr
+    label: "New MRR"
+    description: "MRR from brand-new accounts in the period (USD)."
+    type: simple
+    type_params:
+      measure:
+        name: new_mrr
+        fill_nulls_with: 0
+    meta:
+      group_label: "Finance"
+      format: "usd"
+      team: "Finance"
+
+  - name: expansion_mrr
+    label: "Expansion MRR"
+    description: "Additional MRR from existing accounts paying more (USD)."
+    type: simple
+    type_params:
+      measure:
+        name: expansion_mrr
+        fill_nulls_with: 0
+    meta:
+      group_label: "Finance"
+      format: "usd"
+      team: "Finance"
+
+  - name: churned_mrr
+    label: "Churned MRR"
+    description: "MRR lost to churn in the period (USD)."
+    type: simple
+    type_params:
+      measure:
+        name: churned_mrr
+        fill_nulls_with: 0
+    meta:
+      group_label: "Finance"
+      format: "usd"
+      team: "Finance"
+
+  - name: avg_nrr
+    label: "Avg NRR (%)"
+    description: >
+      Net Revenue Retention. >100% means expansion > churn.
+      Best-in-class B2B SaaS: 120%+.
+    type: simple
+    type_params:
+      measure:
+        name: avg_nrr
+    meta:
+      group_label: "Finance"
+      format: "percent"
+      team: "Finance"
+
+  - name: avg_grr
+    label: "Avg GRR (%)"
+    description: >
+      Gross Revenue Retention. Excludes expansion. Ceiling = 100%.
+      Healthy SaaS target: >85%.
+    type: simple
+    type_params:
+      measure:
+        name: avg_grr
+    meta:
+      group_label: "Finance"
+      format: "percent"
+      team: "Finance"
+
+  - name: avg_monthly_churn_rate
+    label: "Avg Monthly Churn Rate (%)"
+    description: "Churned MRR / Starting MRR for the month."
+    type: simple
+    type_params:
+      measure:
+        name: avg_churn_rate
+    meta:
+      group_label: "Finance"
+      format: "percent"
+      team: "Finance"
+
+  - name: avg_ltv
+    label: "Avg Estimated LTV"
+    description: "Estimated Lifetime Value per account (Avg MRR / Monthly Churn Rate)."
+    type: simple
+    type_params:
+      measure:
+        name: avg_ltv
+    meta:
+      group_label: "Finance"
+      format: "usd"
+      team: "Finance"
+
+  - name: avg_ltv_arr_ratio
+    label: "Avg LTV:ARR Ratio"
+    description: "LTV divided by ARR per account. Healthy SaaS target: >3x."
+    type: simple
+    type_params:
+      measure:
+        name: avg_ltv_arr_ratio
+    meta:
+      group_label: "Finance"
+      team: "Finance"
+
+  # ===========================================================================
+  # MARKETING — Funnel (Simple)
+  # ===========================================================================
+
+  - name: total_leads
+    label: "Total Leads"
+    description: "Count of all leads in the funnel."
+    type: simple
+    type_params:
+      measure:
+        name: lead_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Marketing"
+      team: "Marketing"
+
+  - name: total_mqls
+    label: "Total MQLs"
+    description: "Count of leads at MQL stage or beyond."
+    type: simple
+    type_params:
+      measure:
+        name: mql_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Marketing"
+      team: "Marketing"
+
+  - name: total_sqls
+    label: "Total SQLs"
+    description: "Count of leads at SQL stage or beyond."
+    type: simple
+    type_params:
+      measure:
+        name: sql_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Marketing"
+      team: "Marketing"
+
+  - name: total_customers
+    label: "Total Customers"
+    description: "Count of leads that converted to paying customers."
+    type: simple
+    type_params:
+      measure:
+        name: customer_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Marketing"
+      team: "Marketing"
+
+  - name: attributed_mrr
+    label: "Attributed MRR"
+    description: "Total MRR attributed to each acquisition channel (USD)."
+    type: simple
+    type_params:
+      measure:
+        name: attributed_mrr
+        fill_nulls_with: 0
+    meta:
+      group_label: "Marketing"
+      format: "usd"
+      team: "Marketing"
+
+  - name: attributed_revenue
+    label: "Attributed Revenue"
+    description: "Total closed-won revenue attributed to each channel (USD)."
+    type: simple
+    type_params:
+      measure:
+        name: attributed_revenue
+        fill_nulls_with: 0
+    meta:
+      group_label: "Marketing"
+      format: "usd"
+      team: "Marketing"
+
+  # ===========================================================================
+  # MARKETING — Funnel Rates (Derived)
+  # ===========================================================================
+
+  - name: mql_to_sql_rate
+    label: "MQL → SQL Rate (%)"
+    description: >
+      Percentage of MQLs that converted to SQL.
+      Formula: SQLs / MQLs × 100. Benchmark: 20–40%.
+    type: derived
+    type_params:
+      expr: "metric('total_sqls') / nullif(metric('total_mqls'), 0)"
+      metrics:
+        - name: total_sqls
+        - name: total_mqls
+    meta:
+      group_label: "Marketing"
+      format: "percent"
+      team: "Marketing"
+
+  - name: lead_to_customer_rate
+    label: "Lead → Customer Rate (%)"
+    description: "Percentage of leads that converted to paying customers."
+    type: derived
+    type_params:
+      expr: "metric('total_customers') / nullif(metric('total_leads'), 0)"
+      metrics:
+        - name: total_customers
+        - name: total_leads
+    meta:
+      group_label: "Marketing"
+      format: "percent"
+      team: "Marketing"
+
+  - name: mql_to_customer_rate
+    label: "MQL → Customer Rate (%)"
+    description: "Percentage of MQLs that became paying customers."
+    type: derived
+    type_params:
+      expr: "metric('total_customers') / nullif(metric('total_mqls'), 0)"
+      metrics:
+        - name: total_customers
+        - name: total_mqls
+    meta:
+      group_label: "Marketing"
+      format: "percent"
+      team: "Marketing"
+
+  # ===========================================================================
+  # PRODUCT — Activation & Adoption (Simple)
+  # ===========================================================================
+
+  - name: total_workspaces
+    label: "Total Workspaces"
+    description: "Count of all product workspaces."
+    type: simple
+    type_params:
+      measure:
+        name: workspace_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Product"
+      team: "Product"
+
+  - name: pql_workspaces
+    label: "PQL Workspaces"
+    description: "Count of workspaces classified as Product Qualified Leads."
+    type: simple
+    type_params:
+      measure:
+        name: pql_workspace_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Product"
+      team: "Product"
+
+  - name: converted_workspaces
+    label: "Converted Workspaces"
+    description: "Count of workspaces that converted to paid."
+    type: simple
+    type_params:
+      measure:
+        name: converted_workspace_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Product"
+      team: "Product"
+
+  - name: avg_activation_rate
+    label: "Avg Activation Rate (%)"
+    description: "Average fraction of users who completed the activation milestone."
+    type: simple
+    type_params:
+      measure:
+        name: avg_activation_rate
+    meta:
+      group_label: "Product"
+      format: "percent"
+      team: "Product"
+
+  - name: total_trials
+    label: "Total Trials"
+    description: "Count of all trialing subscriptions."
+    type: simple
+    type_params:
+      measure:
+        name: trial_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Product"
+      team: "Product"
+
+  - name: converted_trials_count
+    label: "Converted Trials"
+    description: "Count of trials that converted to paid."
+    type: simple
+    type_params:
+      measure:
+        name: converted_trial_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Product"
+      team: "Product"
+
+  - name: at_risk_trials
+    label: "At-Risk Trials"
+    description: "Trials expiring within 3 days without conversion."
+    type: simple
+    type_params:
+      measure:
+        name: at_risk_trial_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Product"
+      team: "CS"
+
+  - name: avg_time_to_convert
+    label: "Avg Time to Convert (Days)"
+    description: "Average days from trial start to first successful payment."
+    type: simple
+    type_params:
+      measure:
+        name: avg_time_to_convert
+    meta:
+      group_label: "Product"
+      team: "Product"
+
+  - name: must_win_accounts
+    label: "Must Win Accounts"
+    description: "GTM Priority Matrix: accounts with High Fit + HOT Intent."
+    type: simple
+    type_params:
+      measure:
+        name: must_win_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Product"
+      team: "Sales"
+
+  # ===========================================================================
+  # PRODUCT — Conversion Rates (Derived)
+  # ===========================================================================
+
+  - name: workspace_conversion_rate
+    label: "Workspace Conversion Rate (%)"
+    description: >
+      Percentage of workspaces that converted from trial to paid.
+      Benchmark: 5–25% depending on PLG motion.
+    type: derived
+    type_params:
+      expr: "metric('converted_workspaces') / nullif(metric('total_workspaces'), 0)"
+      metrics:
+        - name: converted_workspaces
+        - name: total_workspaces
+    meta:
+      group_label: "Product"
+      format: "percent"
+      team: "Product"
+
+  - name: pql_conversion_rate
+    label: "PQL Conversion Rate (%)"
+    description: "Percentage of PQL workspaces that converted to paid."
+    type: derived
+    type_params:
+      expr: "metric('converted_workspaces') / nullif(metric('pql_workspaces'), 0)"
+      metrics:
+        - name: converted_workspaces
+        - name: pql_workspaces
+    meta:
+      group_label: "Product"
+      format: "percent"
+      team: "Product"
+
+  - name: trial_conversion_rate
+    label: "Trial Conversion Rate (%)"
+    description: >
+      Percentage of trials that converted to paid.
+      Formula: Converted Trials / Total Trials × 100.
+    type: derived
+    type_params:
+      expr: "metric('converted_trials_count') / nullif(metric('total_trials'), 0)"
+      metrics:
+        - name: converted_trials_count
+        - name: total_trials
+    meta:
+      group_label: "Product"
+      format: "percent"
+      team: "Product"
+
+  # ===========================================================================
+  # CUSTOMER SUCCESS — Health & Churn (Simple)
+  # ===========================================================================
+
+  - name: cs_total_accounts
+    label: "CS Total Accounts"
+    description: "Count of all paying accounts in the CS book."
+    type: simple
+    type_params:
+      measure:
+        name: cs_account_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Customer Success"
+      team: "CS"
+
+  - name: cs_total_mrr
+    label: "CS Total MRR"
+    description: "Total MRR across all CS-managed accounts (USD)."
+    type: simple
+    type_params:
+      measure:
+        name: cs_total_mrr
+        fill_nulls_with: 0
+    meta:
+      group_label: "Customer Success"
+      format: "usd"
+      team: "CS"
+
+  - name: cs_at_risk_accounts
+    label: "CS At-Risk Accounts"
+    description: "Count of CS accounts classified as At Risk."
+    type: simple
+    type_params:
+      measure:
+        name: at_risk_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Customer Success"
+      team: "CS"
+
+  - name: payment_failing_accounts
+    label: "Payment Failing Accounts"
+    description: "Count of accounts with past_due invoices."
+    type: simple
+    type_params:
+      measure:
+        name: payment_failing_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Customer Success"
+      team: "CS"
+
+  - name: churning_soon_accounts
+    label: "Churning Soon Accounts"
+    description: "Count of accounts set to cancel at period end."
+    type: simple
+    type_params:
+      measure:
+        name: churning_soon_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Customer Success"
+      team: "CS"
+
+  - name: low_engagement_accounts
+    label: "Low Engagement Accounts"
+    description: "Count of accounts with no product activity in 30+ days."
+    type: simple
+    type_params:
+      measure:
+        name: low_engagement_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Customer Success"
+      team: "CS"
+
+  - name: cs_upsell_ready
+    label: "Upsell-Ready Accounts (CS)"
+    description: "CS accounts where seat utilization ≥ 90%."
+    type: simple
+    type_params:
+      measure:
+        name: cs_upsell_ready_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Customer Success"
+      team: "CS"
+
+  - name: avg_resolution_hours
+    label: "Avg Resolution Time (hrs)"
+    description: "Average hours to resolve a support ticket."
+    type: simple
+    type_params:
+      measure:
+        name: avg_resolution_hours
+    meta:
+      group_label: "Customer Success"
+      team: "CS"
+
+  # ===========================================================================
+  # CUSTOMER SUCCESS — Rates (Derived)
+  # ===========================================================================
+
+  - name: cs_at_risk_rate
+    label: "CS At-Risk Rate (%)"
+    description: "Percentage of CS accounts classified as At Risk."
+    type: derived
+    type_params:
+      expr: "metric('cs_at_risk_accounts') / nullif(metric('cs_total_accounts'), 0)"
+      metrics:
+        - name: cs_at_risk_accounts
+        - name: cs_total_accounts
+    meta:
+      group_label: "Customer Success"
+      format: "percent"
+      team: "CS"
+
+  - name: cs_upsell_readiness_rate
+    label: "CS Upsell Readiness Rate (%)"
+    description: "Percentage of CS accounts ready for upsell."
+    type: derived
+    type_params:
+      expr: "metric('cs_upsell_ready') / nullif(metric('cs_total_accounts'), 0)"
+      metrics:
+        - name: cs_upsell_ready
+        - name: cs_total_accounts
+    meta:
+      group_label: "Customer Success"
+      format: "percent"
+      team: "CS"
+
+  # ===========================================================================
+  # USERS (Simple)
+  # ===========================================================================
+
+  - name: total_users
+    label: "Total Users"
+    description: "Count of all registered users."
+    type: simple
+    type_params:
+      measure:
+        name: user_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Core"
+      team: "Product"
+
+  - name: activated_users
+    label: "Activated Users"
+    description: "Users who completed the activation milestone."
+    type: simple
+    type_params:
+      measure:
+        name: activated_user_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Core"
+      team: "Product"
+
+  - name: active_users_30d
+    label: "Active Users (30d)"
+    description: "Users seen in the last 30 days."
+    type: simple
+    type_params:
+      measure:
+        name: active_user_30d_count
+        fill_nulls_with: 0
+    meta:
+      group_label: "Core"
+      team: "Product"
+
+  # ===========================================================================
+  # USERS — Rates (Derived)
+  # ===========================================================================
+
+  - name: user_activation_rate
+    label: "User Activation Rate (%)"
+    description: "Percentage of users who activated."
+    type: derived
+    type_params:
+      expr: "metric('activated_users') / nullif(metric('total_users'), 0)"
+      metrics:
+        - name: activated_users
+        - name: total_users
+    meta:
+      group_label: "Core"
+      format: "percent"
+      team: "Product"

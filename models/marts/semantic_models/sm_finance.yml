@@ -1,0 +1,285 @@
+version: 2
+
+# =============================================================================
+# SEMANTIC LAYER — Finance Domain
+#
+# Entities: mrr_movements, subscriptions, arr_movements,
+#           retention_cohorts, unit_economics
+# =============================================================================
+
+semantic_models:
+
+  # ─── MRR WATERFALL ─────────────────────────────────────────────────────────
+  # Entity grain: one row per account per month.
+  - name: mrr_movements
+    description: >
+      Monthly MRR movement per account. The canonical source for SaaS revenue trends.
+      Classifies each account-month as: new, expansion, contraction, churn,
+      resurrection, or retained.
+    model: ref('fct_mrr_waterfall')
+    defaults:
+      agg_time_dimension: month_date
+
+    entities:
+      - name: mrr_movement
+        type: primary
+        expr: "account_id || '-' || month_date"
+
+      - name: account
+        type: foreign
+        expr: account_id
+
+    dimensions:
+      - name: mrr_movement_type
+        type: categorical
+        label: "Movement Type"
+        description: "new, expansion, contraction, churn, resurrection, retained."
+
+      - name: workspace_name
+        type: categorical
+        label: "Account"
+
+      - name: month_date
+        type: time
+        label: "Month"
+        type_params:
+          time_granularity: month
+
+    measures:
+      - name: total_mrr
+        agg: sum
+        expr: mrr
+        label: "Total MRR (raw)"
+
+      - name: total_at_risk_mrr
+        agg: sum
+        expr: at_risk_mrr
+        label: "At-Risk MRR (raw)"
+
+      - name: net_mrr_change
+        agg: sum
+        expr: mrr_change_amount
+        label: "Net MRR Change (raw)"
+
+      - name: new_mrr
+        agg: sum
+        expr: case when mrr_movement_type = 'new' then mrr_change_amount end
+        label: "New MRR (raw)"
+
+      - name: expansion_mrr
+        agg: sum
+        expr: case when mrr_movement_type = 'expansion' then mrr_change_amount end
+        label: "Expansion MRR (raw)"
+
+      - name: contraction_mrr
+        agg: sum
+        expr: case when mrr_movement_type = 'contraction' then mrr_change_amount end
+        label: "Contraction MRR (raw)"
+
+      - name: churned_mrr
+        agg: sum
+        expr: case when mrr_movement_type = 'churn' then abs(mrr_change_amount) end
+        label: "Churned MRR (raw)"
+
+      - name: resurrection_mrr
+        agg: sum
+        expr: case when mrr_movement_type = 'resurrection' then mrr_change_amount end
+        label: "Resurrection MRR (raw)"
+
+  # ─── SUBSCRIPTIONS ─────────────────────────────────────────────────────────
+  # Entity grain: one row per Stripe subscription.
+  - name: subscriptions
+    description: >
+      Active subscription snapshot. Finance source of truth for plan mix,
+      MRR, and churn intent signals.
+    model: ref('fct_subscriptions')
+    defaults:
+      agg_time_dimension: subscription_start_date
+
+    entities:
+      - name: subscription
+        type: primary
+        expr: subscription_id
+
+    dimensions:
+      - name: subscription_status
+        type: categorical
+        label: "Status"
+        description: "active, trialing, past_due, canceled, etc."
+
+      - name: subscription_start_date
+        type: time
+        label: "Subscription Start"
+        type_params:
+          time_granularity: day
+
+    measures:
+      - name: subscription_count
+        agg: count_distinct
+        expr: subscription_id
+        label: "Subscription Count (raw)"
+
+      - name: subscription_mrr
+        agg: sum
+        expr: mrr_amount
+        label: "Subscription MRR (raw)"
+
+  # ─── ARR MOVEMENTS ─────────────────────────────────────────────────────────
+  # Entity grain: one row per account per month (ARR view).
+  - name: arr_movements
+    description: >
+      Annualized revenue movements. Each row is one account-month.
+      Use for ARR waterfall charts — the #1 investor metric.
+    model: ref('fct_arr_movements')
+    defaults:
+      agg_time_dimension: month_date
+
+    entities:
+      - name: arr_movement
+        type: primary
+        expr: arr_snapshot_id
+
+      - name: account
+        type: foreign
+        expr: account_id
+
+    dimensions:
+      - name: arr_movement_type
+        type: categorical
+        label: "ARR Movement Type"
+        description: "new, expansion, contraction, churn, resurrection, retained."
+
+      - name: month_date
+        type: time
+        label: "Month"
+        type_params:
+          time_granularity: month
+
+    measures:
+      - name: total_arr
+        agg: sum
+        expr: current_arr
+        label: "Total ARR (raw)"
+
+      - name: net_arr_change
+        agg: sum
+        expr: arr_amount
+        label: "Net ARR Change (raw)"
+
+  # ─── RETENTION COHORTS ─────────────────────────────────────────────────────
+  # Entity grain: one row per calendar month (aggregate).
+  - name: retention_cohorts
+    description: >
+      Monthly NRR and GRR cohort analysis. The #1 investor metric for B2B SaaS.
+      NRR > 100% means expansion > churn.
+    model: ref('fct_retention_cohorts')
+    defaults:
+      agg_time_dimension: month_date
+
+    entities:
+      - name: retention_month
+        type: primary
+        expr: month_date
+
+    dimensions:
+      - name: month_date
+        type: time
+        label: "Month"
+        type_params:
+          time_granularity: month
+
+    measures:
+      - name: avg_nrr
+        agg: average
+        expr: nrr_pct
+        label: "Avg NRR % (raw)"
+        description: "Net Revenue Retention. >100% = expansion > churn."
+
+      - name: avg_grr
+        agg: average
+        expr: grr_pct
+        label: "Avg GRR % (raw)"
+
+      - name: avg_churn_rate
+        agg: average
+        expr: monthly_churn_rate_pct
+        label: "Avg Monthly Churn Rate % (raw)"
+
+      - name: avg_logo_churn
+        agg: average
+        expr: logo_churn_rate_pct
+        label: "Avg Logo Churn Rate % (raw)"
+
+      - name: total_churned_mrr
+        agg: sum
+        expr: churned_mrr
+        label: "Total Churned MRR (raw)"
+
+      - name: total_expansion_mrr
+        agg: sum
+        expr: expansion_mrr
+        label: "Total Expansion MRR (raw)"
+
+      - name: total_new_mrr
+        agg: sum
+        expr: new_mrr
+        label: "Total New MRR (raw)"
+
+      - name: total_ending_mrr
+        agg: sum
+        expr: ending_mrr
+        label: "Ending MRR (raw)"
+
+  # ─── UNIT ECONOMICS ────────────────────────────────────────────────────────
+  # Entity grain: one row per account segment.
+  - name: unit_economics
+    description: >
+      LTV estimates per account segment. LTV = Avg MRR / Monthly Churn Rate.
+      Target: LTV:ARR Ratio > 3x. Segment-level aggregate — no time dimension.
+    model: ref('fct_unit_economics')
+    defaults:
+      agg_time_dimension: snapshot_date
+
+    entities:
+      - name: segment
+        type: primary
+        expr: account_segment
+
+    dimensions:
+      - name: account_segment
+        type: categorical
+        label: "Segment"
+
+      - name: avg_nrr_pct
+        type: categorical
+        label: "Avg NRR (%)"
+
+      - name: avg_grr_pct
+        type: categorical
+        label: "Avg GRR (%)"
+
+      - name: pct_of_total_mrr
+        type: categorical
+        label: "MRR Share (%)"
+
+      - name: snapshot_date
+        type: time
+        label: "Snapshot Date"
+        type_params:
+          time_granularity: day
+
+    measures:
+      - name: avg_ltv
+        agg: average
+        expr: estimated_ltv
+        label: "Avg Estimated LTV (raw)"
+
+      - name: avg_ltv_arr_ratio
+        agg: average
+        expr: ltv_arr_ratio
+        label: "Avg LTV:ARR Ratio (raw)"
+
+      - name: segment_mrr
+        agg: sum
+        expr: total_segment_mrr
+        label: "Segment MRR (raw)"

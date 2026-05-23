@@ -1,0 +1,21 @@
+version: 2
+
+# =============================================================================
+# MetricFlow Time Spine Declaration
+#
+# In dbt 1.9+, the time spine is declared using the 'time_spines' key
+# alongside semantic_models. MetricFlow uses this as the calendar backbone
+# for all time-series metric queries.
+#
+# Docs: https://docs.getdbt.com/docs/build/metricflow-time-spine
+# =============================================================================
+
+time_spines:
+  - name: time_spine_day
+    description: "Day-grain time spine for MetricFlow semantic layer."
+    node_relation:
+      alias: metricflow_time_spine
+      schema_name: semantic_layer
+    primary_column:
+      name: date_day
+      time_granularity: day

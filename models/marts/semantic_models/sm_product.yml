@@ -1,0 +1,329 @@
+version: 2
+
+# =============================================================================
+# SEMANTIC LAYER — Product Domain
+#
+# Entities: workspaces (fct_product_activation), feature_usage,
+#           pql_signals, trials (fct_trial_conversion)
+# =============================================================================
+
+semantic_models:
+
+  # ─── WORKSPACES (Product Activation) ───────────────────────────────────────
+  # Entity grain: one row per workspace.
+  - name: workspaces
+    description: >
+      Product activation entity. One row per workspace.
+      Tracks activation milestones, feature adoption, PQL scoring,
+      and trial conversion signals.
+    model: ref('fct_product_activation')
+    defaults:
+      agg_time_dimension: workspace_created_at
+
+    entities:
+      - name: workspace
+        type: primary
+        expr: workspace_id
+
+      - name: account
+        type: foreign
+        expr: account_id
+
+    dimensions:
+      - name: workspace_name
+        type: categorical
+        label: "Workspace"
+
+      - name: domain
+        type: categorical
+        label: "Domain"
+
+      - name: account_segment
+        type: categorical
+        label: "Segment"
+
+      - name: current_plan
+        type: categorical
+        label: "Plan"
+
+      - name: subscription_status
+        type: categorical
+        label: "Subscription Status"
+
+      - name: is_pql
+        type: categorical
+        label: "Is PQL"
+
+      - name: is_converted
+        type: categorical
+        label: "Converted to Paid"
+
+      - name: is_ready_for_upsell
+        type: categorical
+        label: "Upsell Ready"
+
+      - name: has_connected_git
+        type: categorical
+        label: "Git Connected"
+
+      - name: has_started_sprint
+        type: categorical
+        label: "Sprint Started"
+
+      - name: is_trial_expired_no_convert
+        type: categorical
+        label: "Trial Expired"
+
+      - name: workspace_created_at
+        type: time
+        label: "Signed Up"
+        type_params:
+          time_granularity: day
+
+      - name: trial_started_at
+        type: time
+        label: "Trial Started"
+        type_params:
+          time_granularity: day
+
+      - name: converted_at
+        type: time
+        label: "Converted"
+        type_params:
+          time_granularity: day
+
+    measures:
+      - name: workspace_count
+        agg: count_distinct
+        expr: workspace_id
+        label: "Workspace Count (raw)"
+
+      - name: pql_workspace_count
+        agg: count_distinct
+        expr: case when is_pql = true then workspace_id end
+        label: "PQL Workspace Count (raw)"
+
+      - name: converted_workspace_count
+        agg: count_distinct
+        expr: case when is_converted = true then workspace_id end
+        label: "Converted Workspace Count (raw)"
+
+      - name: sum_total_users
+        agg: sum
+        expr: total_users
+        label: "Total Users (raw)"
+
+      - name: sum_activated_users
+        agg: sum
+        expr: activated_users
+        label: "Activated Users (raw)"
+
+      - name: sum_active_30d
+        agg: sum
+        expr: active_users_last_30d
+        label: "Active Users 30d (raw)"
+
+      - name: avg_activation_rate
+        agg: average
+        expr: activation_rate
+        label: "Avg Activation Rate (raw)"
+
+      - name: ws_product_events
+        agg: sum
+        expr: total_product_events
+        label: "Total Product Events (raw)"
+
+  # ─── FEATURE USAGE ─────────────────────────────────────────────────────────
+  # Entity grain: one row per workspace × feature_category × week.
+  - name: feature_usage
+    description: >
+      Feature adoption heatmap. Weekly aggregation by workspace and feature category.
+      Used to identify stickiness, adoption gaps, and upsell opportunities.
+    model: ref('fct_feature_usage')
+    defaults:
+      agg_time_dimension: usage_week
+
+    entities:
+      - name: usage_record
+        type: primary
+        expr: usage_id
+
+      - name: account
+        type: foreign
+        expr: account_id
+
+    dimensions:
+      - name: feature_category
+        type: categorical
+        label: "Feature Category"
+        description: "Core Features, Advanced Features, Admin Features, General Usage."
+
+      - name: account_segment
+        type: categorical
+        label: "Account Segment"
+
+      - name: usage_week
+        type: time
+        label: "Week"
+        type_params:
+          time_granularity: week
+
+    measures:
+      - name: sum_feature_events
+        agg: sum
+        expr: total_events
+        label: "Feature Events (raw)"
+
+      - name: avg_weekly_events
+        agg: average
+        expr: total_events
+        label: "Avg Weekly Events (raw)"
+
+      - name: avg_active_days
+        agg: average
+        expr: active_days
+        label: "Avg Active Days per Week (raw)"
+
+  # ─── PQL SIGNALS ───────────────────────────────────────────────────────────
+  # Entity grain: one row per workspace (GTM priority matrix).
+  - name: pql_signals
+    description: >
+      Unified PQL and ICP signal model. Combines Intent (product usage) with
+      Fit (ICP) to create the GTM Priority Matrix.
+    model: ref('fct_pql_signals')
+    defaults:
+      agg_time_dimension: workspace_created_at
+
+    entities:
+      - name: pql_workspace
+        type: primary
+        expr: workspace_id
+
+      - name: account
+        type: foreign
+        expr: account_id
+
+    dimensions:
+      - name: intent_tier
+        type: categorical
+        label: "Intent Tier"
+        description: "HOT, WARM, or COLD based on product usage."
+
+      - name: icp_tier
+        type: categorical
+        label: "ICP Fit"
+        description: "High Fit, Medium Fit, or Low Fit."
+
+      - name: gtm_priority
+        type: categorical
+        label: "GTM Priority"
+        description: "MUST WIN, ACTIVE, NOTIFY, HIGH POTENTIAL, NURTURE, MONITOR, INCUBATE."
+
+      - name: recommended_action
+        type: categorical
+        label: "Recommended Action"
+
+      - name: activation_milestone
+        type: categorical
+        label: "Activation Milestone"
+
+      - name: is_at_risk_of_not_converting
+        type: categorical
+        label: "At Risk"
+
+      - name: workspace_created_at
+        type: time
+        label: "Signed Up"
+        type_params:
+          time_granularity: day
+
+    measures:
+      - name: pql_signal_count
+        agg: count_distinct
+        expr: workspace_id
+        label: "Signal Count (raw)"
+
+      - name: must_win_count
+        agg: count_distinct
+        expr: case when gtm_priority = 'MUST WIN' then workspace_id end
+        label: "Must Win Count (raw)"
+
+      - name: hot_intent_count
+        agg: count_distinct
+        expr: case when intent_tier = 'HOT' then workspace_id end
+        label: "HOT Intent Count (raw)"
+
+      - name: high_fit_count
+        agg: count_distinct
+        expr: case when icp_tier = 'High Fit' then workspace_id end
+        label: "High ICP Fit Count (raw)"
+
+  # ─── TRIALS ────────────────────────────────────────────────────────────────
+  # Entity grain: one row per trialing Stripe subscription.
+  - name: trials
+    description: >
+      Trial-to-paid conversion funnel. One row per trialing subscription.
+      Primary model for PLG funnel analysis and CS intervention targeting.
+    model: ref('fct_trial_conversion')
+    defaults:
+      agg_time_dimension: trial_started_at
+
+    entities:
+      - name: trial
+        type: primary
+        expr: subscription_id
+
+    dimensions:
+      - name: plan_id
+        type: categorical
+        label: "Plan"
+
+      - name: subscription_status
+        type: categorical
+        label: "Status"
+
+      - name: is_converted
+        type: categorical
+        label: "Converted"
+
+      - name: is_at_risk_of_expiring
+        type: categorical
+        label: "Expiring Soon"
+        description: "Trial expires within 3 days and not converted."
+
+      - name: is_expired_unconverted
+        type: categorical
+        label: "Expired (No Conversion)"
+
+      - name: trial_started_at
+        type: time
+        label: "Trial Started"
+        type_params:
+          time_granularity: day
+
+      - name: converted_at
+        type: time
+        label: "Converted At"
+        type_params:
+          time_granularity: day
+
+    measures:
+      - name: trial_count
+        agg: count_distinct
+        expr: subscription_id
+        label: "Trial Count (raw)"
+
+      - name: converted_trial_count
+        agg: count_distinct
+        expr: case when is_converted = true then subscription_id end
+        label: "Converted Trial Count (raw)"
+
+      - name: at_risk_trial_count
+        agg: count_distinct
+        expr: case when is_at_risk_of_expiring = true then subscription_id end
+        label: "At-Risk Trial Count (raw)"
+
+      - name: avg_time_to_convert
+        agg: average
+        expr: time_to_convert_days
+        label: "Avg Time to Convert Days (raw)"

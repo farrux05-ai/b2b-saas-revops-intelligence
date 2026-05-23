@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: metricflow_time_spine
+    description: >
+      MetricFlow time spine — required by dbt Semantic Layer (MetricFlow).
+      Provides the canonical date dimension for all time-series metric queries.
+      MetricFlow uses 'date_day' to generate granularities: DAY, WEEK, MONTH,
+      QUARTER, YEAR automatically.
+    config:
+      materialized: table
+      tags:
+        - semantic_layer
+        - time_spine
+
+    meta:
+      label: "MetricFlow Time Spine"
+      time_spine: true  # marks this as the project time spine for Lightdash awareness
+
+    columns:
+      - name: date_day
+        description: "One row per calendar day. Primary grain for MetricFlow time dimensions."
+        data_tests:
+          - not_null
+          - unique
+        meta:
+          dimension:
+            type: time
+            time_granularity: day

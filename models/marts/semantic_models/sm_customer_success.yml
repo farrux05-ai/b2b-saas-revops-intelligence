@@ -1,0 +1,188 @@
+version: 2
+
+# =============================================================================
+# SEMANTIC LAYER — Customer Success Domain
+#
+# Entities: cs_accounts (fct_accounts_health)
+# =============================================================================
+
+semantic_models:
+
+  # ─── CS ACCOUNTS ───────────────────────────────────────────────────────────
+  # Entity grain: one row per paying account.
+  - name: cs_accounts
+    description: >
+      CS team account health entity. One row per paying account.
+      Shows health, churn risk signals, support burden, and expansion signals.
+      Used for CS prioritization, churn prevention, and QBR prep.
+    model: ref('fct_accounts_health')
+    defaults:
+      agg_time_dimension: last_activity_at
+
+    entities:
+      - name: cs_account
+        type: primary
+        expr: account_id
+
+    dimensions:
+      # Identity
+      - name: domain
+        type: categorical
+        label: "Domain"
+
+      - name: workspace_name
+        type: categorical
+        label: "Account"
+
+      - name: account_segment
+        type: categorical
+        label: "Segment"
+
+      - name: current_plan
+        type: categorical
+        label: "Plan"
+
+      - name: subscription_status
+        type: categorical
+        label: "Subscription Status"
+
+      # Health
+      - name: health_status
+        type: categorical
+        label: "Health Status"
+        description: "Healthy, At Risk, or Churned."
+
+      - name: health_reason
+        type: categorical
+        label: "Health Reason"
+
+      # Churn Risk Signals
+      - name: is_payment_failing
+        type: categorical
+        label: "Payment Failing"
+        description: "True when latest invoice is past_due."
+
+      - name: is_churning_soon
+        type: categorical
+        label: "Churning Soon"
+        description: "True when subscription is set to cancel at period end."
+
+      - name: is_low_engagement
+        type: categorical
+        label: "Low Engagement"
+        description: "True when no activity in last 30 days."
+
+      # Expansion Signals
+      - name: is_ready_for_upsell
+        type: categorical
+        label: "Upsell Ready"
+        description: "True when seat utilization ≥ 90%."
+
+      - name: is_pql
+        type: categorical
+        label: "Is PQL"
+
+      # Time
+      - name: last_activity_at
+        type: time
+        label: "Last Active"
+        type_params:
+          time_granularity: day
+
+      - name: last_ticket_at
+        type: time
+        label: "Last Ticket Date"
+        type_params:
+          time_granularity: day
+
+    measures:
+      - name: cs_account_count
+        agg: count_distinct
+        expr: account_id
+        label: "CS Account Count (raw)"
+
+      # Revenue
+      - name: cs_total_mrr
+        agg: sum
+        expr: mrr
+        label: "CS Total MRR (raw)"
+
+      - name: cs_total_arr
+        agg: sum
+        expr: arr
+        label: "CS Total ARR (raw)"
+
+      - name: cs_mrr_at_risk
+        agg: sum
+        expr: mrr_at_risk
+        label: "CS MRR at Risk (raw)"
+
+      # Health counts
+      - name: at_risk_count
+        agg: count_distinct
+        expr: case when health_status = 'At Risk' then account_id end
+        label: "At-Risk Count (raw)"
+
+      - name: churned_count
+        agg: count_distinct
+        expr: case when health_status = 'Churned' then account_id end
+        label: "Churned Count (raw)"
+
+      - name: healthy_count
+        agg: count_distinct
+        expr: case when health_status = 'Healthy' then account_id end
+        label: "Healthy Count (raw)"
+
+      # Risk signal counts
+      - name: payment_failing_count
+        agg: count_distinct
+        expr: case when is_payment_failing = true then account_id end
+        label: "Payment Failing Count (raw)"
+
+      - name: churning_soon_count
+        agg: count_distinct
+        expr: case when is_churning_soon = true then account_id end
+        label: "Churning Soon Count (raw)"
+
+      - name: low_engagement_count
+        agg: count_distinct
+        expr: case when is_low_engagement = true then account_id end
+        label: "Low Engagement Count (raw)"
+
+      # Expansion
+      - name: cs_upsell_ready_count
+        agg: count_distinct
+        expr: case when is_ready_for_upsell = true then account_id end
+        label: "CS Upsell-Ready Count (raw)"
+
+      # Support
+      - name: sum_total_tickets
+        agg: sum
+        expr: total_tickets
+        label: "Total Support Tickets (raw)"
+
+      - name: sum_open_tickets
+        agg: sum
+        expr: open_tickets
+        label: "Open Support Tickets (raw)"
+
+      - name: sum_high_priority_tickets
+        agg: sum
+        expr: high_priority_tickets
+        label: "High Priority Tickets (raw)"
+
+      - name: avg_resolution_hours
+        agg: average
+        expr: avg_resolution_hours
+        label: "Avg Resolution Hours (raw)"
+
+      # Product
+      - name: cs_product_events
+        agg: sum
+        expr: product_events_count
+        label: "CS Product Events (raw)"
+
+      - name: cs_avg_seat_util
+        agg: average
+        expr: seat_utilization_pct
+        label: "CS Avg Seat Utilization (raw)"

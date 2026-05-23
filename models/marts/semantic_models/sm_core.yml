@@ -1,0 +1,275 @@
+version: 2
+
+# =============================================================================
+# SEMANTIC LAYER — Core Domain
+#
+# Standard MetricFlow semantic models. Defines:
+#   - entities   → grain / primary & foreign keys
+#   - dimensions → slicing attributes (categorical + time)
+#   - measures   → raw aggregations (metrics reference these)
+#
+# Downstream: metrics.yml uses these measures to build business metrics.
+# BI Tools:   Lightdash, Tableau, PowerBI via dbt Cloud Semantic Layer API.
+# Note:       Lightdash meta tags are kept in core_schema.yml (column docs).
+# =============================================================================
+
+semantic_models:
+
+  # ─── ACCOUNTS ──────────────────────────────────────────────────────────────
+  # Entity grain: one row per B2B account (Golden Record).
+  # Primary entity for ALL GTM metrics.
+  - name: accounts
+    description: >
+      Golden Record account entity. One row per B2B account.
+      Integrates identity, revenue, health, product, and sales signals.
+    model: ref('dim_accounts')
+    defaults:
+      agg_time_dimension: last_activity_at
+
+    # ── Entities ─────────────────────────────────────────────────────────────
+    entities:
+      - name: account
+        type: primary
+        expr: account_id
+
+    # ── Dimensions ───────────────────────────────────────────────────────────
+    dimensions:
+      # Identity
+      - name: domain
+        type: categorical
+        label: "Domain"
+        description: "Company website domain. Primary identity key."
+
+      - name: workspace_name
+        type: categorical
+        label: "Workspace Name"
+
+      - name: hubspot_company_name
+        type: categorical
+        label: "Company Name"
+
+      - name: industry
+        type: categorical
+        label: "Industry"
+        description: "Industry vertical (Technology, Healthcare, Finance, etc.)."
+
+      - name: utm_source
+        type: categorical
+        label: "UTM Source"
+        description: "First-touch marketing source."
+
+      - name: utm_campaign
+        type: categorical
+        label: "UTM Campaign"
+
+      # Revenue & Plan
+      - name: account_segment
+        type: categorical
+        label: "Account Segment"
+        description: "Revenue tier: Enterprise, Mid-Market, SMB, Trial/Free."
+
+      - name: subscription_status
+        type: categorical
+        label: "Subscription Status"
+
+      - name: current_plan
+        type: categorical
+        label: "Plan"
+
+      # Health & Risk
+      - name: health_status
+        type: categorical
+        label: "Health Status"
+        description: "Healthy, At Risk, or Churned."
+
+      - name: health_reason
+        type: categorical
+        label: "Health Reason"
+
+      - name: is_payment_failing
+        type: categorical
+        label: "Payment Failing"
+        description: "True when latest invoice is past_due."
+
+      - name: is_churning_soon
+        type: categorical
+        label: "Churning Soon"
+        description: "True when subscription set to cancel at period end."
+
+      - name: is_ready_for_upsell
+        type: categorical
+        label: "Upsell Ready"
+        description: "True when seat utilization ≥ 90%."
+
+      # PLG
+      - name: is_pql
+        type: categorical
+        label: "Is PQL"
+
+      # Time dimensions
+      - name: last_activity_at
+        type: time
+        label: "Last Active"
+        type_params:
+          time_granularity: day
+
+      - name: last_ticket_at
+        type: time
+        label: "Last Ticket Date"
+        type_params:
+          time_granularity: day
+
+      - name: last_won_date
+        type: time
+        label: "Last Won Date"
+        type_params:
+          time_granularity: day
+
+    # ── Measures ─────────────────────────────────────────────────────────────
+    measures:
+      - name: account_count
+        agg: count_distinct
+        expr: account_id
+        label: "Account Count"
+        description: "Count of distinct accounts."
+
+      - name: accounts_mrr
+        agg: sum
+        expr: mrr
+        label: "Accounts MRR (raw)"
+        description: "Sum of MRR from dim_accounts. Use finance models for waterfall analysis."
+
+      - name: accounts_active_mrr
+        agg: sum
+        expr: active_mrr
+        label: "Accounts Active MRR (raw)"
+
+      - name: accounts_arr
+        agg: sum
+        expr: arr
+        label: "Accounts ARR (raw)"
+
+      - name: accounts_mrr_at_risk
+        agg: sum
+        expr: mrr_at_risk
+        label: "Accounts MRR at Risk (raw)"
+
+      - name: accounts_avg_seat_util
+        agg: average
+        expr: seat_utilization_pct
+        label: "Avg Seat Utilization (raw)"
+
+      - name: total_product_events
+        agg: sum
+        expr: product_events_count
+        label: "Total Product Events (raw)"
+
+      - name: total_open_deals
+        agg: sum
+        expr: open_deals_count
+        label: "Total Open Deals (raw)"
+
+      - name: total_lifetime_revenue
+        agg: sum
+        expr: lifetime_revenue
+        label: "Total Lifetime Revenue (raw)"
+
+      - name: total_tickets
+        agg: sum
+        expr: total_tickets
+        label: "Total Support Tickets (raw)"
+
+      - name: open_tickets
+        agg: sum
+        expr: open_tickets
+        label: "Open Support Tickets (raw)"
+
+      # Filtered counts — for derived rate metrics
+      - name: at_risk_account_count
+        agg: count_distinct
+        expr: case when health_status = 'At Risk' then account_id end
+        label: "At-Risk Account Count (raw)"
+
+      - name: churned_account_count
+        agg: count_distinct
+        expr: case when health_status = 'Churned' then account_id end
+        label: "Churned Account Count (raw)"
+
+      - name: pql_count
+        agg: count_distinct
+        expr: case when is_pql = true then account_id end
+        label: "PQL Count (raw)"
+
+      - name: accounts_upsell_ready
+        agg: count_distinct
+        expr: case when is_ready_for_upsell = true then account_id end
+        label: "Upsell-Ready Count (raw)"
+
+  # ─── USERS ─────────────────────────────────────────────────────────────────
+  # Entity grain: one row per user.
+  - name: users
+    description: >
+      Enriched user directory. One row per user.
+      Links internal product users to HubSpot contacts and parent account.
+    model: ref('dim_users')
+    defaults:
+      agg_time_dimension: created_at
+
+    entities:
+      - name: user
+        type: primary
+        expr: global_user_id
+
+      - name: account
+        type: foreign
+        expr: account_id
+
+    dimensions:
+      - name: email
+        type: categorical
+        label: "Email"
+
+      - name: job_title
+        type: categorical
+        label: "Job Title"
+
+      - name: user_role
+        type: categorical
+        label: "Role"
+        description: "admin, member, or viewer."
+
+      - name: is_activated
+        type: categorical
+        label: "Activated"
+
+      - name: is_active_last_30d
+        type: categorical
+        label: "Active (30d)"
+
+      - name: created_at
+        type: time
+        label: "Signed Up"
+        type_params:
+          time_granularity: day
+
+      - name: last_seen_at
+        type: time
+        label: "Last Seen"
+        type_params:
+          time_granularity: day
+
+    measures:
+      - name: user_count
+        agg: count_distinct
+        expr: global_user_id
+        label: "User Count (raw)"
+
+      - name: activated_user_count
+        agg: count_distinct
+        expr: case when is_activated = true then global_user_id end
+        label: "Activated User Count (raw)"
+
+      - name: active_user_30d_count
+        agg: count_distinct
+        expr: case when is_active_last_30d = true then global_user_id end
+        label: "Active User (30d) Count (raw)"

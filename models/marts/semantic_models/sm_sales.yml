@@ -1,0 +1,195 @@
+version: 2
+
+# =============================================================================
+# SEMANTIC LAYER — Sales Domain
+#
+# Entities: deals, sales_activities
+# =============================================================================
+
+semantic_models:
+
+  # ─── DEALS ─────────────────────────────────────────────────────────────────
+  # Entity grain: one row per HubSpot deal.
+  - name: deals
+    description: >
+      Sales deal pipeline entity. One row per HubSpot deal.
+      Source of truth for pipeline reviews and revenue forecasting.
+    model: ref('fct_pipeline')
+    defaults:
+      agg_time_dimension: created_at
+
+    entities:
+      - name: deal
+        type: primary
+        expr: hubspot_deal_id
+
+      - name: account
+        type: foreign
+        expr: account_id
+
+    dimensions:
+      - name: deal_name
+        type: categorical
+        label: "Deal Name"
+
+      - name: pipeline
+        type: categorical
+        label: "Pipeline"
+
+      - name: deal_stage
+        type: categorical
+        label: "Deal Stage"
+
+      - name: account_segment
+        type: categorical
+        label: "Account Segment"
+
+      - name: workspace_name
+        type: categorical
+        label: "Account"
+
+      - name: domain
+        type: categorical
+        label: "Domain"
+
+      - name: account_health_status
+        type: categorical
+        label: "Account Health"
+
+      - name: is_won
+        type: categorical
+        label: "Won"
+
+      - name: is_lost
+        type: categorical
+        label: "Lost"
+
+      - name: is_open
+        type: categorical
+        label: "Open"
+
+      - name: is_stale
+        type: categorical
+        label: "Stale Deal"
+        description: "Open for more than 90 days."
+
+      - name: deal_age_bucket
+        type: categorical
+        label: "Deal Age Bucket"
+        description: "0-30d, 31-60d, 61-90d, 90+ (Stale), Closed."
+
+      - name: created_at
+        type: time
+        label: "Created"
+        type_params:
+          time_granularity: day
+
+      - name: closed_at
+        type: time
+        label: "Closed"
+        type_params:
+          time_granularity: day
+
+    measures:
+      - name: deal_count
+        agg: count_distinct
+        expr: hubspot_deal_id
+        label: "Deal Count (raw)"
+
+      - name: total_pipeline_value
+        agg: sum
+        expr: deal_amount
+        label: "Total Pipeline Value (raw)"
+
+      - name: total_weighted_pipeline
+        agg: sum
+        expr: weighted_amount
+        label: "Weighted Pipeline (raw)"
+
+      - name: won_deal_count
+        agg: count_distinct
+        expr: case when is_won = true then hubspot_deal_id end
+        label: "Won Deal Count (raw)"
+
+      - name: lost_deal_count
+        agg: count_distinct
+        expr: case when is_lost = true then hubspot_deal_id end
+        label: "Lost Deal Count (raw)"
+
+      - name: stale_deal_count
+        agg: count_distinct
+        expr: case when is_stale = true then hubspot_deal_id end
+        label: "Stale Deal Count (raw)"
+
+      - name: avg_deal_size
+        agg: average
+        expr: deal_amount
+        label: "Avg Deal Size (raw)"
+
+      - name: avg_days_to_close
+        agg: average
+        expr: days_to_close
+        label: "Avg Days to Close (raw)"
+
+      - name: avg_days_open
+        agg: average
+        expr: days_open
+        label: "Avg Days Open (raw)"
+
+  # ─── SALES ACTIVITIES ──────────────────────────────────────────────────────
+  # Entity grain: one row per HubSpot engagement (call/email/meeting).
+  - name: sales_activities
+    description: >
+      Sales activity log. One row per engagement.
+      Used for rep productivity and account engagement analysis.
+    model: ref('fct_activities')
+    defaults:
+      agg_time_dimension: activity_at
+
+    entities:
+      - name: activity
+        type: primary
+        expr: activity_id
+
+    dimensions:
+      - name: activity_type
+        type: categorical
+        label: "Activity Type"
+        description: "CALL, EMAIL, or MEETING."
+
+      - name: owner_id
+        type: categorical
+        label: "Rep ID"
+
+      - name: activity_at
+        type: time
+        label: "Activity Time"
+        type_params:
+          time_granularity: day
+
+      - name: activity_date
+        type: time
+        label: "Activity Date"
+        type_params:
+          time_granularity: day
+
+    measures:
+      - name: activity_count
+        agg: count_distinct
+        expr: activity_id
+        label: "Activity Count (raw)"
+
+      - name: call_count
+        agg: count_distinct
+        expr: case when activity_type = 'CALL' then activity_id end
+        label: "Call Count (raw)"
+
+      - name: email_count
+        agg: count_distinct
+        expr: case when activity_type = 'EMAIL' then activity_id end
+        label: "Email Count (raw)"
+
+      - name: meeting_count
+        agg: count_distinct
+        expr: case when activity_type = 'MEETING' then activity_id end
+        label: "Meeting Count (raw)"
