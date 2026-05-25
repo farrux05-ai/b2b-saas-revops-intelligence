@@ -830,6 +830,23 @@ is_mock = HUBSPOT_ACCESS_TOKEN == "mock_token" or "xxxx" in HUBSPOT_ACCESS_TOKEN
 
 ---
 
+### Pitfall 10: Elementary Observability Silent Rollback in DuckDB on-run-end
+
+**Symptom:** The generated Elementary dashboard (`docs/elementary_report.html`) shows empty states with no test results, run history, or metrics, even though the dbt console log shows that the hooks executed successfully (`elementary.on-run-end.1 ... OK`).
+
+**Cause:** To bypass DuckDB's limitation where nested transactions/commits inside dbt model builders throw `TransactionContext` errors, the compatibility macros (`macros/elementary_duckdb_compat.sql`) were configured to override `duckdb__insert_rows` by hardcoding `should_commit=false`. However, at the end of a `dbt build` or `dbt run`, dbt releases/closes the connection and runs `ROLLBACK` on the active connection. Since the inserts executed in the `on-run-end` hook were never committed, they were silently rolled back.
+
+**Fix applied in `macros/elementary_duckdb_compat.sql`:**
+We updated `duckdb__insert_rows` to respect the passed `should_commit` parameter instead of forcing it to `false`:
+```sql
+{% macro duckdb__insert_rows(table_relation, rows, should_commit=false, chunk_size=5000, on_query_exceed=none) %}
+    {{ return(elementary.default__insert_rows(table_relation, rows, should_commit, chunk_size, on_query_exceed)) }}
+{% endmacro %}
+```
+During standard model runs, `should_commit` remains `false` (avoiding nested transaction crashes). But during the `on-run-end` hook, `should_commit=True` is passed and executed, successfully saving data before the connection closes.
+
+---
+
 ## PII & Compliance Strategy
 
 ### 🔒 Privacy-by-Design Architecture

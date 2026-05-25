@@ -8,7 +8,7 @@ revops_intelligence_engine:
       threads: 4
     local:
       type: duckdb
-      path: 'duckdb/revops_intelligence.duckdb'
+      path: '/home/farrux/data_projects/b2b-saas-revops/duckdb/revops_intelligence.duckdb'
       threads: 1
     ci:
       type: duckdb
@@ -16,3 +16,22 @@ revops_intelligence_engine:
       # Used in GitHub Actions CI for `dbt parse` (manifest.json generation only).
       path: ":memory:"
       threads: 4
+
+elementary:
+  target: local
+  outputs:
+    dev:
+      type: duckdb
+      path: 'md:revops_intelligence'
+      threads: 4
+    local:
+      type: duckdb
+      path: '/home/farrux/data_projects/b2b-saas-revops/duckdb/revops_intelligence.duckdb'
+      schema: main_elementary
+      threads: 1
+
+    ci:
+      type: duckdb
+      path: ":memory:"
+      threads: 4
+

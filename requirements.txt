@@ -17,6 +17,7 @@ requests
 scikit-learn
 psycopg2-binary
 dlt[motherduck]
+elementary-data[duckdb]
 
 # Orchestration
 dagster

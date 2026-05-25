@@ -28,7 +28,9 @@ SCHEMAS_TO_COPY = [
     "raw_data",         # raw ingested data (dlt output)
     "main_marts",       # dbt mart layer
     "main_staging",     # dbt staging layer (optional)
+    "main_elementary",  # dbt Elementary observability tables
 ]
+
 
 
 def sync_to_motherduck():

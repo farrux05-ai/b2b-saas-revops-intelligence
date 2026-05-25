@@ -12,11 +12,13 @@ test-paths: ["tests"]
 analysis-paths: ["analyses"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
-
 target-path: "target"
 clean-targets:
   - "target"
   - "dbt_packages"
+
+on-run-end:
+  - "{{ elementary.upload_run_results() }}"
 
 models:
   revops_intelligence_engine:
@@ -40,3 +42,6 @@ models:
         +schema: semantic_layer
         +tags:
           - semantic_layer
+  elementary:
+    +schema: elementary
+    +use_transaction: false

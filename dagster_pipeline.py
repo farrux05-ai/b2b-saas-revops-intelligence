@@ -198,6 +198,55 @@ def dlt_reverse_etl(context: AssetExecutionContext):
 
 
 # ===========================================================================
+# LAYER 5: OBSERVABILITY — Elementary Report Generation
+#
+# Function:
+#   Runs Elementary CLI (edr) to generate a data observability HTML report.
+#
+# deps=[revops_dbt_assets]:
+#   Ensures that dbt has run and updated the observability tables in local DuckDB
+#   and generated dbt artifacts under target/ before generating the report.
+# ===========================================================================
+
+@asset(
+    group_name="observability",
+    deps=[revops_dbt_assets],
+    description="Generates local Elementary data observability HTML report.",
+)
+def elementary_report(context: AssetExecutionContext):
+    context.log.info("▶ 5/4 — Generating Elementary observability report...")
+    
+    edr_executable = shutil.which("edr") or str(
+        DBT_PROJECT_DIR / ".venv" / "bin" / "edr"
+    )
+    
+    import subprocess
+    cmd = [
+        edr_executable,
+        "report",
+        "--profiles-dir", os.fspath(DBT_PROJECT_DIR),
+        "--project-dir", os.fspath(DBT_PROJECT_DIR),
+        "--file-path", os.fspath(DBT_PROJECT_DIR / "docs" / "elementary_report.html")
+    ]
+
+
+
+    
+    context.log.info(f"Running command: {' '.join(cmd)}")
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True
+    )
+    
+    if result.returncode != 0:
+        context.log.error(f"Failed to generate Elementary report:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}")
+        raise RuntimeError(f"Elementary report generation failed with exit code {result.returncode}")
+        
+    context.log.info("✅ Elementary observability report generated successfully at docs/elementary_report.html.")
+
+
+# ===========================================================================
 # JOBS
 #
 # revops_full_pipeline_job:
@@ -259,6 +308,7 @@ defs = Definitions(
         revops_dbt_assets,
         motherduck_sync,
         dlt_reverse_etl,
+        elementary_report,
     ],
     jobs=[
         revops_full_pipeline_job,

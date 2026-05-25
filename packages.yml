@@ -7,4 +7,9 @@ packages:
   - package: calogica/dbt_expectations
     version: 0.10.4
 
+  # Elementary data observability
+  - package: elementary-data/elementary
+    version: 0.23.1
+
+
 

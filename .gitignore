@@ -40,3 +40,5 @@ node_modules/
 dist/
 build/
 .streamlit/
+edr_target/
+
