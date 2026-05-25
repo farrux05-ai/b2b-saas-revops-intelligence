@@ -228,9 +228,6 @@ def elementary_report(context: AssetExecutionContext):
         "--project-dir", os.fspath(DBT_PROJECT_DIR),
         "--file-path", os.fspath(DBT_PROJECT_DIR / "docs" / "elementary_report.html")
     ]
-
-
-
     
     context.log.info(f"Running command: {' '.join(cmd)}")
     result = subprocess.run(
@@ -244,6 +241,33 @@ def elementary_report(context: AssetExecutionContext):
         raise RuntimeError(f"Elementary report generation failed with exit code {result.returncode}")
         
     context.log.info("✅ Elementary observability report generated successfully at docs/elementary_report.html.")
+
+    # Slack alerting step
+    slack_webhook = os.getenv("SLACK_WEBHOOK")
+    if slack_webhook:
+        context.log.info("▶ Sending Elementary alerts to Slack...")
+        monitor_cmd = [
+            edr_executable,
+            "monitor",
+            "--profiles-dir", os.fspath(DBT_PROJECT_DIR),
+            "--project-dir", os.fspath(DBT_PROJECT_DIR),
+            "--slack-webhook", slack_webhook
+        ]
+        context.log.info(f"Running command: {' '.join(monitor_cmd)}")
+        monitor_result = subprocess.run(
+            monitor_cmd,
+            capture_output=True,
+            text=True
+        )
+        if monitor_result.returncode != 0:
+            context.log.warning(
+                f"Elementary monitor failed to send Slack alerts:\n"
+                f"STDOUT:\n{monitor_result.stdout}\nSTDERR:\n{monitor_result.stderr}"
+            )
+        else:
+            context.log.info("✅ Elementary alerts sent to Slack successfully.")
+    else:
+        context.log.info("ℹ️ No SLACK_WEBHOOK environment variable found. Skipping Slack alerts.")
 
 
 # ===========================================================================
