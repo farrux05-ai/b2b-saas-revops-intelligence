@@ -32,69 +32,155 @@ def iso(dt: datetime) -> str:
     return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 NOW = datetime(2024, 6, 1)
+TWO_YEARS_AGO = NOW - timedelta(days=730)
 YEAR_AGO = NOW - timedelta(days=365)
 SIX_M = NOW - timedelta(days=180)
+THREE_M = NOW - timedelta(days=90)
 
 # ── company profiles ──────────────────────────────────────────────────────────
 
 INDUSTRIES = [
     "Software", "FinTech", "HealthTech", "E-commerce",
     "Cybersecurity", "DevTools", "MarTech", "EdTech",
+    "HRTech", "LegalTech", "PropTech", "InsurTech",
 ]
 
 COMPANIES = [
     # (name, domain, industry, employee_count, segment)
     # segment: at_risk | expansion | pql | healthy
-    ("Acme Corp",         "acme.com",         "Software",      120,  "at_risk"),
-    ("Brightwave Labs",   "brightwave.io",    "FinTech",        85,  "at_risk"),
-    ("Cascadia Systems",  "cascadiasys.com",  "HealthTech",    200,  "at_risk"),
-    ("DeltaCore Inc",     "deltacore.com",    "E-commerce",     60,  "at_risk"),
-    ("Evergreen Digital", "evergreen.io",     "MarTech",        95,  "at_risk"),
-    ("Forge Analytics",   "forgeanalytics.co","DevTools",       75,  "at_risk"),
-    ("GridSpark",         "gridspark.com",    "Software",      110,  "at_risk"),
-    ("HorizonAI",         "horizonai.io",     "Software",      180,  "at_risk"),
-    ("IronMesh",          "ironmesh.com",     "Cybersecurity", 250,  "expansion"),
-    ("JetStream Cloud",   "jetstream.cloud",  "Software",      320,  "expansion"),
-    ("KineticHR",         "kineticher.com",   "FinTech",       140,  "expansion"),
-    ("LatticeOps",        "latticeops.io",    "DevTools",      190,  "expansion"),
-    ("Meridian Tech",     "meridiantech.com", "Software",      410,  "expansion"),
-    ("NovaBuild",         "novabuild.dev",    "DevTools",       22,  "pql"),
-    ("OmniStack",         "omnistack.io",     "Software",       18,  "pql"),
-    ("PeakFlow",          "peakflow.co",      "MarTech",        31,  "pql"),
-    ("Quantum Leap",      "quantumleap.ai",   "Software",      150,  "healthy"),
-    ("RootSignal",        "rootsignal.com",   "Cybersecurity", 220,  "healthy"),
-    ("SkyBridge",         "skybridge.io",     "FinTech",        90,  "healthy"),
-    ("TerraScale",        "terrascale.com",   "E-commerce",    175,  "healthy"),
-    ("Unified.io",        "unified.io",       "DevTools",      130,  "healthy"),
-    ("VaultEdge",         "vaultedge.com",    "Cybersecurity", 300,  "healthy"),
-    ("WavePath",          "wavepath.io",      "MarTech",        80,  "healthy"),
-    ("XenonData",         "xenondata.com",    "Software",      160,  "healthy"),
-    ("YieldBridge",       "yieldbridge.co",   "FinTech",       210,  "healthy"),
-    ("ZenithOps",         "zenithops.io",     "DevTools",      240,  "healthy"),
-    ("Arclight Systems",  "arclight.io",      "Software",      100,  "healthy"),
-    ("BluePeak",          "bluepeak.com",     "HealthTech",    280,  "healthy"),
-    ("Cobalt Labs",       "cobaltlabs.io",    "Software",       70,  "healthy"),
-    ("DataForge",         "dataforge.com",    "DevTools",      190,  "healthy"),
-    ("Embark Analytics",  "embark.io",        "MarTech",       120,  "healthy"),
-    ("FluxPoint",         "fluxpoint.com",    "E-commerce",     55,  "healthy"),
-    ("GlacierTech",       "glaciertech.io",   "Software",      145,  "healthy"),
-    ("Helix Security",    "helixsec.com",     "Cybersecurity", 310,  "healthy"),
-    ("Impulse AI",        "impulseai.io",     "Software",      230,  "healthy"),
-    ("Juno Platforms",    "juno.io",          "FinTech",       160,  "healthy"),
-    ("Kinetic Data",      "kineticdata.com",  "DevTools",       95,  "healthy"),
-    ("Luminos Labs",      "luminos.io",       "Software",      185,  "healthy"),
-    ("Moonsail Tech",     "moonsail.io",      "HealthTech",    125,  "healthy"),
-    ("Nexwave",           "nexwave.com",      "Software",      270,  "healthy"),
-    ("Orbital Systems",   "orbital.io",       "E-commerce",    200,  "healthy"),
-    ("Prism Analytics",   "prism.io",         "MarTech",       140,  "healthy"),
-    ("Quasar Dev",        "quasar.dev",       "DevTools",       65,  "healthy"),
-    ("Radius Cloud",      "radiuscloud.io",   "Software",      310,  "healthy"),
-    ("Solaris Labs",      "solaris.io",       "Cybersecurity", 175,  "healthy"),
-    ("Tidal Systems",     "tidalsys.com",     "Software",      135,  "healthy"),
-    ("Ultrawave",         "ultrawave.io",     "FinTech",       290,  "healthy"),
-    ("Vantage IO",        "vantage.io",       "DevTools",      155,  "healthy"),
-    ("WhiteLight Tech",   "whitelight.com",   "Software",       85,  "healthy"),
-    ("Zephyr Analytics",  "zephyr.io",        "MarTech",       220,  "healthy"),
+
+    # ── at_risk (16 companies) ────────────────────────────────────────────────
+    ("Acme Corp",          "acme.com",          "Software",      120,  "at_risk"),
+    ("Brightwave Labs",    "brightwave.io",     "FinTech",        85,  "at_risk"),
+    ("Cascadia Systems",   "cascadiasys.com",   "HealthTech",    200,  "at_risk"),
+    ("DeltaCore Inc",      "deltacore.com",     "E-commerce",     60,  "at_risk"),
+    ("Evergreen Digital",  "evergreen.io",      "MarTech",        95,  "at_risk"),
+    ("Forge Analytics",    "forgeanalytics.co", "DevTools",       75,  "at_risk"),
+    ("GridSpark",          "gridspark.com",     "Software",      110,  "at_risk"),
+    ("HorizonAI",          "horizonai.io",      "Software",      180,  "at_risk"),
+    ("Inkwell Data",       "inkwelldata.com",   "MarTech",        45,  "at_risk"),
+    ("JunctionSoft",       "junctionsoft.io",   "Software",       90,  "at_risk"),
+    ("Kestrel Labs",       "kestrel.io",        "FinTech",       130,  "at_risk"),
+    ("Lantern Systems",    "lanternsys.com",    "HealthTech",     70,  "at_risk"),
+    ("Marble Cloud",       "marblecloud.io",    "E-commerce",    115,  "at_risk"),
+    ("NorthStar Analytics","northstar.io",      "DevTools",       55,  "at_risk"),
+    ("Outpost Tech",       "outposttech.com",   "Cybersecurity", 160,  "at_risk"),
+    ("Pinecrest Software", "pinecrest.io",      "Software",       80,  "at_risk"),
+
+    # ── expansion (10 companies) ──────────────────────────────────────────────
+    ("IronMesh",           "ironmesh.com",      "Cybersecurity", 250,  "expansion"),
+    ("JetStream Cloud",    "jetstream.cloud",   "Software",      320,  "expansion"),
+    ("KineticHR",          "kineticher.com",    "FinTech",       140,  "expansion"),
+    ("LatticeOps",         "latticeops.io",     "DevTools",      190,  "expansion"),
+    ("Meridian Tech",      "meridiantech.com",  "Software",      410,  "expansion"),
+    ("Quartzite Systems",  "quartzite.io",      "Cybersecurity", 380,  "expansion"),
+    ("RidgeLine Cloud",    "ridgeline.cloud",   "Software",      295,  "expansion"),
+    ("Stratosphere Dev",   "stratosphere.dev",  "DevTools",      225,  "expansion"),
+    ("Titanfall Labs",     "titanfall.io",      "FinTech",       345,  "expansion"),
+    ("UpperCut Analytics", "uppercut.io",       "MarTech",       175,  "expansion"),
+
+    # ── pql (8 companies) ─────────────────────────────────────────────────────
+    ("NovaBuild",          "novabuild.dev",     "DevTools",       22,  "pql"),
+    ("OmniStack",          "omnistack.io",      "Software",       18,  "pql"),
+    ("PeakFlow",           "peakflow.co",       "MarTech",        31,  "pql"),
+    ("Rapidfire Dev",      "rapidfire.dev",     "Software",       14,  "pql"),
+    ("ShiftBoard",         "shiftboard.io",     "HRTech",         27,  "pql"),
+    ("TracerIO",           "tracerio.com",      "DevTools",       19,  "pql"),
+    ("Umbra Analytics",    "umbra.io",          "Software",       35,  "pql"),
+    ("Velo Systems",       "velosys.io",        "FinTech",        23,  "pql"),
+
+    # ── healthy (86 companies) ────────────────────────────────────────────────
+    ("Quantum Leap",       "quantumleap.ai",    "Software",      150,  "healthy"),
+    ("RootSignal",         "rootsignal.com",    "Cybersecurity", 220,  "healthy"),
+    ("SkyBridge",          "skybridge.io",      "FinTech",        90,  "healthy"),
+    ("TerraScale",         "terrascale.com",    "E-commerce",    175,  "healthy"),
+    ("Unified.io",         "unified.io",        "DevTools",      130,  "healthy"),
+    ("VaultEdge",          "vaultedge.com",     "Cybersecurity", 300,  "healthy"),
+    ("WavePath",           "wavepath.io",       "MarTech",        80,  "healthy"),
+    ("XenonData",          "xenondata.com",     "Software",      160,  "healthy"),
+    ("YieldBridge",        "yieldbridge.co",    "FinTech",       210,  "healthy"),
+    ("ZenithOps",          "zenithops.io",      "DevTools",      240,  "healthy"),
+    ("Arclight Systems",   "arclight.io",       "Software",      100,  "healthy"),
+    ("BluePeak",           "bluepeak.com",      "HealthTech",    280,  "healthy"),
+    ("Cobalt Labs",        "cobaltlabs.io",     "Software",       70,  "healthy"),
+    ("DataForge",          "dataforge.com",     "DevTools",      190,  "healthy"),
+    ("Embark Analytics",   "embark.io",         "MarTech",       120,  "healthy"),
+    ("FluxPoint",          "fluxpoint.com",     "E-commerce",     55,  "healthy"),
+    ("GlacierTech",        "glaciertech.io",    "Software",      145,  "healthy"),
+    ("Helix Security",     "helixsec.com",      "Cybersecurity", 310,  "healthy"),
+    ("Impulse AI",         "impulseai.io",      "Software",      230,  "healthy"),
+    ("Juno Platforms",     "juno.io",           "FinTech",       160,  "healthy"),
+    ("Kinetic Data",       "kineticdata.com",   "DevTools",       95,  "healthy"),
+    ("Luminos Labs",       "luminos.io",        "Software",      185,  "healthy"),
+    ("Moonsail Tech",      "moonsail.io",       "HealthTech",    125,  "healthy"),
+    ("Nexwave",            "nexwave.com",       "Software",      270,  "healthy"),
+    ("Orbital Systems",    "orbital.io",        "E-commerce",    200,  "healthy"),
+    ("Prism Analytics",    "prism.io",          "MarTech",       140,  "healthy"),
+    ("Quasar Dev",         "quasar.dev",        "DevTools",       65,  "healthy"),
+    ("Radius Cloud",       "radiuscloud.io",    "Software",      310,  "healthy"),
+    ("Solaris Labs",       "solaris.io",        "Cybersecurity", 175,  "healthy"),
+    ("Tidal Systems",      "tidalsys.com",      "Software",      135,  "healthy"),
+    ("Ultrawave",          "ultrawave.io",      "FinTech",       290,  "healthy"),
+    ("Vantage IO",         "vantage.io",        "DevTools",      155,  "healthy"),
+    ("WhiteLight Tech",    "whitelight.com",    "Software",       85,  "healthy"),
+    ("Zephyr Analytics",   "zephyr.io",         "MarTech",       220,  "healthy"),
+    ("Amber Systems",      "ambersys.io",       "HRTech",        105,  "healthy"),
+    ("BridgeCode",         "bridgecode.io",     "Software",      175,  "healthy"),
+    ("ClearPath Labs",     "clearpath.io",      "DevTools",      115,  "healthy"),
+    ("Dawnrise Tech",      "dawnrise.tech",     "EdTech",        135,  "healthy"),
+    ("EdgeForm",           "edgeform.io",       "Software",       95,  "healthy"),
+    ("FalconOps",          "falconops.com",     "Cybersecurity", 260,  "healthy"),
+    ("Granite Analytics",  "graniteanalytics.io","MarTech",      145,  "healthy"),
+    ("Harborlight",        "harborlight.com",   "FinTech",       195,  "healthy"),
+    ("Inertia Labs",       "inertialabs.io",    "Software",       85,  "healthy"),
+    ("Jasper Cloud",       "jaspercloud.io",    "E-commerce",    170,  "healthy"),
+    ("Keyframe Dev",       "keyframe.dev",      "DevTools",       75,  "healthy"),
+    ("Lodestar AI",        "lodestar.ai",       "Software",      215,  "healthy"),
+    ("Mosaic Data",        "mosaicdata.io",     "MarTech",       130,  "healthy"),
+    ("Nautilus Systems",   "nautilussys.com",   "Software",      245,  "healthy"),
+    ("Obsidian Cloud",     "obsidian.cloud",    "Cybersecurity", 185,  "healthy"),
+    ("Parallax Labs",      "parallax.io",       "DevTools",      110,  "healthy"),
+    ("Quorum Analytics",   "quorum.io",         "FinTech",       230,  "healthy"),
+    ("Raven Systems",      "ravensys.com",      "Software",      155,  "healthy"),
+    ("SandBar Tech",       "sandbar.tech",      "E-commerce",     60,  "healthy"),
+    ("Topaz Cloud",        "topaz.cloud",       "Software",      280,  "healthy"),
+    ("UrbanStack",         "urbanstack.io",     "PropTech",      120,  "healthy"),
+    ("Vertex Labs",        "vertexlabs.io",     "Software",      195,  "healthy"),
+    ("Whetstone Data",     "whetstone.io",      "DevTools",      140,  "healthy"),
+    ("Xeno Analytics",     "xenoanalytics.com", "MarTech",       165,  "healthy"),
+    ("Yellowstone Dev",    "yellowstone.dev",   "Software",       90,  "healthy"),
+    ("Zenon Systems",      "zenon.io",          "Cybersecurity", 210,  "healthy"),
+    ("Apex Digital",       "apexdigital.io",    "MarTech",       125,  "healthy"),
+    ("Basin Analytics",    "basinanalytics.com","FinTech",       155,  "healthy"),
+    ("Crestline Labs",     "crestline.io",      "HealthTech",    175,  "healthy"),
+    ("Driftwood Tech",     "driftwood.tech",    "Software",       95,  "healthy"),
+    ("Ember Systems",      "embersys.io",       "DevTools",      145,  "healthy"),
+    ("Fieldstone Data",    "fieldstone.io",     "E-commerce",    115,  "healthy"),
+    ("Groundswell Labs",   "groundswell.io",    "Software",      200,  "healthy"),
+    ("Hillside Analytics", "hillside.io",       "MarTech",       130,  "healthy"),
+    ("Ironwood Cloud",     "ironwood.cloud",    "Cybersecurity", 255,  "healthy"),
+    ("Junction Labs",      "junctionlabs.io",   "Software",      170,  "healthy"),
+    ("Keystone Data",      "keystonedata.io",   "FinTech",       225,  "healthy"),
+    ("Limestone Labs",     "limestone.io",      "DevTools",      100,  "healthy"),
+    ("Millstone Tech",     "millstone.tech",    "Software",      185,  "healthy"),
+    ("Nightfall Systems",  "nightfall.io",      "Cybersecurity", 270,  "healthy"),
+    ("Oakwood Analytics",  "oakwood.io",        "MarTech",       150,  "healthy"),
+    ("Pebblebrook Labs",   "pebblebrook.io",    "EdTech",        115,  "healthy"),
+    ("Quarry Systems",     "quarrysys.com",     "Software",      195,  "healthy"),
+    ("Ridgecrest Data",    "ridgecrest.io",     "FinTech",       165,  "healthy"),
+    ("Stonewall Labs",     "stonewall.io",      "DevTools",       80,  "healthy"),
+    ("Timberline Tech",    "timberline.tech",   "Software",      235,  "healthy"),
+    ("Underhill Systems",  "underhill.io",      "HRTech",        140,  "healthy"),
+    ("Valleyview Labs",    "valleyview.io",     "HealthTech",    195,  "healthy"),
+    ("Westbrook Data",     "westbrook.io",      "Software",      155,  "healthy"),
+    ("Xerxes Analytics",   "xerxes.io",         "MarTech",       175,  "healthy"),
+    ("Yarrow Systems",     "yarrow.io",         "LegalTech",     120,  "healthy"),
+    ("Zircon Labs",        "zircon.io",         "Software",      205,  "healthy"),
+    ("Alluvial Data",      "alluvial.io",       "DevTools",      135,  "healthy"),
+    ("Basalt Systems",     "basalt.io",         "Cybersecurity", 245,  "healthy"),
+    ("Cairn Analytics",    "cairn.io",          "FinTech",       185,  "healthy"),
+    ("Dolomite Labs",      "dolomite.io",       "Software",      110,  "healthy"),
+    ("Esker Cloud",        "esker.cloud",       "E-commerce",    160,  "healthy"),
 ]
 
 PLANS = {
@@ -131,15 +217,29 @@ EVENTS = [
     "project_created", "issue_assigned", "sprint_started",
     "git_integration_connected", "ai_prioritization_used",
     "invite_sent", "comment_added", "report_viewed",
+    "dashboard_viewed", "export_triggered", "api_key_created",
+    "webhook_configured", "automation_rule_created", "bulk_import",
+    "slack_integration_connected", "sso_enabled", "audit_log_viewed",
+    "custom_field_created", "template_used", "roadmap_updated",
 ]
 
 ACTIVATION_EVENTS = {"git_integration_connected", "project_created", "invite_sent"}
 
 TICKET_TAGS = {
-    "at_risk":   [["billing", "churn-risk"], ["bug", "churn-risk"], ["onboarding"]],
-    "expansion": [["feature-request"], ["onboarding"]],
-    "pql":       [["onboarding"], ["bug"]],
-    "healthy":   [["feature-request"], ["bug"], ["onboarding"]],
+    "at_risk":   [
+        ["billing", "churn-risk"], ["bug", "churn-risk"], ["onboarding"],
+        ["billing", "escalated"], ["performance", "churn-risk"], ["access", "churn-risk"],
+    ],
+    "expansion": [
+        ["feature-request"], ["onboarding"], ["api"], ["integration"], ["enterprise-feature"],
+    ],
+    "pql":       [
+        ["onboarding"], ["bug"], ["trial-support"], ["setup-help"],
+    ],
+    "healthy":   [
+        ["feature-request"], ["bug"], ["onboarding"],
+        ["api"], ["integration"], ["performance"],
+    ],
 }
 
 # ── state containers ──────────────────────────────────────────────────────────
@@ -166,7 +266,7 @@ for idx, (name, domain, industry, emp_count, segment) in enumerate(COMPANIES):
     stripe_cust_id   = uid("cus_")
     stripe_sub_id    = uid("sub_")
 
-    created_at = rand_date(YEAR_AGO, SIX_M)
+    created_at = rand_date(TWO_YEARS_AGO, SIX_M)
 
     # ── plan assignment ──
     if segment == "pql":
@@ -202,15 +302,21 @@ for idx, (name, domain, industry, emp_count, segment) in enumerate(COMPANIES):
         seats_used = int(seat_limit * random.uniform(0.4, 0.75))
 
     # ── Marketing Attribution ──
-    utm_source = random.choice(["Organic Search", "Google Ads", "LinkedIn", "Direct", "Referral"])
-    if utm_source == "Organic Search":
-        utm_campaign = "SEO_2023"
-    elif utm_source == "Google Ads":
-        utm_campaign = random.choice(["Q1_Competitor_Keywords", "Retargeting_V2"])
-    elif utm_source == "LinkedIn":
-        utm_campaign = "B2B_SaaS_Leaders"
-    else:
-        utm_campaign = "None"
+    utm_source = random.choice([
+        "Organic Search", "Google Ads", "LinkedIn", "Direct", "Referral",
+        "Product Hunt", "Newsletter", "Twitter", "Podcast", "Webinar",
+    ])
+    utm_campaign_map = {
+        "Organic Search": random.choice(["SEO_2023", "SEO_2024_Q1", "Blog_DevTools"]),
+        "Google Ads":     random.choice(["Q1_Competitor_Keywords", "Retargeting_V2", "Brand_Protection", "Q4_Enterprise"]),
+        "LinkedIn":       random.choice(["B2B_SaaS_Leaders", "DevOps_Personas", "Enterprise_IT"]),
+        "Product Hunt":   random.choice(["PH_Launch_2023", "PH_Featured_2024"]),
+        "Newsletter":     random.choice(["Weekly_Digest", "State_of_DevOps"]),
+        "Twitter":        random.choice(["Dev_Awareness", "OSS_Community"]),
+        "Podcast":        random.choice(["Software_Eng_Podcast", "SaaStr_Sponsorship"]),
+        "Webinar":        random.choice(["Q1_Webinar_CI_CD", "Enterprise_Demo_Day"]),
+    }
+    utm_campaign = utm_campaign_map.get(utm_source, "None")
 
     # ── HubSpot company ──
     hs_companies.append({
@@ -247,12 +353,26 @@ for idx, (name, domain, industry, emp_count, segment) in enumerate(COMPANIES):
             "createdate":                iso(created_at),
         })
 
-    # ── HubSpot contacts (2-4 per company) ──
+    # ── HubSpot contacts (2-5 per company) ──
     company_contact_emails = []
-    roles = ["CTO", "VP Engineering", "Engineering Manager", "Lead Developer", "DevOps Lead"]
-    for _ in range(random.randint(2, 4)):
-        fname = random.choice(["Alex","Jordan","Taylor","Morgan","Casey","Riley","Drew","Quinn"])
-        lname = random.choice(["Smith","Johnson","Lee","Brown","Davis","Wilson","Moore","Clark"])
+    roles = [
+        "CTO", "VP Engineering", "Engineering Manager", "Lead Developer", "DevOps Lead",
+        "VP Product", "Head of IT", "Platform Engineer", "Software Architect",
+        "Director of Engineering", "CEO", "COO", "VP Operations",
+    ]
+    first_names = [
+        "Alex","Jordan","Taylor","Morgan","Casey","Riley","Drew","Quinn",
+        "Blake","Cameron","Avery","Logan","Reese","Skyler","Peyton","Rowan",
+        "Dana","Jesse","Finley","Kendall","Parker","Sage","Spencer","Tatum",
+    ]
+    last_names = [
+        "Smith","Johnson","Lee","Brown","Davis","Wilson","Moore","Clark",
+        "Anderson","Martinez","Garcia","Rodriguez","Harris","Jackson","Thompson",
+        "White","Lewis","Walker","Hall","Allen","Young","Hernandez","King","Wright",
+    ]
+    for _ in range(random.randint(2, 5)):
+        fname = random.choice(first_names)
+        lname = random.choice(last_names)
         email = f"{fname.lower()}.{lname.lower()}@{domain}"
         company_contact_emails.append(email)
         hs_contacts.append({
@@ -270,7 +390,7 @@ for idx, (name, domain, industry, emp_count, segment) in enumerate(COMPANIES):
         })
 
     # ── HubSpot Engagements (Sales Activities) ──
-    n_engagements = random.randint(3, 15) if segment != "pql" else random.randint(0, 2)
+    n_engagements = random.randint(8, 30) if segment != "pql" else random.randint(0, 3)
     for _ in range(n_engagements):
         eng_type = random.choices(["CALL", "EMAIL", "MEETING"], weights=[3, 6, 2])[0]
         eng_time = rand_date(created_at, NOW)
@@ -306,15 +426,18 @@ for idx, (name, domain, industry, emp_count, segment) in enumerate(COMPANIES):
         },
     })
 
-    # ── Stripe invoices (12 months) ──
-    for m in range(12):
+    # ── Stripe invoices (up to 24 months) ──
+    for m in range(24):
         inv_date = sub_start + timedelta(days=30 * m)
         if inv_date > NOW:
             break
         mrr = price_cents * seats_used
-        if segment == "at_risk" and m >= 9:
-            inv_status = random.choice(["open", "uncollectible"])
+        if segment == "at_risk" and m >= 18:
+            inv_status = random.choice(["open", "uncollectible", "void"])
             paid_at = None
+        elif segment == "at_risk" and m >= 12:
+            inv_status = random.choices(["paid", "open", "uncollectible"], weights=[4, 3, 3])[0]
+            paid_at = iso(inv_date + timedelta(days=random.randint(0, 3))) if inv_status == "paid" else None
         else:
             inv_status = "paid"
             paid_at = iso(inv_date + timedelta(days=random.randint(0, 3)))
@@ -428,16 +551,16 @@ for idx, (name, domain, industry, emp_count, segment) in enumerate(COMPANIES):
 
     # at_risk: very few events, old timestamps
     if segment == "at_risk":
-        n_events = random.randint(5, 20)
-        event_window_end = NOW - timedelta(days=45)
+        n_events = random.randint(10, 40)
+        event_window_end = NOW - timedelta(days=30)
     elif segment == "expansion":
-        n_events = random.randint(200, 500)
+        n_events = random.randint(400, 900)
         event_window_end = NOW
     elif segment == "pql":
-        n_events = random.randint(30, 80)
+        n_events = random.randint(50, 120)
         event_window_end = NOW
     else:
-        n_events = random.randint(50, 200)
+        n_events = random.randint(100, 400)
         event_window_end = NOW
 
     for _ in range(n_events):
@@ -452,16 +575,16 @@ for idx, (name, domain, industry, emp_count, segment) in enumerate(COMPANIES):
 
     # ── Zendesk tickets ──
     if segment == "at_risk":
-        n_tickets = random.randint(5, 12)
+        n_tickets = random.randint(8, 20)
         priorities = ["high", "urgent"]
     elif segment == "expansion":
-        n_tickets = random.randint(1, 4)
+        n_tickets = random.randint(2, 8)
         priorities = ["normal", "low"]
     elif segment == "pql":
-        n_tickets = random.randint(0, 2)
-        priorities = ["normal"]
+        n_tickets = random.randint(1, 4)
+        priorities = ["normal", "low"]
     else:
-        n_tickets = random.randint(0, 5)
+        n_tickets = random.randint(1, 10)
         priorities = ["low", "normal", "high"]
 
     for _ in range(n_tickets):
@@ -518,4 +641,7 @@ print(f"\n✅ Done. Files written to {out.resolve()}")
 segments = [c[4] for c in COMPANIES]
 print(f"\nSegment breakdown:")
 for s in ["at_risk", "expansion", "pql", "healthy"]:
-    print(f"  {s:12s}: {segments.count(s)} companies")
+    count = segments.count(s)
+    print(f"  {s:12s}: {count:3d} companies")
+
+print(f"\nTotal companies: {len(COMPANIES)}")
