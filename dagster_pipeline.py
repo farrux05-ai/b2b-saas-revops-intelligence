@@ -36,7 +36,6 @@ from dagster_dbt import DbtCliResource, dbt_assets
 
 from ingestion.stackflow_pipeline import run_pipeline as run_ingestion
 from scripts.reverse_etl_dlt import run as run_reverse_etl_sync
-from scripts.sync_to_motherduck import sync_to_motherduck as run_motherduck_sync
 
 # ===========================================================================
 # PATHS & CONFIGURATION
@@ -123,42 +122,7 @@ def revops_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
 
 
 # ===========================================================================
-# LAYER 4: SYNC — MotherDuck Cloud
-#
-# Function:
-#   Copies raw_data, main_staging, and main_marts schemas from local DuckDB
-#   to MotherDuck (Cloud) using native ATTACH + CREATE OR REPLACE statements.
-#
-# WHY ATTACH + COPY?
-#   Direct dlt-MotherDuck connections can occasionally experience timeouts.
-#   Using local DuckDB + SQL ATTACH is highly memory-efficient (no Python RAM buffering)
-#   and extremely fast.
-#
-# deps=[revops_dbt_assets]:
-#   Ensures data is fully processed and validated by dbt before syncing to the cloud.
-# ===========================================================================
-
-@asset(
-    group_name="sync",
-    deps=[revops_dbt_assets],
-    retry_policy=RetryPolicy(
-        max_retries=2,
-        delay=30,
-        backoff=Backoff.EXPONENTIAL,
-    ),
-    description="Syncs local DuckDB tables to MotherDuck Cloud using ATTACH + COPY.",
-)
-def motherduck_sync(context: AssetExecutionContext):
-    context.log.info("▶ 4/6 — Starting MotherDuck cloud sync...")
-    context.log.info(
-        f"  MOTHERDUCK_REQUIRED status: {os.getenv('MOTHERDUCK_REQUIRED', 'false')}"
-    )
-    run_motherduck_sync()
-    context.log.info("✅ MotherDuck cloud sync completed successfully.")
-
-
-# ===========================================================================
-# LAYER 4: REVERSE ETL — HubSpot CRM Writeback
+# LAYER 3: REVERSE ETL — HubSpot CRM Writeback
 #
 # Function:
 #   Pushes processed CRM insights from the dim_accounts and fct_pql_signals
@@ -166,15 +130,11 @@ def motherduck_sync(context: AssetExecutionContext):
 #     - Company enrichment: MRR, ARR, health metrics → HubSpot Companies
 #     - PQL signals: Intent level, recommended action → HubSpot Contacts
 #     - L2A associations: Matches unassociated contacts to company records
-#
-# WHY AFTER motherduck_sync?
-#   Sequenced after cloud sync so that in case the build fails early,
-#   we do not upload stale or incorrect data to HubSpot.
 # ===========================================================================
 
 @asset(
     group_name="reverse_etl",
-    deps=[motherduck_sync],
+    deps=[revops_dbt_assets],
     retry_policy=RetryPolicy(
         max_retries=3,
         delay=60,
@@ -289,7 +249,7 @@ def elementary_report(context: AssetExecutionContext):
 revops_full_pipeline_job = define_asset_job(
     name="revops_full_pipeline_job",
     selection=AssetSelection.all(),
-    description="Full ELT pipeline: Ingestion -> dbt -> MotherDuck -> HubSpot Reverse ETL",
+    description="Full ELT pipeline: Ingestion -> dbt -> HubSpot Reverse ETL",
 )
 
 revops_ingestion_only_job = define_asset_job(
@@ -300,8 +260,8 @@ revops_ingestion_only_job = define_asset_job(
 
 revops_transform_only_job = define_asset_job(
     name="revops_transform_only_job",
-    selection=AssetSelection.assets(revops_dbt_assets, motherduck_sync),
-    description="Runs dbt build and MotherDuck sync only (skips ingestion).",
+    selection=AssetSelection.assets(revops_dbt_assets),
+    description="Runs dbt build only (skips ingestion).",
 )
 
 
@@ -331,7 +291,6 @@ defs = Definitions(
     assets=[
         ingestion_dlt,
         revops_dbt_assets,
-        motherduck_sync,
         dlt_reverse_etl,
         elementary_report,
     ],

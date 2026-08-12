@@ -5,7 +5,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
-os.environ["MOTHERDUCK_TOKEN"] = os.getenv("MOTHERDUCK_TOKEN", "")
 
 def load_json(filename):
     path = Path("data/raw") / filename

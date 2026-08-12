@@ -2,15 +2,13 @@
 # dbt Profile — RevOps Intelligence Engine
 #
 # TARGETS:
-#   local    → DuckDB file (fast local dev, no credentials)
-#   dev      → MotherDuck (cloud DuckDB, shared dev environment)
-#   snowflake → Snowflake (production-grade enterprise warehouse)
-#   ci       → DuckDB in-memory (GitHub Actions, no credentials)
+#   local     → DuckDB file (fast local dev, testing, CI)
+#   snowflake → Snowflake (production enterprise warehouse)
+#   ci        → DuckDB in-memory (GitHub Actions)
 #
 # USAGE:
 #   dbt run                          # uses 'local' (default)
-#   dbt run --target dev             # MotherDuck
-#   dbt run --target snowflake       # Snowflake
+#   dbt run --target snowflake       # Snowflake (production)
 #   dbt run --target ci              # CI in-memory
 # ============================================================
 
@@ -18,17 +16,10 @@ revops_intelligence_engine:
   target: local
   outputs:
 
-    # ── LOCAL DEV — DuckDB file ──────────────────────────────
+    # ── LOCAL DEV / TESTING — DuckDB file ────────────────────
     local:
       type: duckdb
       path: '/home/farrux/data_projects/b2b-saas-revops/duckdb/revops_intelligence.duckdb'
-      threads: 4
-
-    # ── CLOUD DEV — MotherDuck ───────────────────────────────
-    # Fast cloud sharing with DuckDB-compatible SQL
-    dev:
-      type: duckdb
-      path: 'md:revops_intelligence'
       threads: 4
 
     # ── PRODUCTION — Snowflake ───────────────────────────────
@@ -46,11 +37,9 @@ revops_intelligence_engine:
       schema: MARTS
       threads: 8
       client_session_keep_alive: false
-      # Query tag for cost attribution in Snowflake
       query_tag: "dbt_revops_intelligence"
 
     # ── CI — In-memory DuckDB ────────────────────────────────
-    # Used in GitHub Actions for `dbt parse` only (no real data needed)
     ci:
       type: duckdb
       path: ":memory:"
@@ -63,11 +52,6 @@ elementary:
     local:
       type: duckdb
       path: '/home/farrux/data_projects/b2b-saas-revops/duckdb/revops_intelligence.duckdb'
-      schema: main_elementary
-      threads: 4
-    dev:
-      type: duckdb
-      path: 'md:revops_intelligence'
       schema: main_elementary
       threads: 4
     snowflake:
