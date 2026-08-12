@@ -4,8 +4,8 @@
 > **[View Live Data Documentation & Lineage Graph](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/)**
 
 ![dbt](https://img.shields.io/badge/dbt-FF694B?style=for-the-badge&logo=dbt&logoColor=white)
+![Snowflake](https://img.shields.io/badge/Snowflake-29B5E8?style=for-the-badge&logo=snowflake&logoColor=white)
 ![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?style=for-the-badge&logo=duckdb&logoColor=black)
-![MotherDuck](https://img.shields.io/badge/MotherDuck-FFD966?style=for-the-badge&logo=duckdb&logoColor=black)
 ![Dagster](https://img.shields.io/badge/Dagster-163B36?style=for-the-badge&logo=dagster&logoColor=white)
 ![Lightdash](https://img.shields.io/badge/Lightdash-000000?style=for-the-badge&logo=lightdash&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
@@ -113,20 +113,20 @@ flowchart LR
         INT --> MARTS[Marts\ndim_accounts · fct_mrr_waterfall\nfct_pql_signals · fct_accounts_health]
     end
 
-    subgraph Cloud ["Cloud Warehouse (MotherDuck)"]
-        MARTS --> |ATTACH + COPY\n40 tables synced| MD[(MotherDuck)]
+    subgraph Cloud ["Cloud Enterprise Warehouse"]
+        MARTS --> |dbt build --target snowflake| SF[(Snowflake)]
     end
 
     subgraph Activation ["Activation Layer"]
-        MD --> |Direct Query| LD[Lightdash BI\nSemantic Layer]
+        SF --> |Direct Query| LD[Lightdash BI\nSemantic Layer]
         LD --> |Slack Bot| SL[Slack Alerts\n& Reports]
-        MD --> |Reverse ETL / dlt| HS2[HubSpot CRM\nPQL tags · Health scores]
+        MARTS --> |Reverse ETL / dlt| HS2[HubSpot CRM\nPQL tags · Health scores]
     end
 
     subgraph Orchestration ["Orchestration (Dagster)"]
         ORCH[Daily 07:00 UTC\nDagster Job] -.-> |runs| RAW
         ORCH -.-> |runs| MARTS
-        ORCH -.-> |runs| MD
+        ORCH -.-> |runs| SF
         ORCH -.-> |runs| HS2
     end
 ```
