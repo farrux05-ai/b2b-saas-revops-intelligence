@@ -1,0 +1,10 @@
+[project]
+name = "b2b-dlt"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dlt[duckdb]>=1.29.1",
+    "posthog>=7.38.4",
+]

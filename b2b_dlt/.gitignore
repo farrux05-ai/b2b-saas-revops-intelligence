@@ -1,0 +1,18 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# dlt pipeline artifacts (local state, do not commit)
+*.duckdb
+*.duckdb.wal
+.dlt/pipelines/
+
+# dlt secrets (never commit real credentials)
+.dlt/secrets.toml

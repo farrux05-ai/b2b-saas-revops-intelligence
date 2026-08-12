@@ -1,0 +1,10 @@
+# Non-secret configuration values.
+# Credentials and API keys belong in secrets.toml (never committed).
+
+[runtime]
+log_level = "WARNING"  # dlt system log level
+dlthub_telemetry = true
+
+[sources.posthog]
+project_id = "YOUR_PROJECT_ID"
+host = "https://eu.posthog.com"
