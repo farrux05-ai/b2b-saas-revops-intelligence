@@ -400,8 +400,7 @@ dagster job execute -f dagster_pipeline.py -j revops_transform_job
 # Or run steps manually:
 python ingestion/stackflow_pipeline.py     # 1. Ingest
 dbt build --store-failures                 # 2. Transform + Test
-python scripts/sync_to_motherduck.py       # 3. Sync to cloud
-python scripts/reverse_etl_dlt.py         # 4. Push to HubSpot
+python scripts/reverse_etl_dlt.py         # 3. Push to HubSpot
 ```
 
 ### Run with Dagster UI (Recommended)
@@ -453,7 +452,6 @@ b2b-saas-revops/
 ├── tests/
 │   └── assert_health_status_logic_consistent.sql
 ├── scripts/
-│   ├── sync_to_motherduck.py     # ATTACH-based native DuckDB→MotherDuck sync
 │   ├── reverse_etl_dlt.py        # dlt custom destination → HubSpot API
 │   └── generate_mock_data.py     # Realistic mock data seeder
 ├── macros/                       # dbt Jinja macros (business logic reuse)
