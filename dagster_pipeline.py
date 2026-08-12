@@ -37,7 +37,6 @@ from dagster_dbt import DbtCliResource, dbt_assets
 from ingestion.stackflow_pipeline import run_pipeline as run_ingestion
 from scripts.reverse_etl_dlt import run as run_reverse_etl_sync
 from scripts.sync_to_motherduck import sync_to_motherduck as run_motherduck_sync
-from scripts.vector_ingest import run as run_vector_ingest
 
 # ===========================================================================
 # PATHS & CONFIGURATION
@@ -121,49 +120,6 @@ def revops_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
 
     context.log.info("✅ dbt build completed successfully.")
 
-
-# ===========================================================================
-# LAYER 3: VECTOR ENGINE — Unstructured Data → LanceDB
-#
-# Function:
-#   Reads the 3 unstructured JSON sources (sales notes, Zendesk, Gong),
-#   cleans and chunks text, enriches with dim_accounts (MRR, health_score),
-#   generates 384-dim embeddings using BAAI/bge-small-en-v1.5 (local, free),
-#   and writes to LanceDB tables in duckdb/lancedb/.
-#
-# deps=[revops_dbt_assets]:
-#   Must run AFTER dbt build because it reads dim_accounts from main_marts
-#   to enrich each text chunk with structured RevOps context.
-#
-# WHY A SEPARATE LAYER:
-#   Unstructured text cannot be processed by dbt/SQL:
-#   - HTML stripping, chunking, embedding are Python-only operations
-#   - LanceDB is not a SQL database — it uses Arrow-native vector storage
-#   - But we still need SQL (DuckDB) for the dim_accounts JOIN
-#   So this is a Python asset that orchestrates Polars + DuckDB + LanceDB.
-# ===========================================================================
-
-@asset(
-    group_name="vector",
-    deps=[revops_dbt_assets],
-    description=(
-        "Loads unstructured sales notes, support tickets, and call transcripts. "
-        "Cleans, chunks, enriches with dim_accounts, embeds via bge-small-en-v1.5, "
-        "and writes to LanceDB for semantic search."
-    ),
-)
-def vector_ingest(context: AssetExecutionContext):
-    context.log.info("▶ 3/6 — Starting vector ingestion pipeline...")
-    context.log.info("  Sources: hubspot_sales_notes | zendesk_ticket_comments | gong_call_transcripts")
-    context.log.info("  Embedding model: BAAI/bge-small-en-v1.5 (local, 130MB, 384-dim)")
-
-    counts = run_vector_ingest()
-
-    context.log.info("✅ Vector ingestion complete.")
-    context.log.info(f"   sales_notes:           {counts['sales_notes']} chunks")
-    context.log.info(f"   support_conversations: {counts['support_conversations']} chunks")
-    context.log.info(f"   call_transcripts:      {counts['call_transcripts']} chunks")
-    context.log.info(f"   Total chunks indexed:  {sum(counts.values())}")
 
 
 # ===========================================================================
@@ -375,7 +331,6 @@ defs = Definitions(
     assets=[
         ingestion_dlt,
         revops_dbt_assets,
-        vector_ingest,        # Layer 3: Unstructured → LanceDB
         motherduck_sync,
         dlt_reverse_etl,
         elementary_report,

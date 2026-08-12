@@ -137,10 +137,11 @@ flowchart LR
 
 | Layer | Tool | Why |
 |:------|:-----|:----|
-| **Ingestion** | [dlt](https://dlthub.com) | Open-source, Python-native, handles schema evolution automatically |
+| **Ingestion (Mock Dev)** | `ingestion/stackflow_pipeline.py` | Local dlt pipeline reading reproducible JSON mock data for fast dev & testing |
+| **Ingestion (Live Prod)** | [`b2b_dlt/`](b2b_dlt/) | Production dlt pipeline orchestrator connecting to live APIs (HubSpot, Stripe, Zendesk, PostHog, Postgres CDC) |
 | **Transformation** | [dbt](https://getdbt.com) | DAG-based SQL with built-in testing, docs, and lineage |
 | **Local Compute** | [DuckDB](https://duckdb.org) | Zero-server OLAP, 100M+ rows on a laptop, $0 compute cost |
-| **Cloud Warehouse** | [MotherDuck](https://motherduck.com) | Serverless DuckDB-in-the-cloud for BI connectivity |
+| **Cloud Warehouse** | [MotherDuck](https://motherduck.com) / Snowflake | Serverless DuckDB cloud & enterprise Snowflake production targets |
 | **Semantic Layer** | [Lightdash](https://lightdash.com) | Reads dbt `meta` YAML directly — metrics defined in code |
 | **Orchestration** | [Dagster](https://dagster.io) | Asset-based DAG — tracks *data*, not just *scripts* |
 | **Reverse ETL** | Python + dlt | Closes the loop: pushes insights back into HubSpot |
@@ -417,8 +418,15 @@ dagster dev -f dagster_pipeline.py
 ```
 b2b-saas-revops/
 ├── dagster_pipeline.py           # Orchestration: jobs, assets, daily schedule
+├── b2b_dlt/                      # 🌐 PRODUCTION ELT: Multi-source live API pipelines (dlt)
+│   ├── main.py                   # Production pipeline orchestrator CLI
+│   ├── pipelines/                # Live connectors (hubspot, stripe, zendesk, posthog, pg_replication)
+│   ├── hubspot/                  # HubSpot CRM live API connector + property history
+│   ├── stripe_analytics/         # Stripe payments live API connector
+│   ├── zendesk/                  # Zendesk incremental API connector
+│   └── pg_replication/           # PostgreSQL CDC logical replication
 ├── ingestion/
-│   └── stackflow_pipeline.py     # dlt ingestion (HubSpot, Stripe, Zendesk, Internal)
+│   └── stackflow_pipeline.py     # 🧪 LOCAL DEV ELT: dlt pipeline (mock data reader)
 ├── models/
 │   ├── staging/                  # 8 source-aligned views (type-cast, rename)
 │   │   ├── stg_hubspot/

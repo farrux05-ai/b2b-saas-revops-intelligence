@@ -3,6 +3,7 @@ duckdb
 dbt-core
 dbt-duckdb
 dbt-postgres
+dbt-snowflake
 
 # Utilities
 python-dotenv
