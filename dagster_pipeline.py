@@ -6,9 +6,10 @@ Orchestration layer: Dagster manages the full ELT pipeline lifecycle.
 
 DATA FLOW:
   [1] ingestion_dlt      — External sources (API/JSON) → DuckDB raw_data
-  [2] revops_dbt_assets  — raw_data → staging → intermediate → marts
-  [3] motherduck_sync    — Local DuckDB → MotherDuck Cloud
+  [2] revops_dbt_assets  — raw_data → staging → intermediate → marts (local DuckDB)
+  [3] snowflake_sync     — dbt build --target snowflake (Production Warehouse)
   [4] dlt_reverse_etl    — marts (DuckDB) → HubSpot CRM
+  [5] elementary_report  — Observability report & Slack alerts
 
 KEY ARCHITECTURAL DECISIONS:
   - Monitoring: Every asset reports its status and failures in the Dagster UI.
@@ -39,34 +40,16 @@ from scripts.reverse_etl_dlt import run as run_reverse_etl_sync
 
 # ===========================================================================
 # PATHS & CONFIGURATION
-# Path(__file__).parent gets the directory of this file.
-# .resolve() turns a relative path into an absolute one.
 # ===========================================================================
 
 DBT_PROJECT_DIR = Path(__file__).parent.resolve()
 
-# shutil.which("dbt") works like the Linux `which dbt` command.
-# Local dev: resolved via .venv/bin/dbt | Docker/Cloud: resolved via global path.
 _dbt_executable = shutil.which("dbt") or str(
     DBT_PROJECT_DIR / ".venv" / "bin" / "dbt"
 )
 
 # ===========================================================================
 # LAYER 1: EXTRACT & LOAD — Ingestion
-#
-# Function:
-#   Ingests HubSpot, Stripe, Zendesk, and Internal DB raw data into DuckDB raw_data schema.
-#
-# NOTE FOR PRODUCTION:
-#   This project uses mock raw JSON files for local development.
-#   In production, these read directly from external APIs:
-#     hubspot_source(api_key=os.getenv("HUBSPOT_API_KEY"))
-#   using write_disposition="merge" and incremental tracking.
-#
-# RetryPolicy:
-#   max_retries=3  → Retry up to 3 times on failure
-#   delay=60       → Wait 60 seconds before retrying
-#   backoff=EXPONENTIAL → Exponentially increase wait time (60s → 120s → 240s)
 # ===========================================================================
 
 @asset(
@@ -79,62 +62,73 @@ _dbt_executable = shutil.which("dbt") or str(
     description="Loads HubSpot, Stripe, Zendesk, and Internal raw data into DuckDB raw_data schema.",
 )
 def ingestion_dlt(context: AssetExecutionContext):
-    context.log.info("▶ 1/4 — Starting dlt ingestion...")
+    context.log.info("▶ 1/5 — Starting dlt ingestion...")
     context.log.info("  Sources: HubSpot | Stripe | Zendesk | Internal DB")
     run_ingestion()
     context.log.info("✅ dlt ingestion completed successfully.")
 
 
 # ===========================================================================
-# LAYER 2: TRANSFORM — dbt
-#
-# Function:
-#   1. `dbt source freshness` — Checks if raw source tables are stale (older than 24 hours).
-#      If sources are stale, it raises an error and stops the pipeline.
-#      This prevents stale inputs from corrupting downstream models.
-#
-#   2. `dbt build --store-failures` — Builds and tests staging, intermediate, and mart models.
-#      --store-failures: saves failing test rows to DuckDB for easier debugging.
-#
-# NOTE: @dbt_assets reads manifest.json to expose dbt models as individual assets in Dagster.
-#   This enables rich lineage graphs and model-level monitoring in the UI.
-#
-# deps=ingestion_dlt:
-#   Forces Dagster to run the dlt ingestion step BEFORE running dbt models.
+# LAYER 2: TRANSFORM — dbt (Local DuckDB)
 # ===========================================================================
 
 @dbt_assets(
     manifest=DBT_PROJECT_DIR / "target" / "manifest.json",
 )
 def revops_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
-    """Builds and tests all dbt models (staging -> intermediate -> marts)."""
+    """Builds and tests all dbt models locally on DuckDB (staging -> intermediate -> marts)."""
 
-    context.log.info("▶ 2/4 — Running dbt source freshness checks...")
-    # First, run source freshness to verify data is recent.
+    context.log.info("▶ 2/5 — Running dbt source freshness checks...")
     yield from dbt.cli(["source", "freshness"], context=context).stream()
 
-    context.log.info("✅ Source freshness checks passed. Running dbt build...")
-    # Run dbt build (includes seeds, snapshots, runs, and tests) and store failures.
+    context.log.info("✅ Source freshness checks passed. Running local dbt build...")
     yield from dbt.cli(["build", "--store-failures"], context=context).stream()
 
-    context.log.info("✅ dbt build completed successfully.")
-
+    context.log.info("✅ Local dbt build completed successfully.")
 
 
 # ===========================================================================
-# LAYER 3: REVERSE ETL — HubSpot CRM Writeback
+# LAYER 3: PRODUCTION DEPLOYMENT — Snowflake Warehouse
 #
 # Function:
-#   Pushes processed CRM insights from the dim_accounts and fct_pql_signals
-#   marts back into HubSpot CRM:
-#     - Company enrichment: MRR, ARR, health metrics → HubSpot Companies
-#     - PQL signals: Intent level, recommended action → HubSpot Contacts
-#     - L2A associations: Matches unassociated contacts to company records
+#   Deploys transformed models and runs tests against Snowflake enterprise warehouse.
+#   Uses `dbt build --target snowflake` when Snowflake credentials are set in .env.
+# ===========================================================================
+
+@asset(
+    group_name="sync",
+    deps=[revops_dbt_assets],
+    retry_policy=RetryPolicy(
+        max_retries=2,
+        delay=30,
+        backoff=Backoff.EXPONENTIAL,
+    ),
+    description="Deploys transformed models and tests to Snowflake Enterprise Warehouse.",
+)
+def snowflake_sync(context: AssetExecutionContext, dbt: DbtCliResource):
+    context.log.info("▶ 3/5 — Starting Snowflake production deployment...")
+    account = os.getenv("SNOWFLAKE_ACCOUNT", "")
+
+    if not account or "your_org" in account:
+        context.log.warning(
+            "⚠️  SNOWFLAKE_ACCOUNT is not configured in .env. "
+            "Skipping Snowflake production deployment. "
+            "Set SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PASSWORD in .env for production."
+        )
+        return
+
+    context.log.info("Running dbt build against Snowflake...")
+    yield from dbt.cli(["build", "--target", "snowflake"], context=context).stream()
+    context.log.info("✅ Snowflake production deployment completed successfully.")
+
+
+# ===========================================================================
+# LAYER 4: REVERSE ETL — HubSpot CRM Writeback
 # ===========================================================================
 
 @asset(
     group_name="reverse_etl",
-    deps=[revops_dbt_assets],
+    deps=[snowflake_sync],
     retry_policy=RetryPolicy(
         max_retries=3,
         delay=60,
@@ -143,14 +137,13 @@ def revops_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     description="Pushes processed insights (MRR, Health, PQL signals) from DuckDB marts back to HubSpot CRM.",
 )
 def dlt_reverse_etl(context: AssetExecutionContext):
-    context.log.info("▶ 5/6 — Starting Reverse ETL (DuckDB -> HubSpot)...")
+    context.log.info("▶ 4/5 — Starting Reverse ETL (DuckDB -> HubSpot)...")
 
     hubspot_token = os.getenv("HUBSPOT_ACCESS_TOKEN", "")
     if not hubspot_token or "xxxx" in hubspot_token:
         context.log.warning(
             "⚠️  HUBSPOT_ACCESS_TOKEN is missing or a placeholder. "
-            "Skipping HubSpot Reverse ETL sync. "
-            "Please configure the real token in Dagster Cloud Env Vars for production."
+            "Skipping HubSpot Reverse ETL sync."
         )
         return
 
@@ -160,13 +153,6 @@ def dlt_reverse_etl(context: AssetExecutionContext):
 
 # ===========================================================================
 # LAYER 5: OBSERVABILITY — Elementary Report Generation
-#
-# Function:
-#   Runs Elementary CLI (edr) to generate a data observability HTML report.
-#
-# deps=[revops_dbt_assets]:
-#   Ensures that dbt has run and updated the observability tables in local DuckDB
-#   and generated dbt artifacts under target/ before generating the report.
 # ===========================================================================
 
 @asset(
@@ -175,7 +161,7 @@ def dlt_reverse_etl(context: AssetExecutionContext):
     description="Generates local Elementary data observability HTML report.",
 )
 def elementary_report(context: AssetExecutionContext):
-    context.log.info("▶ 6/6 — Generating Elementary observability report...")
+    context.log.info("▶ 5/5 — Generating Elementary observability report...")
     
     edr_executable = shutil.which("edr") or str(
         DBT_PROJECT_DIR / ".venv" / "bin" / "edr"
@@ -190,20 +176,13 @@ def elementary_report(context: AssetExecutionContext):
         "--file-path", os.fspath(DBT_PROJECT_DIR / "docs" / "elementary_report.html")
     ]
     
-    context.log.info(f"Running command: {' '.join(cmd)}")
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True
-    )
-    
+    result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        context.log.error(f"Failed to generate Elementary report:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}")
+        context.log.error(f"Failed to generate Elementary report:\n{result.stderr}")
         raise RuntimeError(f"Elementary report generation failed with exit code {result.returncode}")
         
     context.log.info("✅ Elementary observability report generated successfully at docs/elementary_report.html.")
 
-    # Slack alerting step
     slack_webhook = os.getenv("SLACK_WEBHOOK")
     if slack_webhook:
         context.log.info("▶ Sending Elementary alerts to Slack...")
@@ -214,42 +193,21 @@ def elementary_report(context: AssetExecutionContext):
             "--project-dir", os.fspath(DBT_PROJECT_DIR),
             "--slack-webhook", slack_webhook
         ]
-        context.log.info(f"Running command: {' '.join(monitor_cmd)}")
-        monitor_result = subprocess.run(
-            monitor_cmd,
-            capture_output=True,
-            text=True
-        )
+        monitor_result = subprocess.run(monitor_cmd, capture_output=True, text=True)
         if monitor_result.returncode != 0:
-            context.log.warning(
-                f"Elementary monitor failed to send Slack alerts:\n"
-                f"STDOUT:\n{monitor_result.stdout}\nSTDERR:\n{monitor_result.stderr}"
-            )
+            context.log.warning(f"Elementary monitor failed: {monitor_result.stderr}")
         else:
             context.log.info("✅ Elementary alerts sent to Slack successfully.")
-    else:
-        context.log.info("ℹ️ No SLACK_WEBHOOK environment variable found. Skipping Slack alerts.")
 
 
 # ===========================================================================
 # JOBS
-#
-# revops_full_pipeline_job:
-#   Uses AssetSelection.all() to run all 4 assets in sequence.
-#   Dagster automatically manages the execution order based on the lineage.
-#
-# revops_ingestion_only_job:
-#   Runs dlt ingestion only. Useful for manual syncs or debugging.
-#
-# revops_transform_only_job:
-#   Runs dbt transformations and MotherDuck sync without running ingestion.
-#   Useful when raw data is already updated and you are iterating on SQL models.
 # ===========================================================================
 
 revops_full_pipeline_job = define_asset_job(
     name="revops_full_pipeline_job",
     selection=AssetSelection.all(),
-    description="Full ELT pipeline: Ingestion -> dbt -> HubSpot Reverse ETL",
+    description="Full ELT pipeline: Ingestion -> Local dbt -> Snowflake -> HubSpot Reverse ETL",
 )
 
 revops_ingestion_only_job = define_asset_job(
@@ -260,17 +218,13 @@ revops_ingestion_only_job = define_asset_job(
 
 revops_transform_only_job = define_asset_job(
     name="revops_transform_only_job",
-    selection=AssetSelection.assets(revops_dbt_assets),
-    description="Runs dbt build only (skips ingestion).",
+    selection=AssetSelection.assets(revops_dbt_assets, snowflake_sync),
+    description="Runs dbt build on local DuckDB and Snowflake.",
 )
 
 
 # ===========================================================================
 # SCHEDULES
-#
-# cron_schedule="0 7 * * *" → Runs daily at 07:00 UTC.
-#
-# execution_timezone="UTC" is used to prevent issues with Daylight Saving Time.
 # ===========================================================================
 
 revops_daily_schedule = ScheduleDefinition(
@@ -283,14 +237,13 @@ revops_daily_schedule = ScheduleDefinition(
 
 # ===========================================================================
 # DEFINITIONS
-#
-# Declares all assets, jobs, schedules, and resources to the Dagster instance.
 # ===========================================================================
 
 defs = Definitions(
     assets=[
         ingestion_dlt,
         revops_dbt_assets,
+        snowflake_sync,
         dlt_reverse_etl,
         elementary_report,
     ],
