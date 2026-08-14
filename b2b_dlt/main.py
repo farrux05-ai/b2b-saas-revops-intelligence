@@ -70,7 +70,7 @@ PIPELINES: dict[str, tuple[Callable[[], bool], str]] = {
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="main.py",
-        description="B2B dlt Pipeline Orchestrator — loads data from all sources into MotherDuck.",
+        description="B2B dlt Pipeline Orchestrator — loads data from all sources into Snowflake.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="\n".join(
             f"  {name:<16} {desc}"

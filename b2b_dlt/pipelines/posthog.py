@@ -85,8 +85,8 @@ def run() -> bool:
     logger.info("PostHog pipeline started...")
     pipeline = dlt.pipeline(
         pipeline_name="posthog_pipeline",
-        destination="motherduck",
-        dataset_name="posthog_data",
+        destination="snowflake",
+        dataset_name="raw_posthog",
     )
     load_info = pipeline.run(posthog_source())
     logger.info("PostHog pipeline finished: %s", load_info)

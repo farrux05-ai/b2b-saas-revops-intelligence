@@ -56,8 +56,8 @@ def run(
 
     pipeline = dlt.pipeline(
         pipeline_name="pg_replication_pipeline",
-        destination="motherduck",
-        dataset_name="pg_replicated_data",
+        destination="snowflake",
+        dataset_name="raw_internal",
     )
 
     # Creates the replication slot and publication on first run.

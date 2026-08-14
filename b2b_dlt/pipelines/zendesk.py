@@ -27,9 +27,9 @@ def run() -> bool:
     logger.info("Zendesk pipeline started...")
     pipeline = dlt.pipeline(
         pipeline_name="dlt_zendesk_pipeline",
-        destination="motherduck",
+        destination="snowflake",
         dev_mode=False,
-        dataset_name="zendesk_data",
+        dataset_name="raw_zendesk",
     )
     data_support = zendesk_support(load_all=True)
     data_chat = zendesk_chat()

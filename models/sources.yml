@@ -1,11 +1,30 @@
 version: 2
 
+# ─────────────────────────────────────────────────────────────────────────────
+# dbt Sources — Raw data loaded by dlt into Snowflake
+#
+# Schema layout (one schema per source to avoid table name collisions):
+#   REVOPS_INTELLIGENCE.RAW_HUBSPOT   ← b2b_dlt/pipelines/hubspot.py
+#   REVOPS_INTELLIGENCE.RAW_STRIPE    ← b2b_dlt/pipelines/stripe.py
+#   REVOPS_INTELLIGENCE.RAW_ZENDESK   ← b2b_dlt/pipelines/zendesk.py
+#   REVOPS_INTELLIGENCE.RAW_INTERNAL  ← b2b_dlt/pipelines/pg_replication.py
+#   REVOPS_INTELLIGENCE.RAW_POSTHOG   ← b2b_dlt/pipelines/posthog.py
+# ─────────────────────────────────────────────────────────────────────────────
+
 sources:
+
+  # ── HubSpot CRM ─────────────────────────────────────────────────────────────
   - name: hubspot
-    schema: raw_data
+    database: REVOPS_INTELLIGENCE
+    schema: raw_hubspot
+    description: "HubSpot CRM data loaded by dlt (contacts, companies, deals, tickets)"
     tables:
       - name: companies
         description: "HubSpot company records"
+        loaded_at_field: "_dlt_load_id"
+        freshness:
+          warn_after: {count: 25, period: hour}
+          error_after: {count: 49, period: hour}
         columns:
           - name: hs_object_id
             tests: [unique, not_null]
@@ -13,60 +32,125 @@ sources:
             tests: [not_null]
           - name: name
             tests: [not_null]
+        tests:
+          - elementary.volume_anomalies:
+              time_bucket:
+                period: day
+                count: 1
+
       - name: deals
         description: "HubSpot deal pipeline records"
+        loaded_at_field: "_dlt_load_id"
+        freshness:
+          warn_after: {count: 25, period: hour}
+          error_after: {count: 49, period: hour}
         columns:
           - name: hs_object_id
             tests: [unique, not_null]
           - name: associated_company_id
             tests: [not_null]
+
       - name: contacts
         description: "HubSpot contact records"
+        loaded_at_field: "_dlt_load_id"
+        freshness:
+          warn_after: {count: 25, period: hour}
+          error_after: {count: 49, period: hour}
         columns:
           - name: hs_object_id
             tests: [unique, not_null]
+        tests:
+          - elementary.schema_changes
+
       - name: engagements
         description: "HubSpot engagement records (calls, emails, meetings)"
         columns:
           - name: hs_engagement_id
             tests: [unique, not_null]
 
+  # ── Stripe Billing ──────────────────────────────────────────────────────────
   - name: stripe
-    schema: raw_data
+    database: REVOPS_INTELLIGENCE
+    schema: raw_stripe
+    description: "Stripe billing data loaded by dlt"
     tables:
-      - name: subscriptions
-        description: "Stripe subscription records per workspace"
+      - name: subscription
+        description: "Stripe subscription records per customer"
+        loaded_at_field: "_dlt_load_id"
+        freshness:
+          warn_after: {count: 25, period: hour}
+          error_after: {count: 49, period: hour}
         columns:
           - name: id
             tests: [unique, not_null]
-          - name: metadata__workspace_id
-            tests: [not_null]
-      - name: invoices
-        description: "Stripe invoice history"
-      - name: payments
-        description: "Stripe payment history"
+        tests:
+          - elementary.volume_anomalies:
+              time_bucket:
+                period: day
+                count: 1
 
+      - name: invoice
+        description: "Stripe invoice history"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+
+      - name: payment_intent
+        description: "Stripe payment records"
+
+  # ── Internal DB (PostgreSQL CDC via dlt pg_replication) ─────────────────────
   - name: internal
-    schema: raw_data
+    database: REVOPS_INTELLIGENCE
+    schema: raw_internal
+    description: "Internal application database replicated via dlt PostgreSQL CDC"
     tables:
       - name: workspaces
-        description: "Internal product workspaces"
+        description: "Internal product workspaces — teams using StackFlow AI"
+        loaded_at_field: "_dlt_load_id"
+        freshness:
+          warn_after: {count: 7, period: hour}
+          error_after: {count: 13, period: hour}
         columns:
           - name: id
             tests: [unique, not_null]
+        tests:
+          - elementary.volume_anomalies:
+              time_bucket:
+                period: day
+                count: 1
+
       - name: users
         description: "Internal product users"
+        loaded_at_field: "_dlt_load_id"
+        freshness:
+          warn_after: {count: 7, period: hour}
+          error_after: {count: 13, period: hour}
         columns:
           - name: id
             tests: [unique, not_null]
           - name: email
             tests: [not_null]
 
+      - name: events
+        description: "Internal product usage events (Git connect, Sprint create, etc.)"
+        loaded_at_field: "_dlt_load_id"
+        freshness:
+          warn_after: {count: 2, period: hour}
+          error_after: {count: 6, period: hour}
+        tests:
+          - elementary.volume_anomalies:
+              time_bucket:
+                period: hour
+                count: 1
+
+  # ── Zendesk Support ─────────────────────────────────────────────────────────
   - name: zendesk
-    schema: raw_data
+    database: REVOPS_INTELLIGENCE
+    schema: raw_zendesk
+    description: "Zendesk Support, Chat, and Talk data loaded by dlt (incremental)"
     tables:
-      - name: tickets
-        description: "Support tickets linked to workspaces"
+      - name: ticket
+        description: "Zendesk support tickets"
         loaded_at_field: "updated_at"
         freshness:
           warn_after: {count: 12, period: hour}
@@ -76,20 +160,34 @@ sources:
             tests: [not_null]
           - name: requester_email
             tests: [not_null]
+        tests:
+          - elementary.schema_changes
 
+  # ── PostHog Product Analytics ────────────────────────────────────────────────
   - name: posthog
-    schema: raw_data
+    database: REVOPS_INTELLIGENCE
+    schema: raw_posthog
+    description: "PostHog analytics data loaded by dlt (persons, cohorts, feature flags)"
     tables:
-      - name: events
-        description: "Product analytics events from PostHog"
-        loaded_at_field: "occurred_at"
-        freshness:
-          warn_after: {count: 6, period: hour}
-          error_after: {count: 12, period: hour}
+      - name: persons
+        description: "PostHog person profiles"
         columns:
           - name: id
             tests: [unique, not_null]
-          - name: event_name
-            tests: [not_null]
-          - name: occurred_at
-            tests: [not_null]
+        tests:
+          - elementary.volume_anomalies:
+              time_bucket:
+                period: day
+                count: 1
+
+      - name: feature_flags
+        description: "PostHog feature flag definitions"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+
+      - name: cohorts
+        description: "PostHog user cohort definitions"
+        columns:
+          - name: id
+            tests: [unique, not_null]

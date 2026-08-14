@@ -28,8 +28,8 @@ def run() -> bool:
     logger.info("Stripe pipeline started...")
     pipeline = dlt.pipeline(
         pipeline_name="stripe_analytics",
-        destination="motherduck",
-        dataset_name="stripe_data",
+        destination="snowflake",
+        dataset_name="raw_stripe",
     )
     source = stripe_source(endpoints=ENDPOINTS + INCREMENTAL_ENDPOINTS)
     load_info = pipeline.run(source)

@@ -44,8 +44,6 @@
 
 ## 1. 💼 Business Context & Problem
 
-> 📹 **[Watch Section Video](#)** *(coming soon)*
-
 **StackFlow AI** is an enterprise Engineering Management Platform (AI task prioritization, Git-native workflows, sprint orchestration). Revenue data lived across 4 disconnected tools — with no way to connect them.
 
 ### 6 Problems → 1 Engine
@@ -94,36 +92,42 @@
 
 ```mermaid
 flowchart LR
-    subgraph Sources
+    subgraph Sources ["Data Sources"]
         HS[HubSpot CRM]
         ST[Stripe Billing]
-        IN[Internal DB / PostHog]
         ZD[Zendesk Support]
+        IDB[Internal DB]
+        PH[PostHog Analytics]
     end
 
     subgraph Ingestion ["Extract & Load (dlt)"]
-        HS --> RAW[(Snowflake\nRAW_DATA schema)]
-        ST --> RAW
-        IN --> RAW
-        ZD --> RAW
+        HS  --> RAW[(Snowflake\nRAW_DATA schema)]
+        ST  --> RAW
+        ZD  --> RAW
+        IDB --> RAW
+        PH  --> RAW
     end
 
-    subgraph Transform ["Transformation (dbt + Elementary)"]
-        RAW --> STG[Staging\nType-cast · Rename · Dedupe]
-        STG --> INT[Intermediate\nIdentity Stitch · Domain Aggregation]
-        INT --> MARTS[Marts\ndim_accounts · fct_mrr_waterfall\nfct_pql_signals · fct_accounts_health]
+    subgraph Intermediate ["Intermediate Layer"]
+        RAW --> INT_ID[int_users_joined\nIdentity Stitching]
+        RAW --> INT_ICP[int_icp_scoring\nICP Fit Scoring]
+        RAW --> INT_FIN[int_finance_aggregated]
+        RAW --> INT_SUP[int_support_aggregated]
+        RAW --> INT_USG[int_usage_aggregated]
+    end
+
+    subgraph Marts ["Marts Layer (Output Models)"]
+        INT_ID & INT_ICP & INT_FIN & INT_SUP & INT_USG --> DIM_ACC[dim_accounts\nAccount 360]
+        INT_ID --> DIM_USR[dim_users\nUser Profile]
+        DIM_ACC & INT_FIN --> FCT_MRR[fct_mrr_waterfall\nMRR Ledger]
+        DIM_ACC & INT_SUP --> FCT_HLT[fct_accounts_health\n3-Signal Risk]
+        DIM_ACC & INT_USG --> FCT_PQL[fct_pql_signals\nPQL Intent Tiers]
     end
 
     subgraph Activation ["Activation Layer"]
-        MARTS --> |Direct Query| LD[Lightdash\nSemantic Layer]
-        LD --> |AI Bot| SL[Slack AI Agent\nAlerts & Ad-hoc Q&A]
-        MARTS --> |Reverse ETL / dlt| HS2[HubSpot CRM\nPQL tags · Health scores]
-    end
-
-    subgraph Orchestration ["Orchestration (Dagster · 07:00 UTC)"]
-        ORCH[Dagster Job] -.-> RAW
-        ORCH -.-> MARTS
-        ORCH -.-> HS2
+        DIM_ACC & FCT_MRR & FCT_HLT & FCT_PQL --> LD[Lightdash\nSemantic Layer]
+        LD --> SL[Slack AI Agent\nAlerts & Q&A]
+        FCT_HLT & FCT_PQL --> |Reverse ETL / dlt| HS2[HubSpot CRM\nCRM Tags & Health]
     end
 ```
 

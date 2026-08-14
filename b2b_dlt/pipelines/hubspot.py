@@ -28,8 +28,8 @@ def run() -> bool:
     logger.info("HubSpot pipeline started...")
     pipeline = dlt.pipeline(
         pipeline_name="hubspot",
-        dataset_name="hubspot_dataset",
-        destination="motherduck",
+        destination="snowflake",
+        dataset_name="raw_hubspot",
     )
     # include_history=True loads property change history for each CRM entity
     # into separate tables: contacts_property_history, deals_property_history, etc.
