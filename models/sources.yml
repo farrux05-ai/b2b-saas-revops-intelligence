@@ -1,14 +1,14 @@
 version: 2
 
 # ─────────────────────────────────────────────────────────────────────────────
-# dbt Sources — Raw data loaded by dlt into Snowflake
+# dbt Sources — Raw data loaded by ingestion/stackflow_pipeline.py (mock data)
 #
-# Schema layout (one schema per source to avoid table name collisions):
-#   REVOPS_INTELLIGENCE.RAW_HUBSPOT   ← b2b_dlt/pipelines/hubspot.py
-#   REVOPS_INTELLIGENCE.RAW_STRIPE    ← b2b_dlt/pipelines/stripe.py
-#   REVOPS_INTELLIGENCE.RAW_ZENDESK   ← b2b_dlt/pipelines/zendesk.py
-#   REVOPS_INTELLIGENCE.RAW_INTERNAL  ← b2b_dlt/pipelines/pg_replication.py
-#   REVOPS_INTELLIGENCE.RAW_POSTHOG   ← b2b_dlt/pipelines/posthog.py
+# ALL tables land in one schema: REVOPS_INTELLIGENCE.RAW_DATA
+# This is set by dataset_name="RAW_DATA" in ingestion/stackflow_pipeline.py.
+#
+# NOTE: b2b_dlt/ is a separate production-ready showcase (real API connectors).
+#       It is NOT the source of truth for dbt models in this project.
+#       dbt reads exclusively from the mock ingestion pipeline output below.
 # ─────────────────────────────────────────────────────────────────────────────
 
 sources:
@@ -16,11 +16,11 @@ sources:
   # ── HubSpot CRM ─────────────────────────────────────────────────────────────
   - name: hubspot
     database: REVOPS_INTELLIGENCE
-    schema: raw_hubspot
-    description: "HubSpot CRM data loaded by dlt (contacts, companies, deals, tickets)"
+    schema: raw_data
+    description: "HubSpot CRM data — mock JSON loaded by ingestion/stackflow_pipeline.py"
     tables:
       - name: companies
-        description: "HubSpot company records"
+        description: "HubSpot company records (125 mock companies)"
         loaded_at_field: "_dlt_load_id"
         freshness:
           warn_after: {count: 25, period: hour}
@@ -34,12 +34,10 @@ sources:
             tests: [not_null]
         tests:
           - elementary.volume_anomalies:
-              time_bucket:
-                period: day
-                count: 1
+              time_bucket: {period: day, count: 1}
 
       - name: deals
-        description: "HubSpot deal pipeline records"
+        description: "HubSpot deal pipeline records (184 mock deals)"
         loaded_at_field: "_dlt_load_id"
         freshness:
           warn_after: {count: 25, period: hour}
@@ -47,11 +45,9 @@ sources:
         columns:
           - name: hs_object_id
             tests: [unique, not_null]
-          - name: associated_company_id
-            tests: [not_null]
 
       - name: contacts
-        description: "HubSpot contact records"
+        description: "HubSpot contact records (438 mock contacts)"
         loaded_at_field: "_dlt_load_id"
         freshness:
           warn_after: {count: 25, period: hour}
@@ -71,11 +67,11 @@ sources:
   # ── Stripe Billing ──────────────────────────────────────────────────────────
   - name: stripe
     database: REVOPS_INTELLIGENCE
-    schema: raw_stripe
-    description: "Stripe billing data loaded by dlt"
+    schema: raw_data
+    description: "Stripe billing data — mock JSON loaded by ingestion/stackflow_pipeline.py"
     tables:
-      - name: subscription
-        description: "Stripe subscription records per customer"
+      - name: subscriptions
+        description: "Stripe subscription records per workspace"
         loaded_at_field: "_dlt_load_id"
         freshness:
           warn_after: {count: 25, period: hour}
@@ -83,29 +79,29 @@ sources:
         columns:
           - name: id
             tests: [unique, not_null]
+          - name: metadata__workspace_id
+            tests: [not_null]
         tests:
           - elementary.volume_anomalies:
-              time_bucket:
-                period: day
-                count: 1
+              time_bucket: {period: day, count: 1}
 
-      - name: invoice
+      - name: invoices
         description: "Stripe invoice history"
         columns:
           - name: id
             tests: [unique, not_null]
 
-      - name: payment_intent
+      - name: payments
         description: "Stripe payment records"
 
-  # ── Internal DB (PostgreSQL CDC via dlt pg_replication) ─────────────────────
+  # ── Internal DB (PostgreSQL / mock) ─────────────────────────────────────────
   - name: internal
     database: REVOPS_INTELLIGENCE
-    schema: raw_internal
-    description: "Internal application database replicated via dlt PostgreSQL CDC"
+    schema: raw_data
+    description: "Internal application database — mock JSON loaded by ingestion/stackflow_pipeline.py"
     tables:
       - name: workspaces
-        description: "Internal product workspaces — teams using StackFlow AI"
+        description: "Internal product workspaces (teams using StackFlow AI)"
         loaded_at_field: "_dlt_load_id"
         freshness:
           warn_after: {count: 7, period: hour}
@@ -115,9 +111,7 @@ sources:
             tests: [unique, not_null]
         tests:
           - elementary.volume_anomalies:
-              time_bucket:
-                period: day
-                count: 1
+              time_bucket: {period: day, count: 1}
 
       - name: users
         description: "Internal product users"
@@ -132,25 +126,23 @@ sources:
             tests: [not_null]
 
       - name: events
-        description: "Internal product usage events (Git connect, Sprint create, etc.)"
+        description: "Internal product usage events (~31K mock events: Git connect, Sprint, AI prioritization)"
         loaded_at_field: "_dlt_load_id"
         freshness:
           warn_after: {count: 2, period: hour}
           error_after: {count: 6, period: hour}
         tests:
           - elementary.volume_anomalies:
-              time_bucket:
-                period: hour
-                count: 1
+              time_bucket: {period: hour, count: 1}
 
   # ── Zendesk Support ─────────────────────────────────────────────────────────
   - name: zendesk
     database: REVOPS_INTELLIGENCE
-    schema: raw_zendesk
-    description: "Zendesk Support, Chat, and Talk data loaded by dlt (incremental)"
+    schema: raw_data
+    description: "Zendesk support tickets — mock JSON loaded by ingestion/stackflow_pipeline.py"
     tables:
-      - name: ticket
-        description: "Zendesk support tickets"
+      - name: tickets
+        description: "Support tickets linked to workspaces"
         loaded_at_field: "updated_at"
         freshness:
           warn_after: {count: 12, period: hour}
@@ -162,32 +154,3 @@ sources:
             tests: [not_null]
         tests:
           - elementary.schema_changes
-
-  # ── PostHog Product Analytics ────────────────────────────────────────────────
-  - name: posthog
-    database: REVOPS_INTELLIGENCE
-    schema: raw_posthog
-    description: "PostHog analytics data loaded by dlt (persons, cohorts, feature flags)"
-    tables:
-      - name: persons
-        description: "PostHog person profiles"
-        columns:
-          - name: id
-            tests: [unique, not_null]
-        tests:
-          - elementary.volume_anomalies:
-              time_bucket:
-                period: day
-                count: 1
-
-      - name: feature_flags
-        description: "PostHog feature flag definitions"
-        columns:
-          - name: id
-            tests: [unique, not_null]
-
-      - name: cohorts
-        description: "PostHog user cohort definitions"
-        columns:
-          - name: id
-            tests: [unique, not_null]
