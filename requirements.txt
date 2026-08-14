@@ -1,19 +1,17 @@
-# Database & dbt
-duckdb
-dbt-core
-dbt-duckdb
-dbt-postgres
+# Snowflake & dbt
 dbt-snowflake
+
+# Data Ingestion & Reverse ETL (dlt)
+dlt[snowflake]
+
+# Data Quality & Observability
+elementary-data[snowflake]
+
+# Orchestration (Dagster)
+dagster
+dagster-webserver
+dagster-dbt
 
 # Utilities
 python-dotenv
 requests
-scikit-learn
-psycopg2-binary
-dlt[duckdb]
-elementary-data[duckdb]
-
-# Orchestration
-dagster
-dagster-webserver
-dagster-dbt

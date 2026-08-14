@@ -9,13 +9,12 @@ dependencies = [
     "dagster",
     "dagster-cloud",
     "dagster-dbt",
-    "dlt[motherduck]",
-    "dbt-duckdb",
-    "duckdb",
+    "dbt-snowflake",
+    "dlt[snowflake]",
+    "elementary-data[snowflake]",
     "python-dotenv",
     "requests",
-    "pandas",
-    "motherduck"
+    "pandas"
 ]
 
 [tool.dagster]

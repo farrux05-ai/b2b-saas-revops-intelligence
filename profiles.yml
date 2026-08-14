@@ -1,31 +1,30 @@
 # ============================================================
 # dbt Profile — RevOps Intelligence Engine
 #
-# TARGETS:
-#   local     → DuckDB file (fast local dev, testing, CI)
-#   snowflake → Snowflake (production enterprise warehouse)
-#   ci        → DuckDB in-memory (GitHub Actions)
+# SINGLE TARGET: Snowflake (production enterprise warehouse)
+#
+# All dbt runs — local development, CI, and production —
+# execute against Snowflake. No local DuckDB or MotherDuck.
+#
+# REQUIRED ENVIRONMENT VARIABLES (.env or Dagster Cloud Secrets):
+#   SNOWFLAKE_ACCOUNT    — e.g. xy12345.us-east-1
+#   SNOWFLAKE_USER       — your Snowflake username
+#   SNOWFLAKE_PASSWORD   — your Snowflake password
+#   SNOWFLAKE_ROLE       — (optional, default: TRANSFORMER)
+#   SNOWFLAKE_WAREHOUSE  — (optional, default: COMPUTE_WH)
+#   SNOWFLAKE_DATABASE   — (optional, default: REVOPS_INTELLIGENCE)
 #
 # USAGE:
-#   dbt run                          # uses 'local' (default)
-#   dbt run --target snowflake       # Snowflake (production)
-#   dbt run --target ci              # CI in-memory
+#   dbt run                    # uses 'snowflake' (default)
+#   dbt run --target snowflake # explicit
+#   dbt run --target ci        # GitHub Actions (same Snowflake, separate schema)
 # ============================================================
 
 revops_intelligence_engine:
-  target: local
+  target: snowflake
   outputs:
 
-    # ── LOCAL DEV / TESTING — DuckDB file ────────────────────
-    local:
-      type: duckdb
-      path: '/home/farrux/data_projects/b2b-saas-revops/duckdb/revops_intelligence.duckdb'
-      threads: 4
-
-    # ── PRODUCTION — Snowflake ───────────────────────────────
-    # Set credentials in .env or Dagster Cloud Env Vars:
-    #   SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PASSWORD
-    #   SNOWFLAKE_ROLE, SNOWFLAKE_WAREHOUSE, SNOWFLAKE_DATABASE
+    # ── PRODUCTION / LOCAL DEV — Snowflake ──────────────────
     snowflake:
       type: snowflake
       account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
@@ -39,21 +38,24 @@ revops_intelligence_engine:
       client_session_keep_alive: false
       query_tag: "dbt_revops_intelligence"
 
-    # ── CI — In-memory DuckDB ────────────────────────────────
+    # ── CI — Snowflake (isolated schema) ────────────────────
     ci:
-      type: duckdb
-      path: ":memory:"
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE', 'TRANSFORMER') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'COMPUTE_WH') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE', 'REVOPS_INTELLIGENCE') }}"
+      schema: MARTS_CI
       threads: 4
+      client_session_keep_alive: false
+      query_tag: "dbt_revops_ci"
 
-# ── Elementary observability — mirrors main profile targets ──
+# ── Elementary observability — mirrors main profile ──────────
 elementary:
-  target: local
+  target: snowflake
   outputs:
-    local:
-      type: duckdb
-      path: '/home/farrux/data_projects/b2b-saas-revops/duckdb/revops_intelligence.duckdb'
-      schema: main_elementary
-      threads: 4
     snowflake:
       type: snowflake
       account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
@@ -66,6 +68,13 @@ elementary:
       threads: 4
       query_tag: "elementary_revops"
     ci:
-      type: duckdb
-      path: ":memory:"
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE', 'TRANSFORMER') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'COMPUTE_WH') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE', 'REVOPS_INTELLIGENCE') }}"
+      schema: ELEMENTARY_CI
       threads: 4
+      query_tag: "elementary_revops_ci"

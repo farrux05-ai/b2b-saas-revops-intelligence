@@ -33,7 +33,7 @@
 2. [Solution & Architecture](#2--solution--architecture)
 3. [Extract & Load (Ingestion)](#3--extract--load-ingestion)
 4. [Transformation](#4--transformation)
-5. [Data Quality & Testing](#5--data-quality--testing)
+5. [Data Validation & Observability](#5--data-validation--observability)
 6. [Semantic Layer + Slack AI Agent](#6--semantic-layer--slack-ai-agent)
 7. [BI Reporting](#7--bi-reporting)
 8. [Reverse ETL](#8--reverse-etl)
@@ -266,7 +266,7 @@ END
 
 ---
 
-## 5. 🧪 Data Quality & Testing
+## 5. 🧪 Data Validation & Observability
 
 > 📹 **[Watch Section Video](#)** *(coming soon)*
 
@@ -499,8 +499,8 @@ b2b-saas-revops/
 ```bash
 git clone https://github.com/farrux05-ai/b2b-saas-revops-intelligence.git
 cd b2b-saas-revops-intelligence
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv venv .venv && source .venv/bin/activate
+uv pip install -r requirements.txt
 
 cp .env.example .env
 # Set: SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PASSWORD, HUBSPOT_ACCESS_TOKEN, SLACK_TOKEN
