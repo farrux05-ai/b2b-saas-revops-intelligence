@@ -37,7 +37,7 @@ They spend hours doing complex Excel `VLOOKUP`s to answer basic questions:
 As the first Senior Analytics Engineer hired at **StackFlow AI**, your mission is to build the **Single Source of Truth** using a modern, efficient stack.
 
 **The Strategy:**
-1.  **Ingestion (dlt):** Use the Data Load Tool to ingest raw JSON from HubSpot, Stripe, Zendesk, and the internal DB into a local **DuckDB** instance.
+1.  **Ingestion (dlt):** Use the Data Load Tool to ingest raw data from HubSpot, Stripe, Zendesk, and internal DB into Snowflake (`RAW_DATA` schema).
 2.  **Transformation (dbt):** Implement a 3-layer architecture (Identity, Domains, Integration) to resolve the "Account Identity" across all silos.
 3.  **Activation (Reverse ETL):** Push critical signals (PQL tags, Health scores) back into the tools (HubSpot/Zendesk) where the GTM teams actually work.
 

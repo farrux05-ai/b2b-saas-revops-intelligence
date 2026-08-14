@@ -1,14 +1,29 @@
-import dlt
+"""
+stackflow_pipeline.py
+=====================
+DEV ELT Pipeline: Ingests mock JSON raw data into Snowflake RAW_DATA schema using dlt.
+
+SOURCES INGESTED:
+  - HubSpot CRM (companies, deals, contacts, engagements)
+  - Stripe Billing (subscriptions, invoices, payments)
+  - Internal DB (workspaces, users, events)
+  - Zendesk Support (tickets)
+
+DESTINATION:
+  Snowflake Warehouse -> RAW_DATA schema
+"""
+
 import json
 import os
 from pathlib import Path
+import dlt
 from dotenv import load_dotenv
 
 load_dotenv()
 
 def load_json(filename):
     path = Path("data/raw") / filename
-    with open(path, "r") as f:
+    with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 @dlt.source(name="hubspot")
@@ -42,14 +57,32 @@ def zendesk_source():
         dlt.resource(load_json("zendesk_tickets.json"), name="tickets", write_disposition="replace"),
     ]
 
+def get_destination():
+    account = os.getenv("SNOWFLAKE_ACCOUNT", "")
+    user = os.getenv("SNOWFLAKE_USER", "")
+    password = os.getenv("SNOWFLAKE_PASSWORD", "")
+    if account and user and password and "your_org" not in account:
+        return dlt.destinations.snowflake(
+            credentials={
+                "account": account,
+                "user": user,
+                "password": password,
+                "database": os.getenv("SNOWFLAKE_DATABASE", "REVOPS_INTELLIGENCE"),
+                "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
+                "role": os.getenv("SNOWFLAKE_ROLE", "TRANSFORMER"),
+            }
+        )
+    return "snowflake"
+
 def run_pipeline():
+    destination = get_destination()
     pipeline = dlt.pipeline(
-        pipeline_name="revops_intelligence",
-        destination=dlt.destinations.duckdb("duckdb/revops_intelligence.duckdb"),
-        dataset_name="raw_data",
+        pipeline_name="revops_intelligence_ingestion",
+        destination=destination,
+        dataset_name="RAW_DATA",
     )
 
-    # Run sources
+    # Run sources into Snowflake RAW_DATA schema
     info = pipeline.run(hubspot_source())
     print(f"HubSpot: {info}")
 

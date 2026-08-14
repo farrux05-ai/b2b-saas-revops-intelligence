@@ -1,7 +1,7 @@
 # B2B dlt Pipelines
 
 A unified [dlt](https://dlthub.com/) (data load tool) pipeline orchestrator for a B2B RevOps data stack.
-Loads data from all source systems into a MotherDuck data warehouse.
+Loads data from all source systems into a Snowflake data warehouse.
 
 ## Architecture
 
@@ -13,27 +13,26 @@ pipelines/
   zendesk.py               ← Zendesk (Support + Chat + Talk, incremental)
   stripe.py                ← Stripe Analytics (all payment endpoints)
   pg_replication.py        ← PostgreSQL CDC (logical replication)
-hubspot/                   ← dlt source connector (unchanged)
-zendesk/                   ← dlt source connector (unchanged)
-stripe_analytics/          ← dlt source connector (unchanged)
-pg_replication/            ← dlt source connector (unchanged)
+hubspot/                   ← dlt source connector
+zendesk/                   ← dlt source connector
+stripe_analytics/          ← dlt source connector
+pg_replication/            ← dlt source connector
 .dlt/
-  config.toml              ← non-secret configuration (project IDs, hosts, ...)
+  config.toml              ← non-secret configuration
   secrets.toml             ← credentials (API keys, DB passwords) — never commit
 ```
 
 ## Installation
 
 ```bash
-uv sync
-# or
-pip install -e .
+uv venv .venv && source .venv/bin/activate
+uv pip install -e .
 ```
 
 ## Usage
 
 ```bash
-# Run all pipelines sequentially
+# Run all pipelines sequentially into Snowflake
 python main.py
 
 # Run a single pipeline
@@ -88,22 +87,25 @@ database = "your_db"
 username = "your_user"
 password = "your_password"
 
-[destination.motherduck.credentials]
-database = "my_db"
-password = "your_motherduck_token"
+[destination.snowflake.credentials]
+account = "xy12345.us-east-1"
+user = "TRANSFORMER"
+password = "your_snowflake_password"
+database = "REVOPS_INTELLIGENCE"
+schema = "RAW_DATA"
 ```
 
-## Datasets & Tables
+## Datasets & Tables (Snowflake Schema: RAW_DATA)
 
-| Pipeline | MotherDuck Dataset | Key Tables |
+| Pipeline | Snowflake Destination Schema | Key Tables |
 |---|---|---|
-| posthog | `posthog_data` | persons, insights, dashboards, cohorts |
-| hubspot | `hubspot_dataset` | contacts, companies, deals, tickets + property_history |
-| zendesk | `zendesk_data` | tickets, users, organizations, chats |
-| stripe | `stripe_data` | charges, customers, invoices, subscriptions |
-| pg_replication | `pg_replicated_data` | (mirrors your source tables) |
+| posthog | `RAW_DATA` | persons, insights, dashboards, cohorts |
+| hubspot | `RAW_DATA` | contacts, companies, deals, tickets, property_history |
+| zendesk | `RAW_DATA` | tickets, users, organizations, chats |
+| stripe | `RAW_DATA` | charges, customers, invoices, subscriptions |
+| pg_replication | `RAW_DATA` | (mirrors source PostgreSQL tables) |
 
-## Scheduling with Cron
+## Scheduling with Dagster or Cron
 
 ```cron
 # Run all pipelines every night at 02:00
