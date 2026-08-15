@@ -44,43 +44,61 @@
 
 ## 1. 💼 Business Context & Problem
 
-**StackFlow AI** is an enterprise Engineering Management Platform (AI task prioritization, Git-native workflows, sprint orchestration). Revenue data lived across 4 disconnected tools — with no way to connect them.
+**[StackFlow AI](https://stackflow.ai)** is a B2B SaaS Engineering Management Platform — AI-driven task prioritization, Git-native sprint orchestration, and team velocity tracking. The company raised a **$10M Series A**, crossed **$3M ARR**, and grew from 15 to 60+ employees in under 18 months.
 
-### 6 Problems → 1 Engine
+But hyper-growth exposed a structural weakness: **the company was flying blind on its own revenue.**
 
-| # | Problem | Impact |
-|:--|:--------|:-------|
-| 1 | **Fragmented Silos** | Finance in Stripe, Sales in HubSpot, CS in Zendesk — no shared identity |
-| 2 | **Silent Churn** | Payment failures went undetected until cancellation |
-| 3 | **PLG Leakage** | Seat utilization invisible to Sales → expansion revenue missed |
-| 4 | **Inaccurate MRR** | CRM ignored prorations and mid-month changes → wrong board numbers |
-| 5 | **Ad-hoc Bottleneck** | Every metric question required an analyst to write SQL — days of delay |
-| 6 | **No Slack Insights** | GTM teams ignored BI dashboards; churn alerts arrived too late |
+Each department ran on best-in-class tools — but none of them talked to each other:
+
+| Department | Tool | What They Knew | What They Couldn't See |
+|:-----------|:-----|:---------------|:-----------------------|
+| Sales | HubSpot | Pipeline, deal stages, rep activity | Whether those deals actually activated in the product |
+| Finance | Stripe | MRR, invoices, payment status | Which marketing campaign or sales rep drove each subscription |
+| Customer Success | Zendesk | Support tickets, CSAT, escalations | Seat utilization or product engagement of the complaining account |
+| Product | Internal DB + PostHog | Git connections, sprint creation, AI usage | The ARR risk tied to low-engagement accounts |
 
 <details>
-<summary><strong>📌 Business Context: StackFlow AI Pricing & PQL Model</strong></summary>
+<summary><strong>📌 Product & Pricing Context</strong></summary>
 
-**Pricing Tiers (Seat-Based)**
+**Seat-Based Pricing Tiers**
 
 | Tier | Price/Seat/mo | Seat Limit | Target Segment |
 |:-----|:-------------|:-----------|:---------------|
 | **Starter** | $12 | 10 | Early-stage teams |
 | **Growth** | $25 | 50 | Scaling mid-market |
-| **Enterprise** | $60 | 500+ | Large orgs |
+| **Enterprise** | $60 | 500+ | Large orgs, custom contracts |
 
-**Activation (Aha!) Moment:** A team connects their Git provider **and** completes their first AI-assisted Sprint. These are the foundation of PQL scoring.
+**The Activation ("Aha!") Moment:** A team connects their Git provider **and** completes their first AI-assisted Sprint. Accounts that hit this milestone churn at 3×-lower rates than those that don't.
 
-**PQL Intent Tiers**
+**PQL Intent Tiers** *(Product-Qualified Lead scoring)*
 
 | Tier | Criteria | GTM Action |
-|:-----|:---------|:-----------|
-| 🔥 **HOT** | Git connected + >50 product events | Immediate Sales outreach |
+|:-----|:---------|:-------------|
+| 🔥 **HOT** | Git connected + >50 product events in 14 days | Immediate Sales call |
 | ⚡ **WARM** | Sprint started + >10 product events | Automated nurture sequence |
-| 🔘 **COLD** | Signed up, no activation milestones | Marketing onboarding emails |
+| 🔘 **COLD** | Signed up — no activation milestones reached | Marketing onboarding emails |
 
 </details>
 
-> **Result:** First `dbt run` surfaced 23 at-risk accounts ($87K at risk). CS intervened → **$45K ARR saved in 30 days**.
+---
+
+### What the business was losing every week
+
+The real cost wasn't complexity — it was **silent, preventable revenue loss** across four areas:
+
+**💸 Revenue walking out the door undetected**
+A $12K/year Enterprise account cancelled without warning. They had been past-due on Stripe for 3 weeks, had zero Git activity for 6 weeks, and had 4 open high-priority Zendesk tickets. Every team saw one signal. Nobody saw all three. CS only found out after the cancellation email arrived.
+
+**📉 Expansion revenue left on the table**
+Finance knew which accounts had unused seats — but couldn't tell Sales. Sales was prospecting cold leads while 30% of existing accounts had >80% seat utilization and were operationally ready to expand. Every week of delay was missed upsell.
+
+**🔢 Board numbers that couldn't be trusted**
+The CFO's MRR report was built by hand — a Finance analyst spent 16 hours/month exporting Stripe CSVs into Excel, manually reconciling prorations, mid-month plan changes, and failed payments. The number the CEO presented at board meetings was always 2–3 weeks stale and ±8% inaccurate.
+
+**⏱️ Every metric required an analyst**
+When the VP of Sales asked *"Which accounts are 80%+ on seats but haven't expanded?"*, the answer took 3 days. The data existed — in 4 separate systems — but assembling it required a custom SQL query and a manual join nobody had time to write. Decisions were delayed. Opportunities were missed.
+
+> **Result:** The first `dbt build` run surfaced **23 at-risk accounts** representing **$87K ARR**. CS intervened within 48 hours → **$45K saved in 30 days**.
 
 ---
 
