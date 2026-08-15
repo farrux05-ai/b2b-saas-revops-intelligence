@@ -183,6 +183,16 @@ flowchart LR
 | PostHog Events | REST API | `events`, `persons` |
 | Internal DB | PostgreSQL CDC (logical replication) | `users`, `workspaces`, `seats` |
 
+### 📸 Execution & Load Verification
+
+**1. `dlt` Ingestion Terminal Output (Snowflake Target):**
+
+![dlt Ingestion Terminal Output](screenshots/dlt_load_snowflake_terminal.png)
+
+**2. Snowflake `RAW_DATA` Schema Load State:**
+
+![Snowflake RAW_DATA Schema State](screenshots/snowflake_dlt_load_state.png)
+
 <details>
 <summary><strong>📂 Two-Mode Ingestion (Dev vs Prod)</strong></summary>
 
@@ -446,6 +456,10 @@ python scripts/reverse_etl_dlt.py --resource pql
 dagster dev -f dagster_pipeline.py
 # → http://localhost:3000
 ```
+
+### 📸 Asset Lineage Graph
+
+![Dagster Asset Lineage Graph](screenshots/dagster_linage.png)
 
 ---
 
