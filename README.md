@@ -108,46 +108,7 @@ When the VP of Sales asked *"Which accounts are 80%+ on seats but haven't expand
 
 **One pipeline, full loop:** raw API data → Snowflake → dbt models → Slack AI agent → back into HubSpot.
 
-```mermaid
-flowchart LR
-    subgraph Sources ["Data Sources"]
-        HS[HubSpot CRM]
-        ST[Stripe Billing]
-        ZD[Zendesk Support]
-        IDB[Internal DB]
-        PH[PostHog Analytics]
-    end
-
-    subgraph Ingestion ["Extract & Load (dlt)"]
-        HS  --> RAW[(Snowflake\nRAW_DATA schema)]
-        ST  --> RAW
-        ZD  --> RAW
-        IDB --> RAW
-        PH  --> RAW
-    end
-
-    subgraph Intermediate ["Intermediate Layer"]
-        RAW --> INT_ID[int_users_joined\nIdentity Stitching]
-        RAW --> INT_ICP[int_icp_scoring\nICP Fit Scoring]
-        RAW --> INT_FIN[int_finance_aggregated]
-        RAW --> INT_SUP[int_support_aggregated]
-        RAW --> INT_USG[int_usage_aggregated]
-    end
-
-    subgraph Marts ["Marts Layer (Output Models)"]
-        INT_ID & INT_ICP & INT_FIN & INT_SUP & INT_USG --> DIM_ACC[dim_accounts\nAccount 360]
-        INT_ID --> DIM_USR[dim_users\nUser Profile]
-        DIM_ACC & INT_FIN --> FCT_MRR[fct_mrr_waterfall\nMRR Ledger]
-        DIM_ACC & INT_SUP --> FCT_HLT[fct_accounts_health\n3-Signal Risk]
-        DIM_ACC & INT_USG --> FCT_PQL[fct_pql_signals\nPQL Intent Tiers]
-    end
-
-    subgraph Activation ["Activation Layer"]
-        DIM_ACC & FCT_MRR & FCT_HLT & FCT_PQL --> LD[Lightdash\nSemantic Layer]
-        LD --> SL[Slack AI Agent\nAlerts & Q&A]
-        FCT_HLT & FCT_PQL --> |Reverse ETL / dlt| HS2[HubSpot CRM\nCRM Tags & Health]
-    end
-```
+![Full Data Architecture](screenshots/full_data_architecture.jpeg)
 
 <details>
 <summary><strong>🛠️ Full Tech Stack</strong></summary>
