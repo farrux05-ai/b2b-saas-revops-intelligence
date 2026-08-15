@@ -44,4 +44,3 @@ models:
           - semantic_layer
   elementary:
     +schema: elementary
-    +use_transaction: false
