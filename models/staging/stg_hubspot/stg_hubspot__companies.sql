@@ -1,5 +1,18 @@
 with source as (
-    select * from {{ source('hubspot', 'companies') }}
+    select
+        hs_object_id,
+        domain,
+        name,
+        industry,
+        employee_count,
+        lifecyclestage,
+        hs_lead_status,
+        hubspot_owner_id,
+        utm_source,
+        utm_campaign,
+        createdate,
+        hs_lastmodifieddate
+    from {{ source('hubspot', 'companies') }}
 ),
 
 renamed as (

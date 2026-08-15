@@ -1,5 +1,14 @@
 with source as (
-    select * from {{ source('internal', 'users') }}
+    select
+        id,
+        workspace_id,
+        email,
+        role,
+        created_at,
+        last_seen_at,
+        invited_at,
+        activated_at
+    from {{ source('internal', 'users') }}
 ),
 
 renamed as (

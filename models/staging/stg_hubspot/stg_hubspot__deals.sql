@@ -1,5 +1,15 @@
 with source as (
-    select * from {{ source('hubspot', 'deals') }}
+    select
+        hs_object_id,
+        associated_company_id,
+        dealname,
+        pipeline,
+        dealstage,
+        amount,
+        hs_deal_stage_probability,
+        createdate,
+        closedate
+    from {{ source('hubspot', 'deals') }}
 ),
 
 renamed as (

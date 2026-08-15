@@ -1,5 +1,11 @@
 with source as (
-    select * from {{ source('hubspot', 'engagements') }}
+    select
+        hs_engagement_id,
+        associated_company_id,
+        owner_id,
+        engagement_type,
+        created_at
+    from {{ source('hubspot', 'engagements') }}
 ),
 
 renamed as (

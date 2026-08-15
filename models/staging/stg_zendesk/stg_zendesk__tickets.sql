@@ -1,5 +1,15 @@
 with source as (
-    select * from {{ source('zendesk', 'tickets') }}
+    select
+        id,
+        requester_email,
+        assignee_id,
+        subject,
+        status,
+        priority,
+        created_at,
+        updated_at,
+        solved_at
+    from {{ source('zendesk', 'tickets') }}
 ),
 
 renamed as (

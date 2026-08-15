@@ -1,5 +1,17 @@
 with source as (
-    select * from {{ source('hubspot', 'contacts') }}
+    select
+        hs_object_id,
+        associated_company_id,
+        firstname,
+        lastname,
+        email,
+        jobtitle,
+        hs_lead_status,
+        linkedin_url,
+        is_enriched,
+        createdate,
+        lastmodifieddate
+    from {{ source('hubspot', 'contacts') }}
 ),
 
 renamed as (

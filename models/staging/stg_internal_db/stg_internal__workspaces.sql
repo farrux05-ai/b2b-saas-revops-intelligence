@@ -1,5 +1,16 @@
 with source as (
-    select * from {{ source('internal', 'workspaces') }}
+    select
+        id,
+        hubspot_company_id,
+        stripe_customer_id,
+        name,
+        plan,
+        seat_limit,
+        created_at,
+        trial_started_at,
+        trial_ended_at,
+        converted_at
+    from {{ source('internal', 'workspaces') }}
 ),
 
 renamed as (

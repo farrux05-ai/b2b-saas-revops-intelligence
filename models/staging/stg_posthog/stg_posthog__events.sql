@@ -1,5 +1,11 @@
 with source as (
-    select * from {{ source('internal', 'events') }}
+    select
+        id,
+        workspace_id,
+        user_id,
+        event_name,
+        occurred_at
+    from {{ source('internal', 'events') }}
 ),
 
 renamed as (
