@@ -23,6 +23,12 @@ models:
       - name: domain
         description: "Primary identity stitching key. Unique per company in HubSpot."
         tests: [not_null]
+      - name: company_name
+        description: "Company display name."
+      - name: industry
+        description: "Industry category."
+      - name: employee_count
+        description: "Reported company employee count."
       - name: lifecycle_stage
         description: "HubSpot-managed enum. Tested here because we own the allowed values."
         tests:
@@ -34,10 +40,16 @@ models:
           - accepted_values:
               values: ['NEW', 'OPEN', 'IN_PROGRESS', 'ATTEMPTED_TO_CONTACT',
                        'CONNECTED', 'BAD_TIMING', 'UNQUALIFIED']
+      - name: owner_id
+        description: "HubSpot user ID who owns this company."
       - name: utm_source
         description: "First-touch attribution source (e.g. Organic Search, Google Ads). May be stale."
       - name: utm_campaign
         description: "Specific campaign parameter."
+      - name: created_at
+        description: "Record creation timestamp."
+      - name: updated_at
+        description: "Last modification timestamp."
 
   - name: stg_hubspot__contacts
     description: >
@@ -45,12 +57,29 @@ models:
     columns:
       - name: hubspot_contact_id
         tests: [unique, not_null]
+      - name: hubspot_company_id
+        description: "Foreign key to stg_hubspot__companies."
+      - name: first_name
+        description: "Contact first name."
+      - name: last_name
+        description: "Contact last name."
       - name: email
         description: "Used for identity stitching to internal users. Not guaranteed unique by HubSpot."
         tests: [not_null]
-      # NOTE: lead_status accepted_values NOT repeated here —
-      # same enum is already tested on stg_hubspot__companies.
-      # Contacts inherit the same CRM-managed values.
+      - name: normalized_email
+        description: "Lowercased and trimmed email for clean identity resolution."
+      - name: job_title
+        description: "Contact job title."
+      - name: lead_status
+        description: "CRM lead stage status."
+      - name: linkedin_profile_url
+        description: "Enriched LinkedIn URL."
+      - name: is_gtm_enriched
+        description: "Flag indicating whether record was enriched via Clay / GTM workflow."
+      - name: created_at
+        description: "Contact creation timestamp."
+      - name: updated_at
+        description: "Last update timestamp."
 
   - name: stg_hubspot__deals
     description: >
@@ -60,17 +89,34 @@ models:
         tests: [unique, not_null]
       - name: hubspot_company_id
         description: "FK to stg_hubspot__companies. Can be null for deals not linked to a company."
-        # NOTE: not_null removed — HubSpot allows orphan deals without a company
+      - name: deal_name
+        description: "Name of the deal opportunity."
+      - name: pipeline
+        description: "Sales pipeline identifier."
       - name: deal_stage
         description: "Current pipeline stage. not_null contract with HubSpot."
         tests: [not_null]
+      - name: amount
+        description: "Deal value amount in USD."
+      - name: probability
+        description: "Win probability percentage (0.0 to 1.0)."
+      - name: created_at
+        description: "Deal creation timestamp."
+      - name: closed_at
+        description: "Deal closure timestamp."
 
   - name: stg_hubspot__engagements
     description: "Cleaned HubSpot engagement records (calls, emails, meetings). One row per engagement."
     columns:
       - name: hubspot_engagement_id
         tests: [unique, not_null]
+      - name: hubspot_company_id
+        description: "Foreign key to stg_hubspot__companies."
+      - name: owner_id
+        description: "Owner user ID performing engagement."
       - name: engagement_type
         tests:
           - accepted_values:
               values: ['CALL', 'EMAIL', 'MEETING']
+      - name: created_at
+        description: "Engagement creation timestamp."

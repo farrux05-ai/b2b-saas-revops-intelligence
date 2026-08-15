@@ -10,6 +10,7 @@ renamed as (
 
         -- attributes
         cast(email as varchar)                          as email,
+        lower(trim(cast(email as varchar)))             as normalized_email,
         cast(role as varchar)                           as user_role,
 
         -- timestamps

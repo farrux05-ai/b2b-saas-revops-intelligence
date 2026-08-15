@@ -14,5 +14,11 @@ models:
       - name: workspace_id
         description: "Mapped to the group profile in PostHog."
         # Not null removed: some events (like pageviews on login) might not have a workspace_id yet
+      - name: user_id
+        description: "Internal user ID associated with event. Null for anonymous events."
       - name: event_name
+        description: "Product action / event name."
+        tests: [not_null]
+      - name: occurred_at
+        description: "Event timestamp."
         tests: [not_null]

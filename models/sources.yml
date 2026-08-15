@@ -21,10 +21,11 @@ sources:
     tables:
       - name: companies
         description: "HubSpot company records (125 mock companies)"
-        loaded_at_field: "_dlt_load_id"
-        freshness:
-          warn_after: {count: 25, period: hour}
-          error_after: {count: 49, period: hour}
+        config:
+          loaded_at_field: "_dlt_load_id"
+          freshness:
+            warn_after: {count: 25, period: hour}
+            error_after: {count: 49, period: hour}
         columns:
           - name: hs_object_id
             tests: [unique, not_null]
@@ -38,20 +39,22 @@ sources:
 
       - name: deals
         description: "HubSpot deal pipeline records (184 mock deals)"
-        loaded_at_field: "_dlt_load_id"
-        freshness:
-          warn_after: {count: 25, period: hour}
-          error_after: {count: 49, period: hour}
+        config:
+          loaded_at_field: "_dlt_load_id"
+          freshness:
+            warn_after: {count: 25, period: hour}
+            error_after: {count: 49, period: hour}
         columns:
           - name: hs_object_id
             tests: [unique, not_null]
 
       - name: contacts
         description: "HubSpot contact records (438 mock contacts)"
-        loaded_at_field: "_dlt_load_id"
-        freshness:
-          warn_after: {count: 25, period: hour}
-          error_after: {count: 49, period: hour}
+        config:
+          loaded_at_field: "_dlt_load_id"
+          freshness:
+            warn_after: {count: 25, period: hour}
+            error_after: {count: 49, period: hour}
         columns:
           - name: hs_object_id
             tests: [unique, not_null]
@@ -72,10 +75,11 @@ sources:
     tables:
       - name: subscriptions
         description: "Stripe subscription records per workspace"
-        loaded_at_field: "_dlt_load_id"
-        freshness:
-          warn_after: {count: 25, period: hour}
-          error_after: {count: 49, period: hour}
+        config:
+          loaded_at_field: "_dlt_load_id"
+          freshness:
+            warn_after: {count: 25, period: hour}
+            error_after: {count: 49, period: hour}
         columns:
           - name: id
             tests: [unique, not_null]
@@ -102,10 +106,11 @@ sources:
     tables:
       - name: workspaces
         description: "Internal product workspaces (teams using StackFlow AI)"
-        loaded_at_field: "_dlt_load_id"
-        freshness:
-          warn_after: {count: 7, period: hour}
-          error_after: {count: 13, period: hour}
+        config:
+          loaded_at_field: "_dlt_load_id"
+          freshness:
+            warn_after: {count: 7, period: hour}
+            error_after: {count: 13, period: hour}
         columns:
           - name: id
             tests: [unique, not_null]
@@ -115,10 +120,11 @@ sources:
 
       - name: users
         description: "Internal product users"
-        loaded_at_field: "_dlt_load_id"
-        freshness:
-          warn_after: {count: 7, period: hour}
-          error_after: {count: 13, period: hour}
+        config:
+          loaded_at_field: "_dlt_load_id"
+          freshness:
+            warn_after: {count: 7, period: hour}
+            error_after: {count: 13, period: hour}
         columns:
           - name: id
             tests: [unique, not_null]
@@ -127,10 +133,11 @@ sources:
 
       - name: events
         description: "Internal product usage events (~31K mock events: Git connect, Sprint, AI prioritization)"
-        loaded_at_field: "_dlt_load_id"
-        freshness:
-          warn_after: {count: 2, period: hour}
-          error_after: {count: 6, period: hour}
+        config:
+          loaded_at_field: "_dlt_load_id"
+          freshness:
+            warn_after: {count: 2, period: hour}
+            error_after: {count: 6, period: hour}
         tests:
           - elementary.volume_anomalies:
               time_bucket: {period: hour, count: 1}
@@ -143,10 +150,11 @@ sources:
     tables:
       - name: tickets
         description: "Support tickets linked to workspaces"
-        loaded_at_field: "updated_at"
-        freshness:
-          warn_after: {count: 12, period: hour}
-          error_after: {count: 24, period: hour}
+        config:
+          loaded_at_field: "updated_at"
+          freshness:
+            warn_after: {count: 12, period: hour}
+            error_after: {count: 24, period: hour}
         columns:
           - name: id
             tests: [not_null]

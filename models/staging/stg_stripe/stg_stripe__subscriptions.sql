@@ -59,6 +59,7 @@ renamed as (
         -- ==========================================
         cast(
             case 
+                when cancel_at_period_end is null then false
                 when lower(cast(cancel_at_period_end as varchar)) in ('true', '1', 'yes') then true 
                 else false 
             end 

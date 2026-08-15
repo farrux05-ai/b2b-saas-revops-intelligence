@@ -12,6 +12,7 @@ renamed as (
         cast(firstname as varchar)                      as first_name,
         cast(lastname as varchar)                       as last_name,
         cast(email as varchar)                          as email,
+        lower(trim(cast(email as varchar)))             as normalized_email,
         cast(jobtitle as varchar)                       as job_title,
         cast(hs_lead_status as varchar)                 as lead_status,
 

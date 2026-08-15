@@ -12,10 +12,25 @@ models:
       - name: workspace_id
         description: "Primary key for internal workspaces."
         tests: [unique, not_null]
+      - name: hubspot_company_id
+        description: "Foreign key to HubSpot company record."
+      - name: stripe_customer_id
+        description: "Foreign key to Stripe customer record."
       - name: workspace_name
+        description: "Name of the workspace team."
         tests: [not_null]
-      # NOTE: We do not test 'plan' for not_null or accepted_values here.
-      # Plan logic/validity belongs in the intermediate layer, as old workspaces might have legacy plans.
+      - name: plan
+        description: "Current workspace plan name."
+      - name: seat_limit
+        description: "Maximum seats allowed on the workspace."
+      - name: created_at
+        description: "Workspace creation timestamp."
+      - name: trial_started_at
+        description: "Trial start timestamp."
+      - name: trial_ended_at
+        description: "Trial completion timestamp."
+      - name: converted_at
+        description: "Timestamp when trial converted to paid plan."
 
   - name: stg_internal__users
     description: "Cleaned internal users records. One row per user."
@@ -26,9 +41,22 @@ models:
       - name: workspace_id
         description: "Foreign key to workspaces. All users must belong to a workspace."
         tests: [not_null]
+      - name: email
+        description: "User account email."
+        tests: [not_null]
+      - name: normalized_email
+        description: "Lowercased and trimmed email for identity stitching."
       - name: user_role
         description: "Product-defined enum for user permissions."
         tests:
           - not_null
           - accepted_values:
               values: ['admin', 'member', 'viewer', 'billing', 'owner']
+      - name: created_at
+        description: "User account creation timestamp."
+      - name: last_seen_at
+        description: "Timestamp of last product activity."
+      - name: invited_at
+        description: "Timestamp when user was invited to workspace."
+      - name: activated_at
+        description: "Timestamp when user accepted invitation."

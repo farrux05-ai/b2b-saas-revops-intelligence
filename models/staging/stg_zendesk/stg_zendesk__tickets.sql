@@ -21,6 +21,7 @@ renamed as (
         cast(solved_at as timestamp)                    as solved_at
 
     from source
+    -- Deduplication: Zendesk raw stream contains snapshot updates per ticket; partition by id to keep latest record
     qualify row_number() over (partition by id order by updated_at desc) = 1
 )
 

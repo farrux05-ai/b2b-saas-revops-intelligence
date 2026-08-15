@@ -1,5 +1,5 @@
 with source as (
-    select * from {{ source('posthog', 'events') }}
+    select * from {{ source('internal', 'events') }}
 ),
 
 renamed as (
