@@ -26,6 +26,9 @@ duckdb/
 .env
 .env.*
 *.local
+secrets.toml
+*.secrets.toml
+
 
 # ── IDE & OS ──────────────────────────────────────────
 .vscode/
@@ -41,4 +44,5 @@ dist/
 build/
 .streamlit/
 edr_target/
+.dlt/
 
