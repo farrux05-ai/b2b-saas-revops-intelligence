@@ -18,8 +18,10 @@ import os
 from pathlib import Path
 import dlt
 from dotenv import load_dotenv
+from dlt.destinations.impl.snowflake.configuration import SnowflakeCredentials
 
-load_dotenv()
+# Always load .env from the project root, regardless of where script is invoked from
+load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env", override=True)
 
 def load_json(filename):
     path = Path("data/raw") / filename
@@ -58,28 +60,44 @@ def zendesk_source():
     ]
 
 def get_destination():
-    account = os.getenv("SNOWFLAKE_ACCOUNT", "")
-    user = os.getenv("SNOWFLAKE_USER", "")
-    password = os.getenv("SNOWFLAKE_PASSWORD", "")
-    if account and user and password and "your_org" not in account:
-        return dlt.destinations.snowflake(
-            credentials={
-                "account": account,
-                "user": user,
-                "password": password,
-                "database": os.getenv("SNOWFLAKE_DATABASE", "REVOPS_INTELLIGENCE"),
-                "warehouse": os.getenv("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
-                "role": os.getenv("SNOWFLAKE_ROLE", "TRANSFORMER"),
-            }
+    """
+    Builds a SnowflakeCredentials object directly from .env variables.
+    This bypasses dlt's config resolution pipeline entirely — no secrets.toml,
+    no env var parsing ambiguity, no URL encoding issues.
+    """
+    account   = os.getenv("SNOWFLAKE_ACCOUNT", "")
+    user      = os.getenv("SNOWFLAKE_USER", "")
+    password  = os.getenv("SNOWFLAKE_PASSWORD", "")
+    database  = os.getenv("SNOWFLAKE_DATABASE", "REVOPS_INTELLIGENCE")
+    warehouse = os.getenv("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH")
+    role      = os.getenv("SNOWFLAKE_ROLE", "TRANSFORMER")
+
+    if not (account and user and password):
+        raise RuntimeError(
+            "Missing Snowflake credentials in .env — "
+            "set SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PASSWORD"
         )
-    return "snowflake"
+
+    print(f"[dlt] Connecting: {user}@{account}/{database}  warehouse={warehouse}  role={role}")
+
+    # Build credentials object directly — no resolution/parsing needed
+    creds = SnowflakeCredentials()
+    creds.host      = account   # e.g. zu12882.me-central2.gcp
+    creds.username  = user
+    creds.password  = password
+    creds.database  = database
+    creds.warehouse = warehouse
+    creds.role      = role
+
+    return dlt.destinations.snowflake(credentials=creds)
+
 
 def run_pipeline():
     destination = get_destination()
     pipeline = dlt.pipeline(
         pipeline_name="revops_intelligence_ingestion",
         destination=destination,
-        dataset_name="RAW_DATA",
+        dataset_name="raw_data",
     )
 
     # Run sources into Snowflake RAW_DATA schema
