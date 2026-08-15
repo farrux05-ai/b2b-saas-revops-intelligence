@@ -3,13 +3,15 @@
 > [!IMPORTANT]
 > **[View Live Data Documentation & Lineage Graph](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/)**
 
-![dbt](https://img.shields.io/badge/dbt-FF694B?style=for-the-badge&logo=dbt&logoColor=white)
 ![Snowflake](https://img.shields.io/badge/Snowflake-29B5E8?style=for-the-badge&logo=snowflake&logoColor=white)
-![Dagster](https://img.shields.io/badge/Dagster-163B36?style=for-the-badge&logo=dagster&logoColor=white)
-![Lightdash](https://img.shields.io/badge/Lightdash-000000?style=for-the-badge&logo=lightdash&logoColor=white)
-![Slack](https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white)
-![Elementary](https://img.shields.io/badge/Elementary-5C6BC0?style=for-the-badge&logoColor=white)
+![dbt](https://img.shields.io/badge/dbt-FF694B?style=for-the-badge&logo=python&logoColor=white)
+![Dagster](https://img.shields.io/badge/Dagster-163B36?style=for-the-badge&logo=python&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![HubSpot](https://img.shields.io/badge/HubSpot-FF7A59?style=for-the-badge&logo=hubspot&logoColor=white)
+![Stripe](https://img.shields.io/badge/Stripe-635BFF?style=for-the-badge&logo=stripe&logoColor=white)
+![PostHog](https://img.shields.io/badge/PostHog-1D4ED8?style=for-the-badge&logo=posthog&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
 
 ---
 
