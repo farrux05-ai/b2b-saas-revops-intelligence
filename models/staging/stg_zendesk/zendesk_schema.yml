@@ -8,6 +8,7 @@ models:
     description: "Cleaned Zendesk support tickets. One row per ticket."
     columns:
       - name: ticket_id
+        description: "Natural PK from Zendesk tickets."
         tests: [unique, not_null]
       - name: requester_email
         description: "Used to map tickets back to users/accounts."

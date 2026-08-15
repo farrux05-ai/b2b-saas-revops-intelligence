@@ -36,6 +36,7 @@ models:
               values: ['subscriber', 'lead', 'marketingqualifiedlead', 'salesqualifiedlead',
                        'opportunity', 'customer', 'evangelist', 'other']
       - name: lead_status
+        description: "CRM lead status enum."
         tests:
           - accepted_values:
               values: ['NEW', 'OPEN', 'IN_PROGRESS', 'ATTEMPTED_TO_CONTACT',
@@ -56,6 +57,7 @@ models:
       Cleaned HubSpot contact records. One row per contact.
     columns:
       - name: hubspot_contact_id
+        description: "Natural PK from HubSpot contacts."
         tests: [unique, not_null]
       - name: hubspot_company_id
         description: "Foreign key to stg_hubspot__companies."
@@ -86,6 +88,7 @@ models:
       Cleaned HubSpot deal records. One row per deal.
     columns:
       - name: hubspot_deal_id
+        description: "Natural PK from HubSpot deals."
         tests: [unique, not_null]
       - name: hubspot_company_id
         description: "FK to stg_hubspot__companies. Can be null for deals not linked to a company."
@@ -109,12 +112,14 @@ models:
     description: "Cleaned HubSpot engagement records (calls, emails, meetings). One row per engagement."
     columns:
       - name: hubspot_engagement_id
+        description: "Natural PK from HubSpot engagements."
         tests: [unique, not_null]
       - name: hubspot_company_id
         description: "Foreign key to stg_hubspot__companies."
       - name: owner_id
         description: "Owner user ID performing engagement."
       - name: engagement_type
+        description: "Type of interaction (CALL, EMAIL, MEETING)."
         tests:
           - accepted_values:
               values: ['CALL', 'EMAIL', 'MEETING']
