@@ -1,0 +1,1081 @@
+{
+    "$defs": {
+        "AnyType": {
+            "description": "This AnyType is an alias for any\nThe goal is to make it easier to identify any type in the codebase\nwithout having to eslint-disable all the time\nThese are only used on legacy `any` types, don't use it for new types.\nThis is added on a separate file to avoid circular dependencies."
+        },
+        "ContentAsCodeType.DASHBOARD": {
+            "enum": ["dashboard"],
+            "type": "string"
+        },
+        "ContentVerificationInfo": {
+            "properties": {
+                "verifiedAt": {
+                    "format": "date-time",
+                    "type": "string"
+                },
+                "verifiedBy": {
+                    "properties": {
+                        "firstName": {
+                            "type": "string"
+                        },
+                        "lastName": {
+                            "type": "string"
+                        },
+                        "userUuid": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["lastName", "firstName", "userUuid"],
+                    "type": "object"
+                }
+            },
+            "required": ["verifiedAt", "verifiedBy"],
+            "type": "object"
+        },
+        "DashboardChartTileAsCode": {
+            "additionalProperties": false,
+            "properties": {
+                "h": {
+                    "format": "double",
+                    "minimum": 1,
+                    "type": "number"
+                },
+                "properties": {
+                    "additionalProperties": false,
+                    "description": "From T, pick a set of properties whose keys are in the union K",
+                    "properties": {
+                        "chartName": {
+                            "type": ["string", "null"]
+                        },
+                        "chartSlug": {
+                            "type": ["string", "null"]
+                        },
+                        "hideTitle": {
+                            "type": "boolean"
+                        },
+                        "title": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["chartSlug"],
+                    "type": "object"
+                },
+                "tabSlug": {
+                    "description": "Portable reference to the dashboard tab containing this tile.",
+                    "type": ["string", "null"]
+                },
+                "tabUuid": {
+                    "description": "Legacy project-local tab reference. Accepted on upload for backwards compatibility.",
+                    "type": ["string", "null"]
+                },
+                "tileSlug": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/$defs/DashboardTileTypes.SAVED_CHART"
+                },
+                "uuid": {
+                    "type": "string"
+                },
+                "w": {
+                    "format": "double",
+                    "maximum": 36,
+                    "minimum": 1,
+                    "type": "number"
+                },
+                "x": {
+                    "format": "double",
+                    "maximum": 35,
+                    "minimum": 0,
+                    "type": "number"
+                },
+                "y": {
+                    "format": "double",
+                    "minimum": 0,
+                    "type": "number"
+                }
+            },
+            "required": ["w", "h", "y", "x", "type", "properties"],
+            "type": "object"
+        },
+        "DashboardConfig": {
+            "properties": {
+                "dateZoomConfig": {
+                    "$ref": "#/$defs/DateZoomConfig"
+                },
+                "dateZoomGranularities": {
+                    "items": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/$defs/DateGranularity"
+                            },
+                            {
+                                "type": "string"
+                            }
+                        ]
+                    },
+                    "type": "array"
+                },
+                "defaultDateZoomGranularity": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/$defs/DateGranularity"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ]
+                },
+                "isAddFilterDisabled": {
+                    "type": "boolean"
+                },
+                "isDateZoomDisabled": {
+                    "type": "boolean"
+                },
+                "parameterOrder": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "pinnedParameters": {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "requiredFiltersNote": {
+                    "description": "Editor-authored note shown to viewers while filter rules are unmet",
+                    "type": "string"
+                }
+            },
+            "required": ["isDateZoomDisabled"],
+            "type": "object"
+        },
+        "DashboardDataAppTileAsCode": {
+            "additionalProperties": false,
+            "properties": {
+                "h": {
+                    "format": "double",
+                    "minimum": 1,
+                    "type": "number"
+                },
+                "properties": {
+                    "additionalProperties": false,
+                    "description": "From T, pick a set of properties whose keys are in the union K",
+                    "properties": {
+                        "appDeletedAt": {
+                            "description": "Legacy read-only deletion marker. Ignored on upload, never written by download.",
+                            "type": ["string", "null"]
+                        },
+                        "appSlug": {
+                            "description": "Portable project-scoped reference written by download.",
+                            "type": ["string", "null"]
+                        },
+                        "appUuid": {
+                            "description": "Legacy project-local reference. Accepted on upload, never written by download.",
+                            "type": "string"
+                        },
+                        "hideTitle": {
+                            "type": "boolean"
+                        },
+                        "title": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["title"],
+                    "type": "object"
+                },
+                "tabSlug": {
+                    "description": "Portable reference to the dashboard tab containing this tile.",
+                    "type": ["string", "null"]
+                },
+                "tabUuid": {
+                    "description": "Legacy project-local tab reference. Accepted on upload for backwards compatibility.",
+                    "type": ["string", "null"]
+                },
+                "tileSlug": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/$defs/DashboardTileTypes.DATA_APP"
+                },
+                "uuid": {
+                    "type": "string"
+                },
+                "w": {
+                    "format": "double",
+                    "maximum": 36,
+                    "minimum": 1,
+                    "type": "number"
+                },
+                "x": {
+                    "format": "double",
+                    "maximum": 35,
+                    "minimum": 0,
+                    "type": "number"
+                },
+                "y": {
+                    "format": "double",
+                    "minimum": 0,
+                    "type": "number"
+                }
+            },
+            "required": ["w", "h", "y", "x", "type", "properties"],
+            "type": "object"
+        },
+        "DashboardFieldTarget": {
+            "properties": {
+                "fallbackType": {
+                    "$ref": "#/$defs/DimensionType"
+                },
+                "fieldId": {
+                    "type": "string"
+                },
+                "isSqlColumn": {
+                    "type": "boolean"
+                },
+                "tableName": {
+                    "type": "string"
+                }
+            },
+            "required": ["tableName", "fieldId"],
+            "type": "object"
+        },
+        "DashboardFilterRule": {
+            "allOf": [
+                {
+                    "$ref": "#/$defs/FilterRule_FilterOperator.DashboardFieldTarget.AnyType.AnyType_"
+                },
+                {
+                    "properties": {
+                        "label": {
+                            "type": "string"
+                        },
+                        "lockedTabUuids": {
+                            "description": "Tab UUIDs where this filter is locked. When the active tab is in this\nlist, viewers see the filter but cannot change it, and URL / embed\nfilter overrides targeting the same field are ignored on that tab.\nEmpty or omitted means the filter is not locked anywhere.",
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        "requiredGroupId": {
+                            "description": "Dashboard filters sharing a requiredGroupId form an \"any-one required\"\ngroup: the dashboard is locked until at least one member has a value.",
+                            "type": "string"
+                        },
+                        "singleValue": {
+                            "type": "boolean"
+                        },
+                        "tileTargets": {
+                            "$ref": "#/$defs/DashboardTileTargets"
+                        }
+                    },
+                    "type": "object"
+                }
+            ]
+        },
+        "DashboardHeadingTileAsCode": {
+            "additionalProperties": false,
+            "properties": {
+                "h": {
+                    "format": "double",
+                    "minimum": 1,
+                    "type": "number"
+                },
+                "properties": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "showDivider": {
+                            "type": "boolean"
+                        },
+                        "text": {
+                            "type": "string"
+                        },
+                        "title": {}
+                    },
+                    "required": ["text"],
+                    "type": "object"
+                },
+                "tabSlug": {
+                    "description": "Portable reference to the dashboard tab containing this tile.",
+                    "type": ["string", "null"]
+                },
+                "tabUuid": {
+                    "description": "Legacy project-local tab reference. Accepted on upload for backwards compatibility.",
+                    "type": ["string", "null"]
+                },
+                "tileSlug": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/$defs/DashboardTileTypes.HEADING"
+                },
+                "uuid": {
+                    "type": "string"
+                },
+                "w": {
+                    "format": "double",
+                    "maximum": 36,
+                    "minimum": 1,
+                    "type": "number"
+                },
+                "x": {
+                    "format": "double",
+                    "maximum": 35,
+                    "minimum": 0,
+                    "type": "number"
+                },
+                "y": {
+                    "format": "double",
+                    "minimum": 0,
+                    "type": "number"
+                }
+            },
+            "required": ["w", "h", "y", "x", "type", "properties"],
+            "type": "object"
+        },
+        "DashboardLoomTileAsCode": {
+            "additionalProperties": false,
+            "properties": {
+                "h": {
+                    "format": "double",
+                    "minimum": 1,
+                    "type": "number"
+                },
+                "properties": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "hideTitle": {
+                            "type": "boolean"
+                        },
+                        "title": {
+                            "type": "string"
+                        },
+                        "url": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["url", "title"],
+                    "type": "object"
+                },
+                "tabSlug": {
+                    "description": "Portable reference to the dashboard tab containing this tile.",
+                    "type": ["string", "null"]
+                },
+                "tabUuid": {
+                    "description": "Legacy project-local tab reference. Accepted on upload for backwards compatibility.",
+                    "type": ["string", "null"]
+                },
+                "tileSlug": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/$defs/DashboardTileTypes.LOOM"
+                },
+                "uuid": {
+                    "type": "string"
+                },
+                "w": {
+                    "format": "double",
+                    "maximum": 36,
+                    "minimum": 1,
+                    "type": "number"
+                },
+                "x": {
+                    "format": "double",
+                    "maximum": 35,
+                    "minimum": 0,
+                    "type": "number"
+                },
+                "y": {
+                    "format": "double",
+                    "minimum": 0,
+                    "type": "number"
+                }
+            },
+            "required": ["w", "h", "y", "x", "type", "properties"],
+            "type": "object"
+        },
+        "DashboardMarkdownTileAsCode": {
+            "additionalProperties": false,
+            "properties": {
+                "h": {
+                    "format": "double",
+                    "minimum": 1,
+                    "type": "number"
+                },
+                "properties": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "content": {
+                            "type": "string"
+                        },
+                        "hideFrame": {
+                            "type": "boolean"
+                        },
+                        "title": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["content", "title"],
+                    "type": "object"
+                },
+                "tabSlug": {
+                    "description": "Portable reference to the dashboard tab containing this tile.",
+                    "type": ["string", "null"]
+                },
+                "tabUuid": {
+                    "description": "Legacy project-local tab reference. Accepted on upload for backwards compatibility.",
+                    "type": ["string", "null"]
+                },
+                "tileSlug": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/$defs/DashboardTileTypes.MARKDOWN"
+                },
+                "uuid": {
+                    "type": "string"
+                },
+                "w": {
+                    "format": "double",
+                    "maximum": 36,
+                    "minimum": 1,
+                    "type": "number"
+                },
+                "x": {
+                    "format": "double",
+                    "maximum": 35,
+                    "minimum": 0,
+                    "type": "number"
+                },
+                "y": {
+                    "format": "double",
+                    "minimum": 0,
+                    "type": "number"
+                }
+            },
+            "required": ["w", "h", "y", "x", "type", "properties"],
+            "type": "object"
+        },
+        "DashboardParameters": {
+            "$ref": "#/$defs/Record_string.DashboardParameterValue_"
+        },
+        "DashboardParameterValue": {
+            "properties": {
+                "parameterName": {
+                    "type": "string"
+                },
+                "value": {
+                    "$ref": "#/$defs/ParameterValue"
+                }
+            },
+            "required": ["value", "parameterName"],
+            "type": "object"
+        },
+        "DashboardSqlChartTileAsCode": {
+            "additionalProperties": false,
+            "properties": {
+                "h": {
+                    "format": "double",
+                    "minimum": 1,
+                    "type": "number"
+                },
+                "properties": {
+                    "additionalProperties": false,
+                    "description": "From T, pick a set of properties whose keys are in the union K",
+                    "properties": {
+                        "chartName": {
+                            "type": "string"
+                        },
+                        "chartSlug": {
+                            "type": ["string", "null"]
+                        },
+                        "hideTitle": {
+                            "type": "boolean"
+                        },
+                        "title": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["chartName", "chartSlug"],
+                    "type": "object"
+                },
+                "tabSlug": {
+                    "description": "Portable reference to the dashboard tab containing this tile.",
+                    "type": ["string", "null"]
+                },
+                "tabUuid": {
+                    "description": "Legacy project-local tab reference. Accepted on upload for backwards compatibility.",
+                    "type": ["string", "null"]
+                },
+                "tileSlug": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/$defs/DashboardTileTypes.SQL_CHART"
+                },
+                "uuid": {
+                    "type": "string"
+                },
+                "w": {
+                    "format": "double",
+                    "maximum": 36,
+                    "minimum": 1,
+                    "type": "number"
+                },
+                "x": {
+                    "format": "double",
+                    "maximum": 35,
+                    "minimum": 0,
+                    "type": "number"
+                },
+                "y": {
+                    "format": "double",
+                    "minimum": 0,
+                    "type": "number"
+                }
+            },
+            "required": ["w", "h", "y", "x", "type", "properties"],
+            "type": "object"
+        },
+        "DashboardTabAsCode": {
+            "additionalProperties": false,
+            "properties": {
+                "hidden": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "minLength": 1,
+                    "type": "string"
+                },
+                "order": {
+                    "format": "double",
+                    "minimum": 0,
+                    "type": "number"
+                },
+                "slug": {
+                    "description": "Portable tab identifier used by new downloads.",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "Legacy project-local identifier. Accepted on upload for backwards compatibility.",
+                    "type": "string"
+                }
+            },
+            "required": ["order", "name"],
+            "type": "object"
+        },
+        "DashboardTileAsCode": {
+            "anyOf": [
+                {
+                    "$ref": "#/$defs/DashboardChartTileAsCode"
+                },
+                {
+                    "$ref": "#/$defs/DashboardSqlChartTileAsCode"
+                },
+                {
+                    "$ref": "#/$defs/DashboardMarkdownTileAsCode"
+                },
+                {
+                    "$ref": "#/$defs/DashboardLoomTileAsCode"
+                },
+                {
+                    "$ref": "#/$defs/DashboardHeadingTileAsCode"
+                },
+                {
+                    "$ref": "#/$defs/DashboardDataAppTileAsCode"
+                }
+            ]
+        },
+        "DashboardTileAsCodeBase": {
+            "properties": {
+                "h": {
+                    "format": "double",
+                    "minimum": 1,
+                    "type": "number"
+                },
+                "tabSlug": {
+                    "description": "Portable reference to the dashboard tab containing this tile.",
+                    "type": ["string", "null"]
+                },
+                "tabUuid": {
+                    "description": "Legacy project-local tab reference. Accepted on upload for backwards compatibility.",
+                    "type": ["string", "null"]
+                },
+                "tileSlug": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/$defs/DashboardTileTypes"
+                },
+                "uuid": {
+                    "type": "string"
+                },
+                "w": {
+                    "format": "double",
+                    "maximum": 36,
+                    "minimum": 1,
+                    "type": "number"
+                },
+                "x": {
+                    "format": "double",
+                    "maximum": 35,
+                    "minimum": 0,
+                    "type": "number"
+                },
+                "y": {
+                    "format": "double",
+                    "minimum": 0,
+                    "type": "number"
+                }
+            },
+            "required": ["w", "h", "y", "x", "type"],
+            "type": "object"
+        },
+        "DashboardTileTarget": {
+            "anyOf": [
+                {
+                    "$ref": "#/$defs/DashboardFieldTarget"
+                },
+                {
+                    "enum": [false],
+                    "type": "boolean"
+                }
+            ]
+        },
+        "DashboardTileTargets": {
+            "additionalProperties": {
+                "$ref": "#/$defs/DashboardTileTarget"
+            },
+            "description": "Deliberately an index-signature literal, not `Record<string, ...>`. When\nTSOA first resolves `Record<string, DashboardTileTarget>` inside a mapped\ntype (e.g. `Omit<DashboardFilterRule, 'id'>` in content-as-code types), it\ncaches an EMPTY model under the shared `Record_string.DashboardTileTarget_`\nname, and request validation then strips every tileTargets entry from\nbodies — silently breaking dashboard filters on SQL chart tiles. The\nindex-signature form resolves correctly in every context.",
+            "properties": {},
+            "type": "object"
+        },
+        "DashboardTileTypes": {
+            "enum": [
+                "saved_chart",
+                "sql_chart",
+                "markdown",
+                "loom",
+                "heading",
+                "data_app"
+            ],
+            "type": "string"
+        },
+        "DashboardTileTypes.DATA_APP": {
+            "enum": ["data_app"],
+            "type": "string"
+        },
+        "DashboardTileTypes.HEADING": {
+            "enum": ["heading"],
+            "type": "string"
+        },
+        "DashboardTileTypes.LOOM": {
+            "enum": ["loom"],
+            "type": "string"
+        },
+        "DashboardTileTypes.MARKDOWN": {
+            "enum": ["markdown"],
+            "type": "string"
+        },
+        "DashboardTileTypes.SAVED_CHART": {
+            "enum": ["saved_chart"],
+            "type": "string"
+        },
+        "DashboardTileTypes.SQL_CHART": {
+            "enum": ["sql_chart"],
+            "type": "string"
+        },
+        "DateGranularity": {
+            "enum": [
+                "Second",
+                "Minute",
+                "Hour",
+                "Day",
+                "Week",
+                "Month",
+                "Quarter",
+                "Year"
+            ],
+            "type": "string"
+        },
+        "DateZoomConfig": {
+            "properties": {
+                "controls": {
+                    "items": {
+                        "$ref": "#/$defs/DateZoomControl"
+                    },
+                    "type": "array"
+                },
+                "tileTargets": {
+                    "$ref": "#/$defs/Record_string.DateZoomTileTarget_"
+                }
+            },
+            "required": ["tileTargets", "controls"],
+            "type": "object"
+        },
+        "DateZoomControl": {
+            "properties": {
+                "granularity": {
+                    "anyOf": [
+                        {
+                            "$ref": "#/$defs/DateGranularity"
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ]
+                },
+                "hidden": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "string"
+                }
+            },
+            "required": ["granularity", "name", "uuid"],
+            "type": "object"
+        },
+        "DateZoomTileTarget": {
+            "properties": {
+                "controlUuid": {
+                    "type": "string"
+                },
+                "fieldId": {
+                    "type": ["string", "null"]
+                },
+                "tableName": {
+                    "type": ["string", "null"]
+                }
+            },
+            "required": ["tableName", "fieldId", "controlUuid"],
+            "type": "object"
+        },
+        "DimensionType": {
+            "enum": ["string", "number", "timestamp", "date", "boolean"],
+            "type": "string"
+        },
+        "FilterOperator": {
+            "enum": [
+                "isNull",
+                "notNull",
+                "equals",
+                "notEquals",
+                "startsWith",
+                "endsWith",
+                "include",
+                "doesNotInclude",
+                "lessThan",
+                "lessThanOrEqual",
+                "greaterThan",
+                "greaterThanOrEqual",
+                "inThePast",
+                "notInThePast",
+                "inTheNext",
+                "inTheCurrent",
+                "notInTheCurrent",
+                "inBetween",
+                "notInBetween",
+                "inPeriodToDate"
+            ],
+            "type": "string"
+        },
+        "FilterRule_FilterOperator.DashboardFieldTarget.AnyType.AnyType_": {
+            "additionalProperties": true,
+            "properties": {
+                "caseSensitive": {
+                    "description": "Overrides the field/explore case-sensitivity for this rule only.\nUsed by internal features like autocomplete search that must always\nmatch case-insensitively regardless of the field's configured setting.",
+                    "type": "boolean"
+                },
+                "disabled": {
+                    "description": "Whether this filter is disabled",
+                    "type": "boolean"
+                },
+                "id": {
+                    "description": "Unique identifier for the filter",
+                    "type": "string"
+                },
+                "includeNull": {
+                    "description": "For the `equals` operator on string fields, also match rows where the\nfield is null (compiles to `field IN (...) OR field IS NULL`). Lets users\ncombine null with selected values in a single \"is\" rule.",
+                    "type": "boolean"
+                },
+                "operator": {
+                    "$ref": "#/$defs/FilterOperator",
+                    "description": "Filter operator"
+                },
+                "required": {
+                    "description": "Whether this filter is required",
+                    "type": "boolean"
+                },
+                "settings": {
+                    "$ref": "#/$defs/AnyType",
+                    "description": "Additional settings for date/time filters"
+                },
+                "target": {
+                    "$ref": "#/$defs/DashboardFieldTarget",
+                    "description": "Target field for the filter"
+                },
+                "values": {
+                    "description": "Values to filter by",
+                    "items": {
+                        "$ref": "#/$defs/AnyType"
+                    },
+                    "type": "array"
+                }
+            },
+            "required": ["operator", "id", "target"],
+            "type": "object"
+        },
+        "Omit_DashboardFilterRule.id_": {
+            "$ref": "#/$defs/Pick_DashboardFilterRule.Exclude_keyofDashboardFilterRule.id__",
+            "description": "Construct a type with the properties of T except for those in type K."
+        },
+        "ParameterValue": {
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "format": "double",
+                    "type": "number"
+                },
+                {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                {
+                    "items": {
+                        "format": "double",
+                        "type": "number"
+                    },
+                    "type": "array"
+                }
+            ]
+        },
+        "Pick_DashboardChartTileProperties-at-properties.title-or-hideTitle-or-chartName_": {
+            "description": "From T, pick a set of properties whose keys are in the union K",
+            "properties": {
+                "chartName": {
+                    "type": ["string", "null"]
+                },
+                "hideTitle": {
+                    "type": "boolean"
+                },
+                "title": {
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "Pick_DashboardDataAppTileProperties-at-properties.title-or-hideTitle_": {
+            "description": "From T, pick a set of properties whose keys are in the union K",
+            "properties": {
+                "hideTitle": {
+                    "type": "boolean"
+                },
+                "title": {
+                    "type": "string"
+                }
+            },
+            "required": ["title"],
+            "type": "object"
+        },
+        "Pick_DashboardFilterRule.Exclude_keyofDashboardFilterRule.id__": {
+            "description": "From T, pick a set of properties whose keys are in the union K",
+            "properties": {
+                "caseSensitive": {
+                    "description": "Overrides the field/explore case-sensitivity for this rule only.\nUsed by internal features like autocomplete search that must always\nmatch case-insensitively regardless of the field's configured setting.",
+                    "type": "boolean"
+                },
+                "disabled": {
+                    "description": "Whether this filter is disabled",
+                    "type": "boolean"
+                },
+                "includeNull": {
+                    "description": "For the `equals` operator on string fields, also match rows where the\nfield is null (compiles to `field IN (...) OR field IS NULL`). Lets users\ncombine null with selected values in a single \"is\" rule.",
+                    "type": "boolean"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "lockedTabUuids": {
+                    "description": "Tab UUIDs where this filter is locked. When the active tab is in this\nlist, viewers see the filter but cannot change it, and URL / embed\nfilter overrides targeting the same field are ignored on that tab.\nEmpty or omitted means the filter is not locked anywhere.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                "operator": {
+                    "$ref": "#/$defs/FilterOperator",
+                    "description": "Filter operator"
+                },
+                "required": {
+                    "description": "Whether this filter is required",
+                    "type": "boolean"
+                },
+                "requiredGroupId": {
+                    "description": "Dashboard filters sharing a requiredGroupId form an \"any-one required\"\ngroup: the dashboard is locked until at least one member has a value.",
+                    "type": "string"
+                },
+                "settings": {
+                    "description": "Additional settings for date/time filters"
+                },
+                "singleValue": {
+                    "type": "boolean"
+                },
+                "target": {
+                    "$ref": "#/$defs/DashboardFieldTarget",
+                    "description": "Target field for the filter"
+                },
+                "tileTargets": {
+                    "$ref": "#/$defs/DashboardTileTargets"
+                },
+                "values": {
+                    "description": "Values to filter by",
+                    "items": {},
+                    "type": "array"
+                }
+            },
+            "required": ["target", "operator"],
+            "type": "object"
+        },
+        "Pick_DashboardSqlChartTileProperties-at-properties.title-or-hideTitle-or-chartName_": {
+            "description": "From T, pick a set of properties whose keys are in the union K",
+            "properties": {
+                "chartName": {
+                    "type": "string"
+                },
+                "hideTitle": {
+                    "type": "boolean"
+                },
+                "title": {
+                    "type": "string"
+                }
+            },
+            "required": ["chartName"],
+            "type": "object"
+        },
+        "Record_string.DashboardParameterValue_": {
+            "additionalProperties": {
+                "$ref": "#/$defs/DashboardParameterValue"
+            },
+            "description": "Construct a type with a set of properties K of type T",
+            "properties": {},
+            "type": "object"
+        },
+        "Record_string.DateZoomTileTarget_": {
+            "additionalProperties": {
+                "$ref": "#/$defs/DateZoomTileTarget"
+            },
+            "description": "Construct a type with a set of properties K of type T",
+            "properties": {},
+            "type": "object"
+        }
+    },
+    "$id": "https://schemas.lightdash.com/lightdash/dashboard-as-code.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
+    "description": "From T, pick a set of properties whose keys are in the union K",
+    "properties": {
+        "config": {
+            "$ref": "#/$defs/DashboardConfig"
+        },
+        "contentType": {
+            "$ref": "#/$defs/ContentAsCodeType.DASHBOARD"
+        },
+        "description": {
+            "type": "string"
+        },
+        "downloadedAt": {
+            "format": "date-time",
+            "type": "string"
+        },
+        "filters": {
+            "properties": {
+                "dimensions": {
+                    "items": {
+                        "$ref": "#/$defs/Omit_DashboardFilterRule.id_"
+                    },
+                    "type": "array"
+                },
+                "metrics": {
+                    "items": {
+                        "$ref": "#/$defs/DashboardFilterRule"
+                    },
+                    "type": "array"
+                },
+                "tableCalculations": {
+                    "items": {
+                        "$ref": "#/$defs/DashboardFilterRule"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        },
+        "name": {
+            "minLength": 1,
+            "type": "string"
+        },
+        "parameters": {
+            "$ref": "#/$defs/DashboardParameters"
+        },
+        "slug": {
+            "pattern": "^[a-z0-9-]+$",
+            "type": "string"
+        },
+        "spaceSlug": {
+            "type": "string"
+        },
+        "tabs": {
+            "items": {
+                "$ref": "#/$defs/DashboardTabAsCode"
+            },
+            "type": "array"
+        },
+        "tiles": {
+            "items": {
+                "$ref": "#/$defs/DashboardTileAsCode"
+            },
+            "type": "array"
+        },
+        "updatedAt": {
+            "description": "Not modifiable by user, but useful to know if it has been updated. Defaults to now if omitted.",
+            "format": "date-time",
+            "type": "string"
+        },
+        "verification": {
+            "anyOf": [
+                {
+                    "allOf": [
+                        {
+                            "$ref": "#/$defs/ContentVerificationInfo"
+                        }
+                    ],
+                    "description": "Detailed verification info (who/when). Read-only; ignored on upload."
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "verified": {
+            "description": "Declarative verification state.\n`true` verifies the dashboard on upload, `false` unverifies it, `undefined` leaves the\ncurrent state untouched. Download sets this to `true` when the dashboard is verified.",
+            "type": "boolean"
+        },
+        "version": {
+            "const": 1,
+            "format": "double",
+            "type": "number"
+        }
+    },
+    "required": ["spaceSlug", "version", "tiles", "tabs", "slug", "name"],
+    "title": "Lightdash Dashboard as Code",
+    "type": "object"
+}
