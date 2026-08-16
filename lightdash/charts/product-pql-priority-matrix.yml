@@ -1,7 +1,9 @@
+contentType: chart
 name: GTM Priority Matrix
 slug: product-pql-priority-matrix
 tableName: fct_pql_signals
 spaceSlug: product
+version: 1
 metricQuery:
   exploreName: fct_pql_signals
   dimensions:
@@ -10,6 +12,20 @@ metricQuery:
     - fct_pql_signals_pql_workspaces
   filters: {}
   sorts: []
+  tableCalculations: []
   limit: 500
 chartConfig:
-  type: bar
+  type: cartesian
+  config:
+    eChartsConfig:
+      series:
+        - encode:
+            xRef:
+              field: fct_pql_signals_intent_tier
+            yRef:
+              field: fct_pql_signals_pql_workspaces
+          type: bar
+    layout:
+      xField: fct_pql_signals_intent_tier
+      yField:
+        - fct_pql_signals_pql_workspaces

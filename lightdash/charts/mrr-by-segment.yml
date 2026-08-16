@@ -1,7 +1,9 @@
+contentType: chart
 name: MRR by Account Segment
 slug: mrr-by-segment
 tableName: dim_accounts
 spaceSlug: executive-overview
+version: 1
 metricQuery:
   exploreName: dim_accounts
   dimensions:
@@ -12,6 +14,20 @@ metricQuery:
   sorts:
     - fieldId: dim_accounts_total_mrr
       descending: true
+  tableCalculations: []
   limit: 500
 chartConfig:
-  type: bar
+  type: cartesian
+  config:
+    eChartsConfig:
+      series:
+        - encode:
+            xRef:
+              field: dim_accounts_account_segment
+            yRef:
+              field: dim_accounts_total_mrr
+          type: bar
+    layout:
+      xField: dim_accounts_account_segment
+      yField:
+        - dim_accounts_total_mrr

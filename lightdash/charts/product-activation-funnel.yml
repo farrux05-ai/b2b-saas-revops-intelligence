@@ -1,7 +1,9 @@
+contentType: chart
 name: Activation Funnel
 slug: product-activation-funnel
 tableName: fct_product_activation
 spaceSlug: product
+version: 1
 metricQuery:
   exploreName: fct_product_activation
   dimensions:
@@ -9,6 +11,20 @@ metricQuery:
   metrics: []
   filters: {}
   sorts: []
+  tableCalculations: []
   limit: 500
 chartConfig:
-  type: bar
+  type: cartesian
+  config:
+    eChartsConfig:
+      series:
+        - encode:
+            xRef:
+              field: fct_product_activation_account_id
+            yRef:
+              field: fct_product_activation_account_id
+          type: bar
+    layout:
+      xField: fct_product_activation_account_id
+      yField:
+        - fct_product_activation_account_id

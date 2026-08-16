@@ -1,7 +1,9 @@
+contentType: chart
 name: MRR at Risk
 slug: cs-mrr-at-risk
 tableName: fct_accounts_health
 spaceSlug: customer-success
+version: 1
 metricQuery:
   exploreName: fct_accounts_health
   dimensions: []
@@ -9,6 +11,7 @@ metricQuery:
     - fct_accounts_health_total_mrr_at_risk
   filters: {}
   sorts: []
+  tableCalculations: []
   limit: 500
 chartConfig:
   type: big_number

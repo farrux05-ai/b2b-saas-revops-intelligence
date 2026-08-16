@@ -1,7 +1,9 @@
+contentType: chart
 name: Trials Expiring in 3 Days
 slug: product-trial-at-risk
 tableName: fct_trial_conversion
 spaceSlug: product
+version: 1
 metricQuery:
   exploreName: fct_trial_conversion
   dimensions:
@@ -9,6 +11,7 @@ metricQuery:
   metrics: []
   filters: {}
   sorts: []
+  tableCalculations: []
   limit: 500
 chartConfig:
   type: table

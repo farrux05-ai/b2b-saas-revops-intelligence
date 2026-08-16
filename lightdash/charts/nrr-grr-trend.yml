@@ -1,7 +1,9 @@
+contentType: chart
 name: NRR vs GRR Trend (Trailing 12 Months)
 slug: nrr-grr-trend
 tableName: fct_retention_cohorts
 spaceSlug: finance
+version: 1
 metricQuery:
   exploreName: fct_retention_cohorts
   dimensions:
@@ -11,6 +13,27 @@ metricQuery:
     - fct_retention_cohorts_avg_grr
   filters: {}
   sorts: []
+  tableCalculations: []
   limit: 500
 chartConfig:
-  type: line
+  type: cartesian
+  config:
+    eChartsConfig:
+      series:
+        - encode:
+            xRef:
+              field: fct_retention_cohorts_cohort_month
+            yRef:
+              field: fct_retention_cohorts_avg_nrr
+          type: line
+        - encode:
+            xRef:
+              field: fct_retention_cohorts_cohort_month
+            yRef:
+              field: fct_retention_cohorts_avg_grr
+          type: line
+    layout:
+      xField: fct_retention_cohorts_cohort_month
+      yField:
+        - fct_retention_cohorts_avg_nrr
+        - fct_retention_cohorts_avg_grr

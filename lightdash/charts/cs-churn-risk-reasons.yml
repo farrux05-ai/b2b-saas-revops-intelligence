@@ -1,7 +1,9 @@
+contentType: chart
 name: Risk Reasons by Account Count
 slug: cs-churn-risk-reasons
 tableName: fct_accounts_health
 spaceSlug: customer-success
+version: 1
 metricQuery:
   exploreName: fct_accounts_health
   dimensions:
@@ -10,6 +12,20 @@ metricQuery:
     - fct_accounts_health_at_risk_accounts
   filters: {}
   sorts: []
+  tableCalculations: []
   limit: 500
 chartConfig:
-  type: bar
+  type: cartesian
+  config:
+    eChartsConfig:
+      series:
+        - encode:
+            xRef:
+              field: fct_accounts_health_health_reason
+            yRef:
+              field: fct_accounts_health_at_risk_accounts
+          type: bar
+    layout:
+      xField: fct_accounts_health_health_reason
+      yField:
+        - fct_accounts_health_at_risk_accounts

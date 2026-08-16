@@ -1,7 +1,9 @@
+contentType: chart
 name: At-Risk Accounts — Priority Ordered
 slug: cs-at-risk-accounts-table
 tableName: fct_accounts_health
 spaceSlug: customer-success
+version: 1
 metricQuery:
   exploreName: fct_accounts_health
   dimensions:
@@ -12,6 +14,7 @@ metricQuery:
     - fct_accounts_health_total_mrr_at_risk
   filters: {}
   sorts: []
+  tableCalculations: []
   limit: 500
 chartConfig:
   type: table
