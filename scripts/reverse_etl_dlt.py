@@ -96,18 +96,22 @@ def get_db_cursor():
     password = os.getenv("SNOWFLAKE_PASSWORD")
 
     if account and user and password:
-        logger.info("🔌 Connecting to Snowflake Data Warehouse for Reverse ETL...")
-        conn = snowflake.connector.connect(
-            account=account,
-            user=user,
-            password=password,
-            role=os.getenv("SNOWFLAKE_ROLE", "TRANSFORMER"),
-            warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
-            database=os.getenv("SNOWFLAKE_DATABASE", "REVOPS_INTELLIGENCE"),
-            schema="MARTS",
-        )
-        return conn.cursor(), "snowflake", conn
-    elif os.path.exists(DB_PATH):
+        try:
+            logger.info("🔌 Connecting to Snowflake Data Warehouse for Reverse ETL...")
+            conn = snowflake.connector.connect(
+                account=account,
+                user=user,
+                password=password,
+                role=os.getenv("SNOWFLAKE_ROLE", "TRANSFORMER"),
+                warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
+                database=os.getenv("SNOWFLAKE_DATABASE", "REVOPS_INTELLIGENCE"),
+                schema="MARTS",
+            )
+            return conn.cursor(), "snowflake", conn
+        except Exception as err:
+            logger.warning(f"⚠️ Snowflake connection attempt failed ({err}). Checking DuckDB fallback...")
+
+    if os.path.exists(DB_PATH):
         logger.info(f"🔌 Connecting to local DuckDB at {DB_PATH}...")
         conn = duckdb.connect(DB_PATH, read_only=True)
         return conn.cursor(), "duckdb", conn
@@ -139,7 +143,7 @@ def revops_warehouse_source():
             return
 
         try:
-            table_prefix = "MARTS." if db_type == "snowflake" else "main_marts."
+            table_prefix = "MARTS_marts." if db_type == "snowflake" else "main_marts."
             query = f"""
                 SELECT
                     hubspot_company_id,
@@ -182,8 +186,8 @@ def revops_warehouse_source():
             return
 
         try:
-            marts_prefix = "MARTS." if db_type == "snowflake" else "main_marts."
-            identity_prefix = "IDENTITY." if db_type == "snowflake" else "main_identity."
+            marts_prefix = "MARTS_marts." if db_type == "snowflake" else "main_marts."
+            identity_prefix = "MARTS_identity." if db_type == "snowflake" else "main_identity."
             query = f"""
                 SELECT
                     u.hubspot_contact_id,
@@ -221,7 +225,7 @@ def revops_warehouse_source():
             return
 
         try:
-            identity_prefix = "IDENTITY." if db_type == "snowflake" else "main_identity."
+            identity_prefix = "MARTS_identity." if db_type == "snowflake" else "main_identity."
             query = f"""
                 SELECT
                     u.email,
