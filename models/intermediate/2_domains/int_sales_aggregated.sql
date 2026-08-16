@@ -17,23 +17,24 @@ final as (
         hubspot_company_id,
 
         -- Open pipeline count: any deal not yet resolved
-        count(hubspot_deal_id) filter (
-            where deal_stage not in ('closedwon', 'closedlost')
+        count(
+            case when deal_stage not in ('closedwon', 'closedlost') then hubspot_deal_id end
         )                                               as open_deals_count,
 
         -- Historical revenue from won deals
         coalesce(
-            sum(amount) filter (where deal_stage = 'closedwon'), 0
+            sum(case when deal_stage = 'closedwon' then amount else 0 end), 0
         )                                               as lifetime_revenue,
 
         -- Total won deals count (reusable in marketing marts)
-        count(hubspot_deal_id) filter (
-            where deal_stage = 'closedwon'
+        count(
+            case when deal_stage = 'closedwon' then hubspot_deal_id end
         )                                               as won_deals_count,
 
         -- Most recent win date: used to identify dormant customers
-        max(closed_at) filter (where deal_stage = 'closedwon')
-                                                        as last_won_date,
+        max(
+            case when deal_stage = 'closedwon' then closed_at end
+        )                                               as last_won_date,
 
         -- Total deals ever created (pipeline velocity indicator)
         count(hubspot_deal_id)                          as total_deals_created

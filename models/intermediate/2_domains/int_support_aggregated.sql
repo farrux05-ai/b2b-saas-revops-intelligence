@@ -36,13 +36,13 @@ final as (
         count(t.ticket_id)                              as total_tickets,
 
         -- Open tickets = active burden on CS team
-        count(t.ticket_id) filter (
-            where t.ticket_status in ('new', 'open', 'pending')
+        count(
+            case when t.ticket_status in ('new', 'open', 'pending') then t.ticket_id end
         )                                               as open_tickets,
 
         -- Escalation signal: urgent/high priority tickets
-        count(t.ticket_id) filter (
-            where t.priority in ('urgent', 'high')
+        count(
+            case when t.priority in ('urgent', 'high') then t.ticket_id end
         )                                               as high_priority_tickets,
 
         -- Avg resolution time in hours (quality of support metric)
