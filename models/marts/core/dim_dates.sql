@@ -1,7 +1,6 @@
 {{
     config(
-        materialized='table',
-        schema='marts'
+        materialized='table'
     )
 }}
 
@@ -29,17 +28,17 @@ select
     extract(year from d.date_day)::int as year,
     extract(quarter from d.date_day)::int as quarter,
     extract(month from d.date_day)::int as month,
-    strftime(d.date_day, '%Y-%m') as year_month,
+    to_varchar(d.date_day, 'YYYY-MM') as year_month,
     
     -- Week
     extract(week from d.date_day)::int as week_of_year,
-    strftime(d.date_day, '%Y-W%V') as year_week,
+    to_varchar(d.date_day, 'YYYY-"W"IW') as year_week,
     
     -- Day
     extract(day from d.date_day)::int as day_of_month,
     extract(dow from d.date_day)::int as day_of_week_num,
     case 
-        when extract(dow from d.date_day) = 0 then 'Sunday'
+        when extract(dow from d.date_day) in (0, 7) then 'Sunday'
         when extract(dow from d.date_day) = 1 then 'Monday'
         when extract(dow from d.date_day) = 2 then 'Tuesday'
         when extract(dow from d.date_day) = 3 then 'Wednesday'
@@ -50,7 +49,7 @@ select
     extract(doy from d.date_day)::int as day_of_year,
     
     -- Flags
-    case when extract(dow from d.date_day) in (0, 6) then true else false end as is_weekend,
+    case when extract(dow from d.date_day) in (0, 6, 7) then true else false end as is_weekend,
     
     -- Dynamic Holiday Logic from Seed
     case when h.holiday_date is not null then true else false end as is_holiday,

@@ -13,11 +13,6 @@
 #   SNOWFLAKE_ROLE       — (optional, default: TRANSFORMER)
 #   SNOWFLAKE_WAREHOUSE  — (optional, default: COMPUTE_WH)
 #   SNOWFLAKE_DATABASE   — (optional, default: REVOPS_INTELLIGENCE)
-#
-# USAGE:
-#   dbt run                    # uses 'snowflake' (default)
-#   dbt run --target snowflake # explicit
-#   dbt run --target ci        # GitHub Actions (same Snowflake, separate schema)
 # ============================================================
 
 revops_intelligence_engine:
@@ -64,7 +59,7 @@ elementary:
       role: "{{ env_var('SNOWFLAKE_ROLE', 'TRANSFORMER') }}"
       warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'COMPUTE_WH') }}"
       database: "{{ env_var('SNOWFLAKE_DATABASE', 'REVOPS_INTELLIGENCE') }}"
-      schema: ELEMENTARY
+      schema: MARTS_elementary
       threads: 4
       query_tag: "elementary_revops"
     ci:
@@ -75,6 +70,6 @@ elementary:
       role: "{{ env_var('SNOWFLAKE_ROLE', 'TRANSFORMER') }}"
       warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'COMPUTE_WH') }}"
       database: "{{ env_var('SNOWFLAKE_DATABASE', 'REVOPS_INTELLIGENCE') }}"
-      schema: ELEMENTARY_CI
+      schema: MARTS_elementary_ci
       threads: 4
       query_tag: "elementary_revops_ci"
