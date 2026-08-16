@@ -1,3 +1,4 @@
+contentType: dashboard
 name: Sales — Pipeline & Win Rate
 description: >
   For Sales Leadership & AEs: pipeline health, stale deals,
@@ -75,15 +76,5 @@ tiles:
         **Stale Deal:** Open >90 days signals pipeline friction. Collaborative review with CSM is recommended.
 
 filters:
-  metrics: []
-  dimensions:
-    - target:
-        fieldId: fct_pipeline_account_segment
-        fieldName: account_segment
-        tableName: fct_pipeline
-      values: []
-      disabled: false
-      operator: notNull
-      tileTargets: {}
-  tableCalculations: []
+  dimensions: []
 tabs: []

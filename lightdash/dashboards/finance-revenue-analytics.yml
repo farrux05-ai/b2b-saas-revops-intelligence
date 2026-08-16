@@ -1,3 +1,4 @@
+contentType: dashboard
 name: Finance — Revenue Analytics
 description: >
   MRR waterfall, NRR/GRR trends, LTV by segment.
@@ -65,7 +66,5 @@ tiles:
         **Waterfall Categories:** `new` — new account | `expansion` — revenue increase | `contraction` — revenue decrease | `churn` — account cancelled | `resurrection` — returned customer | `retained` — unchanged revenue
 
 filters:
-  metrics: []
   dimensions: []
-  tableCalculations: []
 tabs: []

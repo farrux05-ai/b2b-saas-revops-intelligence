@@ -1,3 +1,4 @@
+contentType: dashboard
 name: Executive Overview
 description: >
   Key C-Suite KPIs — MRR, account health, and segment distribution.
@@ -98,7 +99,5 @@ tiles:
     tileSlug: exec-health-distribution
 
 filters:
-  metrics: []
   dimensions: []
-  tableCalculations: []
 tabs: []

@@ -1,3 +1,4 @@
+contentType: dashboard
 name: Product — PLG Signals & Activation
 description: >
   For Product & Growth Leaders: GTM Priority Matrix, activation funnel,
@@ -83,7 +84,5 @@ tiles:
         **PQL Criteria:** Git provider connected **AND** first Sprint started = Product Qualified Lead.
 
 filters:
-  metrics: []
   dimensions: []
-  tableCalculations: []
 tabs: []

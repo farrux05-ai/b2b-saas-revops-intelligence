@@ -1,3 +1,4 @@
+contentType: dashboard
 name: Customer Success — Account Health
 description: >
   For CS Team: churn prevention, at-risk accounts,
@@ -108,15 +109,5 @@ tiles:
     tileSlug: cs-at-risk-table
 
 filters:
-  metrics: []
-  dimensions:
-    - target:
-        fieldId: fct_accounts_health_account_segment
-        fieldName: account_segment
-        tableName: fct_accounts_health
-      values: []
-      disabled: false
-      operator: notNull
-      tileTargets: {}
-  tableCalculations: []
+  dimensions: []
 tabs: []
