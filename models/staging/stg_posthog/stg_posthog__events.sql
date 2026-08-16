@@ -5,7 +5,7 @@ with source as (
         user_id,
         event_name,
         occurred_at
-    from {{ source('internal', 'events') }}
+    from {{ source('posthog', 'events') }}
 ),
 
 renamed as (

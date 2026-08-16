@@ -35,7 +35,8 @@ sources:
             tests: [not_null]
         tests:
           - elementary.volume_anomalies:
-              time_bucket: {period: day, count: 1}
+              arguments:
+                time_bucket: {period: day, count: 1}
 
       - name: deals
         description: "HubSpot deal pipeline records (184 mock deals)"
@@ -87,7 +88,8 @@ sources:
             tests: [not_null]
         tests:
           - elementary.volume_anomalies:
-              time_bucket: {period: day, count: 1}
+              arguments:
+                time_bucket: {period: day, count: 1}
 
       - name: invoices
         description: "Stripe invoice history"
@@ -116,7 +118,8 @@ sources:
             tests: [unique, not_null]
         tests:
           - elementary.volume_anomalies:
-              time_bucket: {period: day, count: 1}
+              arguments:
+                time_bucket: {period: day, count: 1}
 
       - name: users
         description: "Internal product users"
@@ -140,7 +143,30 @@ sources:
             error_after: {count: 6, period: hour}
         tests:
           - elementary.volume_anomalies:
-              time_bucket: {period: hour, count: 1}
+              arguments:
+                time_bucket: {period: hour, count: 1}
+
+  # ── PostHog Product Telemetry ───────────────────────────────────────────────
+  - name: posthog
+    database: REVOPS_INTELLIGENCE
+    schema: raw_data
+    description: "PostHog product telemetry events — raw data in RAW_DATA.EVENTS"
+    tables:
+      - name: events
+        identifier: events
+        description: "Product telemetry events (git connect, sprint start, AI prioritization)"
+        config:
+          loaded_at_field: "_dlt_load_id"
+          freshness:
+            warn_after: {count: 2, period: hour}
+            error_after: {count: 6, period: hour}
+        columns:
+          - name: id
+            tests: [unique, not_null]
+        tests:
+          - elementary.volume_anomalies:
+              arguments:
+                time_bucket: {period: hour, count: 1}
 
   # ── Zendesk Support ─────────────────────────────────────────────────────────
   - name: zendesk
