@@ -29,7 +29,10 @@ from datetime import datetime
 from typing import Iterator
 
 import dlt
-import duckdb
+try:
+    import duckdb
+except ImportError:
+    duckdb = None
 from dotenv import load_dotenv
 from dlt.common.typing import TDataItems
 from dlt.common.schema import TTableSchema
