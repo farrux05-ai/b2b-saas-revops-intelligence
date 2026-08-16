@@ -28,68 +28,78 @@ models:
         tests: [not_null]
 
   # ---------------------------------------------------------------------------
-  # Layer 2: Domain Aggregations
+  # Layer 2: Domain Aggregations & Enrichments
   # ---------------------------------------------------------------------------
-  - name: int_finance_aggregated
+  - name: int_billing_aggregated
     description: >
-      Billing metrics per workspace from Stripe. Computes MRR here (not in
-      staging) as per best practice: business logic belongs in Intermediate.
+      Consolidated billing metrics per workspace from Stripe. Combines subscriptions,
+      invoices, and payments. Computes active MRR, churn risk indicators, seat utilization,
+      and worst payment failure categories.
     columns:
       - name: workspace_id
+        description: "Primary key for workspace billing aggregation."
         tests: [unique, not_null]
       - name: active_mrr
+        description: "Active monthly recurring revenue in USD."
         tests: [not_null]
       - name: total_mrr
+        description: "Total recurring revenue including trialing plans in USD."
         tests: [not_null]
 
-  - name: int_payments_enriched
+  - name: int_crm_aggregated
     description: >
-      Payment-level enrichment with failure categorization (failure_category).
-      This is the canonical source of payment failure signals used for churn
-      prediction. One row per Stripe payment charge.
-    columns:
-      - name: payment_id
-        description: "Stripe payment charge ID — primary key."
-        tests: [unique, not_null]
-      - name: failure_code
-        description: "Raw Stripe failure code. NULL for successful payments."
-      - name: failure_category
-        description: >
-          Grouped failure category for churn signaling.
-          card_issue | funds_issue | fraud_risk | other | NULL (success).
-        tests:
-          - accepted_values:
-              arguments:
-                values: ['card_issue', 'funds_issue', 'fraud_risk', 'other']
-              config:
-                severity: warn  # New Stripe codes should not break CI
-                where: "failure_category is not null"
-      - name: is_failed
-        description: "True when the payment has a failure_code. Convenience flag."
-
-  - name: int_sales_aggregated
-    description: >
-      CRM pipeline metrics per account from HubSpot deals.
+      Consolidated CRM sales pipeline and engagement metrics per HubSpot company.
     columns:
       - name: hubspot_company_id
+        description: "Primary key for CRM aggregation."
         tests: [unique, not_null]
-      - name: won_deals_count
-        description: "Number of closed-won deals. Used for marketing attribution."
+
+  - name: int_deals_enriched
+    description: >
+      Deal-level enrichment model linking HubSpot deals with account context.
+      Replaces direct staging dependency in fct_pipeline (resolves Anti-pattern #13).
+    columns:
+      - name: hubspot_deal_id
+        description: "Primary key for HubSpot deals."
+        tests: [unique, not_null]
 
   - name: int_support_aggregated
     description: >
-      Support health metrics per account from Zendesk. Computes resolution_hours
-      here (removed from staging in thin staging refactor).
+      Support health metrics per account from Zendesk.
     columns:
       - name: account_id
+        description: "Primary key for support aggregation."
         tests: [unique, not_null]
 
-  - name: int_usage_aggregated
+  - name: int_product_aggregated
     description: >
-      Product usage and PLG (Product-Led Growth) signals from PostHog events.
+      Product usage and PLG signals from PostHog events and user adoption.
     columns:
       - name: workspace_id
+        description: "Primary key for product usage aggregation."
         tests: [unique, not_null]
+
+  # ---------------------------------------------------------------------------
+  # Layer 2 (extra): ICP Scoring
+  # ---------------------------------------------------------------------------
+  - name: int_icp_scoring
+    description: >
+      ICP (Ideal Customer Profile) Fit Score per account.
+      Scores accounts by industry, employee count, and MRR.
+    columns:
+      - name: account_id
+        description: "Stable surrogate key — joins to dim_accounts."
+        tests: [unique, not_null]
+      - name: account_segment
+        description: "Revenue-based tier: Enterprise / Mid-Market / SMB / Trial/Free."
+        tests:
+          - accepted_values:
+              values: ['Enterprise', 'Mid-Market', 'SMB', 'Trial/Free']
+      - name: icp_tier
+        description: "ICP Fit classification: High Fit / Medium Fit / Low Fit."
+        tests:
+          - accepted_values:
+              values: ['High Fit', 'Medium Fit', 'Low Fit']
 
   # ---------------------------------------------------------------------------
   # Layer 3: Integration (Final Output of Intermediate)
@@ -100,10 +110,13 @@ models:
       spine. Materialized as TABLE for mart query performance.
     columns:
       - name: account_id
+        description: "Primary key for integrated accounts."
         tests: [unique, not_null]
       - name: mrr
+        description: "Total account MRR."
         tests: [not_null]
       - name: account_segment
+        description: "Account segment."
         tests:
           - accepted_values:
               values: ['Enterprise', 'Mid-Market', 'SMB', 'Trial/Free']
@@ -113,61 +126,17 @@ models:
       Multi-signal health scoring model. Scoring priority: Churned >
       Payment Failing > Support Critical > Low Engagement > Expansion Target > Healthy.
     columns:
-      # account_id is not tested here because its uniqueness is verified in int_accounts_integrated
+      - name: account_id
+        description: "Primary key for scored accounts."
+        tests: [unique, not_null]
       - name: health_status
+        description: "Overall account health status."
         tests:
           - accepted_values:
               values: ['Healthy', 'At Risk', 'Churned']
       - name: health_reason
+        description: "Detailed cause for health status."
         tests:
           - accepted_values:
               values: ['Healthy', 'Payment Failing', 'Support Critical',
                        'Low Engagement', 'Expansion Target', 'Churned']
-
-  # ---------------------------------------------------------------------------
-  # Layer 2 (extra): Enriched Subscriptions & ICP Scoring
-  # ---------------------------------------------------------------------------
-  - name: int_subscriptions_enriched
-    description: >
-      Stripe subscriptions enriched with MRR via the centralized calculate_mrr macro.
-      One row per subscription with a recency_rank window for extracting the latest
-      plan/status per workspace. DRY source for all marts that need subscription MRR.
-    columns:
-      - name: subscription_id
-        description: "Stripe subscription ID — primary key."
-        tests: [unique, not_null]
-      - name: workspace_id
-        description: "FK to internal workspace. Used to join with product data."
-        tests: [not_null]
-      - name: mrr_amount
-        description: "MRR computed via calculate_mrr macro (unit_amount × seats / 12)."
-        tests: [not_null]
-      - name: recency_rank
-        description: "1 = most recent subscription for this workspace. Used for current plan extraction."
-
-  - name: int_icp_scoring
-    description: >
-      ICP (Ideal Customer Profile) Fit Score per account.
-      Scores accounts by company attributes (industry, employee count, MRR tier)
-      to classify as High Fit / Medium Fit / Low Fit.
-      Used downstream in fct_pql_signals to build the GTM Priority Matrix.
-    columns:
-      - name: account_id
-        description: "Stable surrogate key — joins to dim_accounts."
-        tests: [unique, not_null]
-      - name: company_name
-        description: "HubSpot company name."
-      - name: industry
-        description: "Industry vertical from HubSpot."
-      - name: mrr
-        description: "MRR from int_finance_aggregated used for scoring."
-      - name: account_segment
-        description: "Revenue-based tier computed here: Enterprise / Mid-Market / SMB / Trial/Free."
-        tests:
-          - accepted_values:
-              values: ['Enterprise', 'Mid-Market', 'SMB', 'Trial/Free']
-      - name: icp_tier
-        description: "ICP Fit classification: High Fit / Medium Fit / Low Fit."
-        tests:
-          - accepted_values:
-              values: ['High Fit', 'Medium Fit', 'Low Fit']
