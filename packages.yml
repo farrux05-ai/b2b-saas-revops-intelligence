@@ -9,7 +9,4 @@ packages:
 
   # Elementary data observability
   - package: elementary-data/elementary
-    version: 0.23.1
-
-
-
+    version: 0.25.1
