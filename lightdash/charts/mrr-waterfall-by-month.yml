@@ -1,0 +1,16 @@
+name: MRR Waterfall (Trailing 12 Months)
+slug: mrr-waterfall-by-month
+tableName: fct_mrr_waterfall
+spaceSlug: finance
+metricQuery:
+  exploreName: fct_mrr_waterfall
+  dimensions:
+    - fct_mrr_waterfall_month_date
+  metrics:
+    - fct_mrr_waterfall_total_new_mrr
+    - fct_mrr_waterfall_total_churn_mrr
+  filters: {}
+  sorts: []
+  limit: 500
+chartConfig:
+  type: bar

@@ -1,0 +1,15 @@
+name: Pipeline by Deal Stage (Weighted)
+slug: sales-pipeline-by-stage
+tableName: fct_pipeline
+spaceSlug: sales
+metricQuery:
+  exploreName: fct_pipeline
+  dimensions:
+    - fct_pipeline_deal_stage
+  metrics:
+    - fct_pipeline_weighted_pipeline_value
+  filters: {}
+  sorts: []
+  limit: 500
+chartConfig:
+  type: bar

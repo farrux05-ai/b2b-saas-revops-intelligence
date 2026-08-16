@@ -1,0 +1,14 @@
+name: Trials Expiring in 3 Days
+slug: product-trial-at-risk
+tableName: fct_trial_conversion
+spaceSlug: product
+metricQuery:
+  exploreName: fct_trial_conversion
+  dimensions:
+    - fct_trial_conversion_trial_id
+  metrics: []
+  filters: {}
+  sorts: []
+  limit: 500
+chartConfig:
+  type: table

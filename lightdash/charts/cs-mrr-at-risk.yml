@@ -1,0 +1,14 @@
+name: MRR at Risk
+slug: cs-mrr-at-risk
+tableName: fct_accounts_health
+spaceSlug: customer-success
+metricQuery:
+  exploreName: fct_accounts_health
+  dimensions: []
+  metrics:
+    - fct_accounts_health_total_mrr_at_risk
+  filters: {}
+  sorts: []
+  limit: 500
+chartConfig:
+  type: big_number

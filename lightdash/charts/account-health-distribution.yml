@@ -1,0 +1,15 @@
+name: Account Health Distribution
+slug: account-health-distribution
+tableName: fct_accounts_health
+spaceSlug: customer-success
+metricQuery:
+  exploreName: fct_accounts_health
+  dimensions:
+    - fct_accounts_health_health_status
+  metrics:
+    - fct_accounts_health_at_risk_accounts
+  filters: {}
+  sorts: []
+  limit: 500
+chartConfig:
+  type: pie

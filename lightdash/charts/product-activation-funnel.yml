@@ -1,0 +1,14 @@
+name: Activation Funnel
+slug: product-activation-funnel
+tableName: fct_product_activation
+spaceSlug: product
+metricQuery:
+  exploreName: fct_product_activation
+  dimensions:
+    - fct_product_activation_account_id
+  metrics: []
+  filters: {}
+  sorts: []
+  limit: 500
+chartConfig:
+  type: bar

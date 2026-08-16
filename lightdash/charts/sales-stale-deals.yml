@@ -1,0 +1,16 @@
+name: Stale Deals (Open >90 Days)
+slug: sales-stale-deals
+tableName: fct_pipeline
+spaceSlug: sales
+metricQuery:
+  exploreName: fct_pipeline
+  dimensions:
+    - fct_pipeline_deal_id
+    - fct_pipeline_deal_stage
+  metrics:
+    - fct_pipeline_stale_deals
+  filters: {}
+  sorts: []
+  limit: 500
+chartConfig:
+  type: table

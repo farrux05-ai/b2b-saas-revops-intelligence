@@ -1,0 +1,15 @@
+name: Win Rate by Account Segment
+slug: sales-win-rate-by-segment
+tableName: fct_pipeline
+spaceSlug: sales
+metricQuery:
+  exploreName: fct_pipeline
+  dimensions:
+    - fct_pipeline_account_segment
+  metrics:
+    - fct_pipeline_total_pipeline_value
+  filters: {}
+  sorts: []
+  limit: 500
+chartConfig:
+  type: bar

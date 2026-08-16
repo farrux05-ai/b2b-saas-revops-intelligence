@@ -1,0 +1,15 @@
+name: GTM Priority Matrix
+slug: product-pql-priority-matrix
+tableName: fct_pql_signals
+spaceSlug: product
+metricQuery:
+  exploreName: fct_pql_signals
+  dimensions:
+    - fct_pql_signals_intent_tier
+  metrics:
+    - fct_pql_signals_pql_workspaces
+  filters: {}
+  sorts: []
+  limit: 500
+chartConfig:
+  type: bar

@@ -1,0 +1,14 @@
+name: Total MRR
+slug: total-mrr
+tableName: dim_accounts
+spaceSlug: executive-overview
+metricQuery:
+  exploreName: dim_accounts
+  dimensions: []
+  metrics:
+    - dim_accounts_total_mrr
+  filters: {}
+  sorts: []
+  limit: 500
+chartConfig:
+  type: big_number

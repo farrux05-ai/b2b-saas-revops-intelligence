@@ -1,0 +1,17 @@
+name: MRR by Account Segment
+slug: mrr-by-segment
+tableName: dim_accounts
+spaceSlug: executive-overview
+metricQuery:
+  exploreName: dim_accounts
+  dimensions:
+    - dim_accounts_account_segment
+  metrics:
+    - dim_accounts_total_mrr
+  filters: {}
+  sorts:
+    - fieldId: dim_accounts_total_mrr
+      descending: true
+  limit: 500
+chartConfig:
+  type: bar
