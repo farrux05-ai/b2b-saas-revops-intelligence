@@ -1,15 +1,15 @@
 # 🔄 Reverse ETL Demo — Step-by-Step Walkthrough
 
-> **Maqsad:** Mock data generatsiya qilish → HubSpot'ga seed → Snowflake warehouse build →
-> Analytics natijalarini HubSpot CRM'ga qaytarish (Reverse ETL)
+> **Goal:** Generate mock data → Seed live HubSpot CRM → Build Snowflake Data Warehouse →
+> Push calculated product & revenue analytics back into HubSpot CRM (Reverse ETL Loop).
 
 ---
 
-## 📦 Arxitektura
+## 📦 Architecture
 
 ```
 generate_mock_data.py
-        │  JSON fayllar (data/raw/)
+        │  JSON Files (data/raw/)
         ▼
 seed_live_environments.py
         │  HubSpot API → 125 Companies, 438 Contacts, 184 Deals
@@ -27,26 +27,26 @@ scripts/reverse_etl_dlt.py
         │  ✅ Contacts:  intent_tier, recommended_action (HOT PQLs)
         │  ✅ L2A:       Contact ↔ Company associations
         ▼
-HubSpot CRM (enriched) 🎯
+HubSpot CRM (Enriched) 🎯
 ```
 
 ---
 
-## 🚀 Ishga tushirish — 5 qadam
+## 🚀 Execution Guide — 5 Steps
 
-> **Har bir qadam** terminalda ketma-ket ishlating.
-> Loyiha papkasida ekanligingizni tekshiring: `cd ~/data_projects/b2b-saas-revops`
+> **Execute each step** sequentially in your terminal.
+> Ensure you are in the project root directory: `cd ~/data_projects/b2b-saas-revops`
 
 ---
 
-### QADAM 1 — Mock data generatsiya
+### STEP 1 — Generate Mock Data
 
 ```bash
 uv venv .venv && source .venv/bin/activate
 python scripts/generate_mock_data.py
 ```
 
-**Natija:**
+**Expected Output:**
 ```
 ✓ hubspot_companies.json     125 records
 ✓ hubspot_deals.json         184 records
@@ -57,15 +57,15 @@ python scripts/generate_mock_data.py
 
 ---
 
-### QADAM 2 — HubSpot'ga seed (real data kiritish)
+### STEP 2 — Seed Live HubSpot Environment
 
 ```bash
 python scripts/seed_live_environments.py
 ```
 
-> ⏱️ Bu **~5-7 daqiqa** davom etadi (rate limit: 0.15s/request)
+> ⏱️ Takes **~5-7 minutes** (enforces rate limit: 0.15s/request)
 
-**Natija:**
+**Expected Output:**
 ```
 🏢 Seeding 125 companies...
   ✅ Created Company: Acme Corp (ID: 44289xxxx)
@@ -78,7 +78,7 @@ python scripts/seed_live_environments.py
 
 ---
 
-### QADAM 2.5 — JSON fayllarni real ID'lar bilan patch qilish
+### STEP 2.5 — Patch Local Raw JSON Files with Real HubSpot IDs
 
 ```bash
 python3 - <<'EOF'
@@ -118,13 +118,13 @@ EOF
 
 ---
 
-### QADAM 3 — Snowflake'ga ingest (dlt pipeline)
+### STEP 3 — Ingest Data into Snowflake (dlt Pipeline)
 
 ```bash
 python ingestion/stackflow_pipeline.py
 ```
 
-**Natija:**
+**Expected Output:**
 ```
 HubSpot:  Pipeline LOADED into Snowflake — 1.8s
 Stripe:   Pipeline LOADED into Snowflake — 2.4s
@@ -134,41 +134,41 @@ Zendesk:  Pipeline LOADED into Snowflake — 1.2s
 
 ---
 
-### QADAM 4 — dbt build (Warehouse Build & Test)
+### STEP 4 — Run dbt Build (Transform & Test Warehouse)
 
 ```bash
 dbt build --target snowflake --store-failures
 ```
 
-> ⏱️ ~25 sekund
+> ⏱️ ~25 seconds
 
-**Natija:**
+**Expected Output:**
 ```
-Done. PASS=160 WARN=0 ERROR=0 SKIP=0 TOTAL=160
+Done. PASS=200 WARN=0 ERROR=0 SKIP=0 TOTAL=200
 ```
 
-**Qurilgan modellar:**
-| Model | Maqsad |
-|-------|--------|
-| `MARTS.DIM_ACCOUNTS` | Account health, MRR/ARR, segment |
-| `MARTS.FCT_PQL_SIGNALS` | HOT/WARM PQL intent scores |
-| `INTERMEDIATE.INT_USERS_JOINED` | Email/domain stitching |
+**Core Built Models:**
+| Model | Description |
+|-------|-------------|
+| `MARTS.DIM_ACCOUNTS` | Account health, MRR/ARR, customer segmentation |
+| `MARTS.FCT_PQL_SIGNALS` | Product-Qualified Lead (HOT/WARM intent scores) |
+| `INTERMEDIATE.INT_USERS_JOINED` | Cross-domain user & account stitching |
 
 ---
 
-### QADAM 5 — Reverse ETL (Snowflake → HubSpot)
+### STEP 5 — Reverse ETL (Snowflake → HubSpot CRM)
 
-#### Avval dry-run (preview, API call yo'q):
+#### Run Dry-Run Mode First (Preview without making API calls):
 ```bash
 python scripts/reverse_etl_dlt.py --dry-run
 ```
 
-#### So'ng live run:
+#### Run Live Sync:
 ```bash
 python scripts/reverse_etl_dlt.py
 ```
 
-**Natija:**
+**Expected Output:**
 ```
 ✅ Company KineticHR     | MRR=$288 | Health=At Risk
 ✅ Company IronMesh      | MRR=$240 | Health=Healthy
@@ -179,25 +179,25 @@ python scripts/reverse_etl_dlt.py
 
 ---
 
-## ✅ HubSpot'da ko'rinadigan natija
+## ✅ Enriched Results in HubSpot CRM
 
-HubSpot'dagi har bir Company recordida endi yangi custom properties:
+Each Company record in HubSpot will now display updated custom properties:
 
-| Property | Misol qiymati | Manba |
-|----------|--------------|-------|
-| `mrr` | `288.0` | Snowflake → DIM_ACCOUNTS |
-| `arr` | `3456.0` | Snowflake → DIM_ACCOUNTS |
+| Property | Example Value | Source Model |
+|----------|---------------|--------------|
+| `mrr` | `288.0` | Snowflake → `DIM_ACCOUNTS` |
+| `arr` | `3456.0` | Snowflake → `DIM_ACCOUNTS` |
 | `health_status` | `At Risk` | dbt health scoring |
-| `health_reason` | `Payment Failing` | Stripe past_due |
-| `account_segment` | `SMB` | Employee count |
-| `subscription_status` | `past_due` | Stripe |
-| `is_ready_for_upsell` | `true` | dbt logic |
-| `is_churning_soon` | `1` | dbt churn signals |
+| `health_reason` | `Payment Failing` | Stripe `past_due` |
+| `account_segment` | `SMB` | Employee count / MRR tier |
+| `subscription_status` | `past_due` | Stripe Billing |
+| `is_ready_for_upsell` | `true` | dbt business logic |
+| `is_churning_soon` | `1` | dbt churn risk signals |
 
-HubSpot'dagi Contact'larda:
+On HubSpot Contact records:
 
-| Property | Misol qiymati |
-|----------|--------------|
+| Property | Example Value |
+|----------|---------------|
 | `intent_tier` | `HOT` |
 | `recommended_action` | `Sales Qualification Call` |
 | `gtm_priority` | `NOTIFY` |
@@ -206,25 +206,25 @@ HubSpot'dagi Contact'larda:
 
 ## 🔧 Troubleshooting
 
-### dlt pending packages xatosi
+### Clear dlt Pending Packages
 ```bash
 dlt pipeline revops_to_hubspot drop-pending-packages
 ```
 
-### dlt state'ni to'liq reset qilish
+### Reset Local dlt Pipeline State
 ```bash
 rm -rf ~/.dlt/pipelines/revops_to_hubspot/
 ```
 
 ---
 
-## 📁 Asosiy fayllar
+## 📁 Key File References
 
-| Fayl | Maqsad |
-|------|--------|
-| [`scripts/generate_mock_data.py`](scripts/generate_mock_data.py) | 125 company, 438 contact, 10K+ event |
-| [`scripts/seed_live_environments.py`](scripts/seed_live_environments.py) | HubSpot'ga POST + real ID sync |
-| [`ingestion/stackflow_pipeline.py`](ingestion/stackflow_pipeline.py) | JSON → Snowflake RAW_DATA (dlt) |
-| [`scripts/reverse_etl_dlt.py`](scripts/reverse_etl_dlt.py) | Snowflake MARTS → HubSpot API |
-| [`models/marts/core/dim_accounts.sql`](models/marts/core/dim_accounts.sql) | Account health & revenue model |
-| [`models/marts/product/fct_pql_signals.sql`](models/marts/product/fct_pql_signals.sql) | PQL scoring model |
+| File | Description |
+|------|-------------|
+| [`scripts/generate_mock_data.py`](file:///home/farrux/data_projects/b2b-saas-revops/scripts/generate_mock_data.py) | Generates 125 companies, 438 contacts, 31K+ events |
+| [`scripts/seed_live_environments.py`](file:///home/farrux/data_projects/b2b-saas-revops/scripts/seed_live_environments.py) | Seeds HubSpot via POST & syncs live IDs |
+| [`ingestion/stackflow_pipeline.py`](file:///home/farrux/data_projects/b2b-saas-revops/ingestion/stackflow_pipeline.py) | Ingests JSON into Snowflake `RAW_DATA` via `dlt` |
+| [`scripts/reverse_etl_dlt.py`](file:///home/farrux/data_projects/b2b-saas-revops/scripts/reverse_etl_dlt.py) | Pushes Snowflake `MARTS` insights back into HubSpot API |
+| [`models/marts/core/dim_accounts.sql`](file:///home/farrux/data_projects/b2b-saas-revops/models/marts/core/dim_accounts.sql) | Golden Record Account dimension model |
+| [`models/marts/product/fct_pql_signals.sql`](file:///home/farrux/data_projects/b2b-saas-revops/models/marts/product/fct_pql_signals.sql) | Product-Qualified Lead scoring model |
