@@ -1,0 +1,89 @@
+name: Product — PLG Signals & Activation
+description: >
+  Product jamoasi uchun: GTM Priority Matrix, activation funnel,
+  trial at-risk, PQL signals.
+slug: product-plg-signals
+updatedAt: "2025-08-16T00:00:00.000Z"
+spaceSlug: product
+version: 1
+tiles:
+  # ── Header ────────────────────────────────────────────────────────────────
+  - x: 0
+    "y": 0
+    h: 2
+    w: 36
+    tabUuid: null
+    type: markdown
+    properties:
+      title: ""
+      hideTitle: true
+      content: |-
+        ## Product — PLG Signals & Activation
+        Intent × Fit GTM matrisi. Convert bo'lmagan triallar.
+
+  # ── Row 1: Activation funnel ─────────────────────────────────────────────
+  - x: 0
+    "y": 2
+    h: 5
+    w: 18
+    tabUuid: null
+    type: saved_chart
+    properties:
+      title: "Activation Funnel: Signup → PQL → Converted"
+      hideTitle: false
+      chartSlug: product-activation-funnel
+    tileSlug: product-activation-funnel
+
+  - x: 18
+    "y": 2
+    h: 5
+    w: 18
+    tabUuid: null
+    type: saved_chart
+    properties:
+      title: "Trials Expiring in 3 Days — CS Intervention Kerak"
+      hideTitle: false
+      chartSlug: product-trial-at-risk
+    tileSlug: product-trial-at-risk
+
+  # ── Row 2: GTM Priority Matrix ───────────────────────────────────────────
+  - x: 0
+    "y": 7
+    h: 11
+    w: 36
+    tabUuid: null
+    type: saved_chart
+    properties:
+      title: "GTM Priority Matrix — Sales Outreach Tartibi"
+      hideTitle: false
+      chartSlug: product-pql-priority-matrix
+    tileSlug: product-pql-priority-matrix
+
+  # ── Row 3: Legend ─────────────────────────────────────────────────────────
+  - x: 0
+    "y": 18
+    h: 5
+    w: 36
+    tabUuid: null
+    type: markdown
+    properties:
+      title: "GTM Priority Matrix — Izoh"
+      hideTitle: false
+      content: |-
+        | Priority | Intent | ICP Fit | Harakat |
+        |---|---|---|---|
+        | **MUST WIN** | HOT | High Fit | Darhol Executive Outreach |
+        | **ACTIVE** | HOT | Medium Fit | Sales Qualification Call |
+        | **HIGH POTENTIAL** | WARM | High Fit | Personalized Demo Invite |
+        | **NURTURE** | WARM | Medium Fit | Automated Nurture Sequence |
+        | **NOTIFY** | HOT | Low Fit | CS ga xabar berish |
+        | **MONITOR** | Any | Low Fit | Avtomatik kuzatish |
+        | **INCUBATE** | COLD | Any | Email sequence |
+
+        **PQL shartlari:** Git integration ulangan **VA** Sprint boshlangan = Product Qualified Lead.
+
+filters:
+  metrics: []
+  dimensions: []
+  tableCalculations: []
+tabs: []

@@ -1,0 +1,104 @@
+name: Executive Overview
+description: >
+  C-Suite uchun asosiy KPIlar — MRR, account health, segment taqsimoti.
+  Har haftada yangilanadi.
+slug: executive-overview
+updatedAt: "2025-08-16T00:00:00.000Z"
+spaceSlug: executive-overview
+version: 1
+tiles:
+  # ── Header markdown ──────────────────────────────────────────────────────
+  - x: 0
+    "y": 0
+    h: 2
+    w: 36
+    tabUuid: null
+    type: markdown
+    properties:
+      title: ""
+      hideTitle: true
+      content: |-
+        ## RevOps Intelligence — Executive Overview
+        Asosiy biznes metrikalar. Manbai: Snowflake → dbt → Lightdash.
+
+  # ── Row 1: Big numbers ────────────────────────────────────────────────────
+  - x: 0
+    "y": 2
+    h: 4
+    w: 9
+    tabUuid: null
+    type: saved_chart
+    properties:
+      title: "Total MRR"
+      hideTitle: false
+      chartSlug: total-mrr
+    tileSlug: exec-total-mrr
+
+  - x: 9
+    "y": 2
+    h: 4
+    w: 9
+    tabUuid: null
+    type: saved_chart
+    properties:
+      title: "MRR at Risk"
+      hideTitle: false
+      chartSlug: cs-mrr-at-risk
+    tileSlug: exec-mrr-at-risk
+
+  - x: 18
+    "y": 2
+    h: 4
+    w: 9
+    tabUuid: null
+    type: markdown
+    properties:
+      title: "Healthy Accounts"
+      hideTitle: false
+      content: |-
+        Accounts with **Healthy** health status.
+        See Account Health dashboard for details.
+
+  - x: 27
+    "y": 2
+    h: 4
+    w: 9
+    tabUuid: null
+    type: markdown
+    properties:
+      title: "Active PQLs"
+      hideTitle: false
+      content: |-
+        Product Qualified Leads ready for Sales outreach.
+        See Product dashboard for GTM Priority Matrix.
+
+  # ── Row 2: MRR by Segment + Health Distribution ───────────────────────────
+  - x: 0
+    "y": 6
+    h: 8
+    w: 20
+    tabUuid: null
+    type: saved_chart
+    properties:
+      title: "MRR by Account Segment"
+      hideTitle: false
+      chartSlug: mrr-by-segment
+    tileSlug: exec-mrr-by-segment
+
+  - x: 20
+    "y": 6
+    h: 8
+    w: 16
+    tabUuid: null
+    type: saved_chart
+    properties:
+      title: "Account Health Distribution"
+      hideTitle: false
+      chartSlug: account-health-distribution
+    tileSlug: exec-health-distribution
+
+filters:
+  metrics: []
+  dimensions: []
+  tableCalculations: []
+tabs: []

@@ -1,0 +1,71 @@
+name: Finance — Revenue Analytics
+description: >
+  MRR waterfall, NRR/GRR trend, LTV segment bo'yicha.
+  Finance jamoasi va investorlar uchun.
+slug: finance-revenue-analytics
+updatedAt: "2025-08-16T00:00:00.000Z"
+spaceSlug: finance
+version: 1
+tiles:
+  # ── Header ────────────────────────────────────────────────────────────────
+  - x: 0
+    "y": 0
+    h: 2
+    w: 36
+    tabUuid: null
+    type: markdown
+    properties:
+      title: ""
+      hideTitle: true
+      content: |-
+        ## Finance — Revenue Analytics
+        MRR waterfall, NRR/GRR, LTV. Oxirgi 12 oy ko'rsatilgan.
+
+  # ── Row 1: MRR Waterfall ─────────────────────────────────────────────────
+  - x: 0
+    "y": 2
+    h: 9
+    w: 36
+    tabUuid: null
+    type: saved_chart
+    properties:
+      title: "MRR Waterfall (Oxirgi 12 oy)"
+      hideTitle: false
+      chartSlug: mrr-waterfall-by-month
+    tileSlug: finance-mrr-waterfall
+
+  # ── Row 2: NRR vs GRR ─────────────────────────────────────────────────────
+  - x: 0
+    "y": 11
+    h: 8
+    w: 36
+    tabUuid: null
+    type: saved_chart
+    properties:
+      title: "NRR vs GRR Trend (Oxirgi 12 oy)"
+      hideTitle: false
+      chartSlug: nrr-grr-trend
+    tileSlug: finance-nrr-grr-trend
+
+  # ── Row 3: Info markdown ──────────────────────────────────────────────────
+  - x: 0
+    "y": 19
+    h: 4
+    w: 36
+    tabUuid: null
+    type: markdown
+    properties:
+      title: "Metrika ta'riflari"
+      hideTitle: false
+      content: |-
+        **NRR (Net Revenue Retention):** Expansion kiradi. 100%+ = o'sish churni bosib o'tyapti. Best-in-class: 120%+
+
+        **GRR (Gross Revenue Retention):** Expansion kiritilmaydi. Ceiling = 100%. Sog'lom SaaS: 85%+
+
+        **Waterfall turlari:** `new` — yangi account | `expansion` — ko'proq to'layapti | `contraction` — kamroq | `churn` — nolga tushdi | `resurrection` — qaytib keldi | `retained` — o'zgarmadi
+
+filters:
+  metrics: []
+  dimensions: []
+  tableCalculations: []
+tabs: []

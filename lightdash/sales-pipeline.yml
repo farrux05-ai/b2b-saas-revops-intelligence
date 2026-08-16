@@ -1,0 +1,89 @@
+name: Sales — Pipeline & Win Rate
+description: >
+  Sales jamoasi uchun: pipeline holati, stale deals,
+  win rate segment bo'yicha, deal velocity.
+slug: sales-pipeline
+updatedAt: "2025-08-16T00:00:00.000Z"
+spaceSlug: sales
+version: 1
+tiles:
+  # ── Header ────────────────────────────────────────────────────────────────
+  - x: 0
+    "y": 0
+    h: 2
+    w: 36
+    tabUuid: null
+    type: markdown
+    properties:
+      title: ""
+      hideTitle: true
+      content: |-
+        ## Sales — Pipeline & Win Rate
+        Ochiq pipeline, stale deals, segment bo'yicha win rate.
+
+  # ── Row 1: Pipeline by stage ──────────────────────────────────────────────
+  - x: 0
+    "y": 2
+    h: 9
+    w: 20
+    tabUuid: null
+    type: saved_chart
+    properties:
+      title: "Pipeline by Deal Stage (Weighted)"
+      hideTitle: false
+      chartSlug: sales-pipeline-by-stage
+    tileSlug: sales-pipeline-by-stage
+
+  - x: 20
+    "y": 2
+    h: 9
+    w: 16
+    tabUuid: null
+    type: saved_chart
+    properties:
+      title: "Win Rate by Account Segment"
+      hideTitle: false
+      chartSlug: sales-win-rate-by-segment
+    tileSlug: sales-win-rate-by-segment
+
+  # ── Row 2: Stale deals table ───────────────────────────────────────────────
+  - x: 0
+    "y": 11
+    h: 10
+    w: 36
+    tabUuid: null
+    type: saved_chart
+    properties:
+      title: "Stale Deals (90 kundan ko'p ochiq) — Darhol e'tibor kerak"
+      hideTitle: false
+      chartSlug: sales-stale-deals
+    tileSlug: sales-stale-deals
+
+  # ── Row 3: Info ───────────────────────────────────────────────────────────
+  - x: 0
+    "y": 21
+    h: 3
+    w: 36
+    tabUuid: null
+    type: markdown
+    properties:
+      title: "Benchmark"
+      hideTitle: false
+      content: |-
+        **Win Rate benchmark:** B2B SaaS da 20–30% sog'lom ko'rsatkich.
+
+        **Stale Deal:** 90 kundan ko'p ochiq = pipeline tiqilib qolish signali. CSM bilan hamkorlikda ko'rib chiqish tavsiya etiladi.
+
+filters:
+  metrics: []
+  dimensions:
+    - target:
+        fieldId: fct_pipeline_account_segment
+        fieldName: account_segment
+        tableName: fct_pipeline
+      values: []
+      disabled: false
+      operator: notNull
+      tileTargets: {}
+  tableCalculations: []
+tabs: []

@@ -1,0 +1,122 @@
+name: Customer Success — Account Health
+description: >
+  CS jamoasi uchun: churn prevention, at-risk accountlar,
+  3 ta churn sinyal (payment + intent + engagement).
+slug: cs-account-health
+updatedAt: "2025-08-16T00:00:00.000Z"
+spaceSlug: customer-success
+version: 1
+tiles:
+  # ── Header ────────────────────────────────────────────────────────────────
+  - x: 0
+    "y": 0
+    h: 2
+    w: 36
+    tabUuid: null
+    type: markdown
+    properties:
+      title: ""
+      hideTitle: true
+      content: |-
+        ## CS — Account Health & Churn Prevention
+        3 ta churn sinyal: **Payment Failing** | **Churning Soon** | **Low Engagement**
+
+  # ── Row 1: Key metrics ────────────────────────────────────────────────────
+  - x: 0
+    "y": 2
+    h: 4
+    w: 12
+    tabUuid: null
+    type: saved_chart
+    properties:
+      title: "MRR at Risk"
+      hideTitle: false
+      chartSlug: cs-mrr-at-risk
+    tileSlug: cs-mrr-at-risk
+
+  - x: 12
+    "y": 2
+    h: 4
+    w: 12
+    tabUuid: null
+    type: markdown
+    properties:
+      title: "3 ta Churn Signali"
+      hideTitle: false
+      content: |-
+        **Payment Failing** → Karta rad etilgan, CS murojaat qilsin
+
+        **Churning Soon** → Bekor qilish boshlangan, saqlab qolish imkoniyati bor
+
+        **Low Engagement** → 30 kundan ko'p faoliyat yo'q, onboarding kerak
+
+  - x: 24
+    "y": 2
+    h: 4
+    w: 12
+    tabUuid: null
+    type: markdown
+    properties:
+      title: "Expansion Imkoniyatlari"
+      hideTitle: false
+      content: |-
+        Seat utilization ≥ 90% bo'lgan accountlar upsell uchun tayyor.
+
+        dim_accounts → is_ready_for_upsell = true
+
+  # ── Row 2: Churn reasons bar ──────────────────────────────────────────────
+  - x: 0
+    "y": 6
+    h: 8
+    w: 16
+    tabUuid: null
+    type: saved_chart
+    properties:
+      title: "Risk Sabablari bo'yicha Account Soni"
+      hideTitle: false
+      chartSlug: cs-churn-risk-reasons
+    tileSlug: cs-churn-risk-reasons
+
+  - x: 16
+    "y": 6
+    h: 8
+    w: 20
+    tabUuid: null
+    type: markdown
+    properties:
+      title: "CS Harakat Plani"
+      hideTitle: false
+      content: |-
+        | Health Reason | Harakat |
+        |---|---|
+        | Payment Failing | Karta yangilash eslatmasi yuborish |
+        | Support Critical | Eskalatsiya, CSM murojaat qilsin |
+        | Low Engagement | Onboarding call rejalashtirish |
+        | Expansion Target | Upsell taklif yuborish |
+
+  # ── Row 3: At-risk accounts table ─────────────────────────────────────────
+  - x: 0
+    "y": 14
+    h: 10
+    w: 36
+    tabUuid: null
+    type: saved_chart
+    properties:
+      title: "At-Risk Accountlar — Prioritet bo'yicha"
+      hideTitle: false
+      chartSlug: cs-at-risk-accounts-table
+    tileSlug: cs-at-risk-table
+
+filters:
+  metrics: []
+  dimensions:
+    - target:
+        fieldId: fct_accounts_health_account_segment
+        fieldName: account_segment
+        tableName: fct_accounts_health
+      values: []
+      disabled: false
+      operator: notNull
+      tileTargets: {}
+  tableCalculations: []
+tabs: []
