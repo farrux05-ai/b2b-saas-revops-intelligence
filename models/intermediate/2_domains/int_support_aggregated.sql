@@ -23,7 +23,7 @@ tickets_with_resolution as (
         case
             when solved_at is not null
               and solved_at > created_at
-            then date_diff('hour', created_at, solved_at)
+            then datediff('hour', created_at, solved_at)
         end                                             as resolution_hours
     from tickets
 ),
