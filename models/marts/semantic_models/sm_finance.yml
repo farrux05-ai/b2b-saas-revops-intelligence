@@ -10,7 +10,6 @@ version: 2
 semantic_models:
 
   # ─── MRR WATERFALL ─────────────────────────────────────────────────────────
-  # Entity grain: one row per account per month.
   - name: mrr_movements
     description: >
       Monthly MRR movement per account. The canonical source for SaaS revenue trends.
@@ -23,7 +22,7 @@ semantic_models:
     entities:
       - name: mrr_movement
         type: primary
-        expr: "account_id || '-' || month_date"
+        expr: waterfall_id
 
       - name: account
         type: foreign
@@ -87,19 +86,18 @@ semantic_models:
         label: "Resurrection MRR (raw)"
 
   # ─── SUBSCRIPTIONS ─────────────────────────────────────────────────────────
-  # Entity grain: one row per Stripe subscription.
   - name: subscriptions
     description: >
       Active subscription snapshot. Finance source of truth for plan mix,
       MRR, and churn intent signals.
     model: ref('fct_subscriptions')
     defaults:
-      agg_time_dimension: subscription_start_date
+      agg_time_dimension: current_period_start_at
 
     entities:
       - name: subscription
         type: primary
-        expr: subscription_id
+        expr: workspace_id
 
     dimensions:
       - name: subscription_status
@@ -107,16 +105,20 @@ semantic_models:
         label: "Status"
         description: "active, trialing, past_due, canceled, etc."
 
-      - name: subscription_start_date
+      - name: plan_id
+        type: categorical
+        label: "Plan"
+
+      - name: current_period_start_at
         type: time
-        label: "Subscription Start"
+        label: "Current Period Start"
         type_params:
           time_granularity: day
 
     measures:
       - name: subscription_count
         agg: count_distinct
-        expr: subscription_id
+        expr: workspace_id
         label: "Subscription Count (raw)"
 
       - name: subscription_mrr
@@ -125,7 +127,6 @@ semantic_models:
         label: "Subscription MRR (raw)"
 
   # ─── ARR MOVEMENTS ─────────────────────────────────────────────────────────
-  # Entity grain: one row per account per month (ARR view).
   - name: arr_movements
     description: >
       Annualized revenue movements. Each row is one account-month.
@@ -167,7 +168,6 @@ semantic_models:
         label: "Net ARR Change (raw)"
 
   # ─── RETENTION COHORTS ─────────────────────────────────────────────────────
-  # Entity grain: one row per calendar month (aggregate).
   - name: retention_cohorts
     description: >
       Monthly NRR and GRR cohort analysis. The #1 investor metric for B2B SaaS.
@@ -231,11 +231,10 @@ semantic_models:
         label: "Ending MRR (raw)"
 
   # ─── UNIT ECONOMICS ────────────────────────────────────────────────────────
-  # Entity grain: one row per account segment.
   - name: unit_economics
     description: >
       LTV estimates per account segment. LTV = Avg MRR / Monthly Churn Rate.
-      Target: LTV:ARR Ratio > 3x. Segment-level aggregate — no time dimension.
+      Target: LTV:ARR Ratio > 3x. Segment-level aggregate.
     model: ref('fct_unit_economics')
     defaults:
       agg_time_dimension: snapshot_date

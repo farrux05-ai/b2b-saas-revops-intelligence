@@ -4,20 +4,14 @@ version: 2
 # SEMANTIC LAYER — Core Domain
 #
 # Standard MetricFlow semantic models. Defines:
-#   - entities   → grain / primary & foreign keys
-#   - dimensions → slicing attributes (categorical + time)
-#   - measures   → raw aggregations (metrics reference these)
-#
-# Downstream: metrics.yml uses these measures to build business metrics.
-# BI Tools:   Lightdash, Tableau, PowerBI via dbt Cloud Semantic Layer API.
-# Note:       Lightdash meta tags are kept in core_schema.yml (column docs).
+#   - entities   -> grain / primary & foreign keys
+#   - dimensions -> slicing attributes (categorical + time)
+#   - measures   -> raw aggregations (metrics reference these)
 # =============================================================================
 
 semantic_models:
 
   # ─── ACCOUNTS ──────────────────────────────────────────────────────────────
-  # Entity grain: one row per B2B account (Golden Record).
-  # Primary entity for ALL GTM metrics.
   - name: accounts
     description: >
       Golden Record account entity. One row per B2B account.
@@ -26,15 +20,12 @@ semantic_models:
     defaults:
       agg_time_dimension: last_activity_at
 
-    # ── Entities ─────────────────────────────────────────────────────────────
     entities:
       - name: account
         type: primary
         expr: account_id
 
-    # ── Dimensions ───────────────────────────────────────────────────────────
     dimensions:
-      # Identity
       - name: domain
         type: categorical
         label: "Domain"
@@ -44,7 +35,7 @@ semantic_models:
         type: categorical
         label: "Workspace Name"
 
-      - name: hubspot_company_name
+      - name: company_name
         type: categorical
         label: "Company Name"
 
@@ -62,7 +53,6 @@ semantic_models:
         type: categorical
         label: "UTM Campaign"
 
-      # Revenue & Plan
       - name: account_segment
         type: categorical
         label: "Account Segment"
@@ -76,7 +66,6 @@ semantic_models:
         type: categorical
         label: "Plan"
 
-      # Health & Risk
       - name: health_status
         type: categorical
         label: "Health Status"
@@ -99,14 +88,12 @@ semantic_models:
       - name: is_ready_for_upsell
         type: categorical
         label: "Upsell Ready"
-        description: "True when seat utilization ≥ 90%."
+        description: "True when seat utilization >= 90%."
 
-      # PLG
       - name: is_pql
         type: categorical
         label: "Is PQL"
 
-      # Time dimensions
       - name: last_activity_at
         type: time
         label: "Last Active"
@@ -125,7 +112,6 @@ semantic_models:
         type_params:
           time_granularity: day
 
-    # ── Measures ─────────────────────────────────────────────────────────────
     measures:
       - name: account_count
         agg: count_distinct
@@ -137,7 +123,7 @@ semantic_models:
         agg: sum
         expr: mrr
         label: "Accounts MRR (raw)"
-        description: "Sum of MRR from dim_accounts. Use finance models for waterfall analysis."
+        description: "Sum of MRR from dim_accounts."
 
       - name: accounts_active_mrr
         agg: sum
@@ -161,7 +147,7 @@ semantic_models:
 
       - name: total_product_events
         agg: sum
-        expr: product_events_count
+        expr: total_product_events
         label: "Total Product Events (raw)"
 
       - name: total_open_deals
@@ -184,7 +170,6 @@ semantic_models:
         expr: open_tickets
         label: "Open Support Tickets (raw)"
 
-      # Filtered counts — for derived rate metrics
       - name: at_risk_account_count
         agg: count_distinct
         expr: case when health_status = 'At Risk' then account_id end
@@ -206,7 +191,6 @@ semantic_models:
         label: "Upsell-Ready Count (raw)"
 
   # ─── USERS ─────────────────────────────────────────────────────────────────
-  # Entity grain: one row per user.
   - name: users
     description: >
       Enriched user directory. One row per user.

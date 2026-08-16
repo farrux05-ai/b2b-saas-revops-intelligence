@@ -13,17 +13,9 @@ models:
         - semantic_layer
         - time_spine
 
-    meta:
-      label: "MetricFlow Time Spine"
-      time_spine: true  # marks this as the project time spine for Lightdash awareness
-
     columns:
       - name: date_day
         description: "One row per calendar day. Primary grain for MetricFlow time dimensions."
         data_tests:
           - not_null
           - unique
-        meta:
-          dimension:
-            type: time
-            time_granularity: day

@@ -10,7 +10,6 @@ version: 2
 semantic_models:
 
   # ─── WORKSPACES (Product Activation) ───────────────────────────────────────
-  # Entity grain: one row per workspace.
   - name: workspaces
     description: >
       Product activation entity. One row per workspace.
@@ -134,7 +133,6 @@ semantic_models:
         label: "Total Product Events (raw)"
 
   # ─── FEATURE USAGE ─────────────────────────────────────────────────────────
-  # Entity grain: one row per workspace × feature_category × week.
   - name: feature_usage
     description: >
       Feature adoption heatmap. Weekly aggregation by workspace and feature category.
@@ -185,7 +183,6 @@ semantic_models:
         label: "Avg Active Days per Week (raw)"
 
   # ─── PQL SIGNALS ───────────────────────────────────────────────────────────
-  # Entity grain: one row per workspace (GTM priority matrix).
   - name: pql_signals
     description: >
       Unified PQL and ICP signal model. Combines Intent (product usage) with
@@ -259,7 +256,6 @@ semantic_models:
         label: "High ICP Fit Count (raw)"
 
   # ─── TRIALS ────────────────────────────────────────────────────────────────
-  # Entity grain: one row per trialing Stripe subscription.
   - name: trials
     description: >
       Trial-to-paid conversion funnel. One row per trialing subscription.
@@ -271,7 +267,7 @@ semantic_models:
     entities:
       - name: trial
         type: primary
-        expr: subscription_id
+        expr: workspace_id
 
     dimensions:
       - name: plan_id
@@ -310,17 +306,17 @@ semantic_models:
     measures:
       - name: trial_count
         agg: count_distinct
-        expr: subscription_id
+        expr: workspace_id
         label: "Trial Count (raw)"
 
       - name: converted_trial_count
         agg: count_distinct
-        expr: case when is_converted = true then subscription_id end
+        expr: case when is_converted = true then workspace_id end
         label: "Converted Trial Count (raw)"
 
       - name: at_risk_trial_count
         agg: count_distinct
-        expr: case when is_at_risk_of_expiring = true then subscription_id end
+        expr: case when is_at_risk_of_expiring = true then workspace_id end
         label: "At-Risk Trial Count (raw)"
 
       - name: avg_time_to_convert

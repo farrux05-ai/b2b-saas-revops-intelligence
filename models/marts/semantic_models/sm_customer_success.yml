@@ -9,7 +9,6 @@ version: 2
 semantic_models:
 
   # ─── CS ACCOUNTS ───────────────────────────────────────────────────────────
-  # Entity grain: one row per paying account.
   - name: cs_accounts
     description: >
       CS team account health entity. One row per paying account.
@@ -25,7 +24,6 @@ semantic_models:
         expr: account_id
 
     dimensions:
-      # Identity
       - name: domain
         type: categorical
         label: "Domain"
@@ -46,7 +44,6 @@ semantic_models:
         type: categorical
         label: "Subscription Status"
 
-      # Health
       - name: health_status
         type: categorical
         label: "Health Status"
@@ -56,7 +53,6 @@ semantic_models:
         type: categorical
         label: "Health Reason"
 
-      # Churn Risk Signals
       - name: is_payment_failing
         type: categorical
         label: "Payment Failing"
@@ -72,17 +68,15 @@ semantic_models:
         label: "Low Engagement"
         description: "True when no activity in last 30 days."
 
-      # Expansion Signals
       - name: is_ready_for_upsell
         type: categorical
         label: "Upsell Ready"
-        description: "True when seat utilization ≥ 90%."
+        description: "True when seat utilization >= 90%."
 
       - name: is_pql
         type: categorical
         label: "Is PQL"
 
-      # Time
       - name: last_activity_at
         type: time
         label: "Last Active"
@@ -101,7 +95,6 @@ semantic_models:
         expr: account_id
         label: "CS Account Count (raw)"
 
-      # Revenue
       - name: cs_total_mrr
         agg: sum
         expr: mrr
@@ -117,7 +110,6 @@ semantic_models:
         expr: mrr_at_risk
         label: "CS MRR at Risk (raw)"
 
-      # Health counts
       - name: at_risk_count
         agg: count_distinct
         expr: case when health_status = 'At Risk' then account_id end
@@ -133,15 +125,14 @@ semantic_models:
         expr: case when health_status = 'Healthy' then account_id end
         label: "Healthy Count (raw)"
 
-      # Risk signal counts
       - name: payment_failing_count
         agg: count_distinct
-        expr: case when is_payment_failing = true then account_id end
+        expr: case when is_payment_failing = 1 then account_id end
         label: "Payment Failing Count (raw)"
 
       - name: churning_soon_count
         agg: count_distinct
-        expr: case when is_churning_soon = true then account_id end
+        expr: case when is_churning_soon = 1 then account_id end
         label: "Churning Soon Count (raw)"
 
       - name: low_engagement_count
@@ -149,13 +140,11 @@ semantic_models:
         expr: case when is_low_engagement = true then account_id end
         label: "Low Engagement Count (raw)"
 
-      # Expansion
       - name: cs_upsell_ready_count
         agg: count_distinct
         expr: case when is_ready_for_upsell = true then account_id end
         label: "CS Upsell-Ready Count (raw)"
 
-      # Support
       - name: sum_total_tickets
         agg: sum
         expr: total_tickets
@@ -176,10 +165,9 @@ semantic_models:
         expr: avg_resolution_hours
         label: "Avg Resolution Hours (raw)"
 
-      # Product
       - name: cs_product_events
         agg: sum
-        expr: product_events_count
+        expr: total_product_events
         label: "CS Product Events (raw)"
 
       - name: cs_avg_seat_util
