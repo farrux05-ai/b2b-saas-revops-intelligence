@@ -82,6 +82,12 @@ models:
                 type: count_distinct
                 label: "Total Deal Count"
 
+      - name: account_id
+        description: "FK to dim_accounts."
+        config:
+          meta:
+            label: "Account ID"
+
       - name: deal_amount
         description: "Deal amount in USD."
         tests: [not_null]
@@ -123,6 +129,12 @@ models:
                 type: count_distinct
                 label: "Total Sales Activities"
 
+      - name: account_id
+        description: "FK to dim_accounts."
+        config:
+          meta:
+            label: "Account ID"
+
       - name: activity_type
         tests:
           - accepted_values:
@@ -155,6 +167,12 @@ models:
               total_leads:
                 type: count_distinct
                 label: "Total Lead Count"
+
+      - name: account_id
+        description: "FK to dim_accounts."
+        config:
+          meta:
+            label: "Account ID"
 
       - name: lifecycle_stage
         tests:
@@ -209,6 +227,12 @@ models:
           meta:
             label: "Workspace ID"
 
+      - name: account_id
+        description: "FK to dim_accounts."
+        config:
+          meta:
+            label: "Account ID"
+
       - name: activation_rate
         description: "activated_users / total_users (0.0 to 1.0)."
         tests: [not_null]
@@ -232,6 +256,12 @@ models:
         config:
           meta:
             label: "Workspace ID"
+
+      - name: account_id
+        description: "FK to dim_accounts."
+        config:
+          meta:
+            label: "Account ID"
 
       - name: intent_tier
         tests:
@@ -283,6 +313,18 @@ models:
           meta:
             label: "Usage Record ID"
 
+      - name: workspace_id
+        description: "FK to workspace."
+        config:
+          meta:
+            label: "Workspace ID"
+
+      - name: account_id
+        description: "FK to dim_accounts."
+        config:
+          meta:
+            label: "Account ID"
+
   - name: fct_trial_conversion
     description: >
       Trial-to-Paid Conversion Funnel Mart. One row per trialing workspace.
@@ -298,6 +340,12 @@ models:
         config:
           meta:
             label: "Workspace ID"
+
+      - name: account_id
+        description: "FK to dim_accounts."
+        config:
+          meta:
+            label: "Account ID"
 
   # ===========================================================================
   # FINANCE
@@ -318,6 +366,12 @@ models:
         config:
           meta:
             label: "Workspace ID"
+
+      - name: account_id
+        description: "FK to dim_accounts."
+        config:
+          meta:
+            label: "Account ID"
 
       - name: mrr_amount
         description: "Workspace active MRR in USD."
@@ -359,6 +413,12 @@ models:
           meta:
             label: "Waterfall Record ID"
 
+      - name: account_id
+        description: "FK to dim_accounts."
+        config:
+          meta:
+            label: "Account ID"
+
       - name: mrr
         description: "End of month MRR."
         tests:
@@ -395,6 +455,12 @@ models:
         config:
           meta:
             label: "ARR Snapshot ID"
+
+      - name: account_id
+        description: "FK to dim_accounts."
+        config:
+          meta:
+            label: "Account ID"
 
       - name: arr_movement_type
         tests:
