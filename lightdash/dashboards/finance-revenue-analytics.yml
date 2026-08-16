@@ -1,8 +1,7 @@
 contentType: dashboard
 name: Finance — Revenue Analytics
 description: >
-  MRR waterfall, NRR/GRR trends, LTV by segment.
-  Designed for Finance leaders and investors.
+  MRR waterfall, NRR/GRR trends, and LTV metrics. Displaying trailing 12 months.
 slug: finance-revenue-analytics
 updatedAt: "2025-08-16T00:00:00.000Z"
 spaceSlug: finance

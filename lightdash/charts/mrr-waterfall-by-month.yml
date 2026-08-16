@@ -1,18 +1,22 @@
 contentType: chart
 name: MRR Waterfall (Trailing 12 Months)
 slug: mrr-waterfall-by-month
-tableName: fct_mrr_waterfall
+tableName: fct_retention_cohorts
 spaceSlug: finance
 version: 1
 metricQuery:
-  exploreName: fct_mrr_waterfall
+  exploreName: fct_retention_cohorts
   dimensions:
-    - fct_mrr_waterfall_month_date
-  metrics:
-    - fct_mrr_waterfall_total_new_mrr
-    - fct_mrr_waterfall_total_churn_mrr
+    - fct_retention_cohorts_month_date
+    - fct_retention_cohorts_new_mrr
+    - fct_retention_cohorts_expansion_mrr
+    - fct_retention_cohorts_contraction_mrr
+    - fct_retention_cohorts_churned_mrr
+  metrics: []
   filters: {}
-  sorts: []
+  sorts:
+    - fieldId: fct_retention_cohorts_month_date
+      descending: false
   tableCalculations: []
   limit: 500
 chartConfig:
@@ -22,18 +26,36 @@ chartConfig:
       series:
         - encode:
             xRef:
-              field: fct_mrr_waterfall_month_date
+              field: fct_retention_cohorts_month_date
             yRef:
-              field: fct_mrr_waterfall_total_new_mrr
+              field: fct_retention_cohorts_new_mrr
+          name: "New MRR"
           type: bar
         - encode:
             xRef:
-              field: fct_mrr_waterfall_month_date
+              field: fct_retention_cohorts_month_date
             yRef:
-              field: fct_mrr_waterfall_total_churn_mrr
+              field: fct_retention_cohorts_expansion_mrr
+          name: "Expansion MRR"
+          type: bar
+        - encode:
+            xRef:
+              field: fct_retention_cohorts_month_date
+            yRef:
+              field: fct_retention_cohorts_contraction_mrr
+          name: "Contraction MRR"
+          type: bar
+        - encode:
+            xRef:
+              field: fct_retention_cohorts_month_date
+            yRef:
+              field: fct_retention_cohorts_churned_mrr
+          name: "Churned MRR"
           type: bar
     layout:
-      xField: fct_mrr_waterfall_month_date
+      xField: fct_retention_cohorts_month_date
       yField:
-        - fct_mrr_waterfall_total_new_mrr
-        - fct_mrr_waterfall_total_churn_mrr
+        - fct_retention_cohorts_new_mrr
+        - fct_retention_cohorts_expansion_mrr
+        - fct_retention_cohorts_contraction_mrr
+        - fct_retention_cohorts_churned_mrr
