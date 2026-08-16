@@ -15,8 +15,8 @@ KEY ARCHITECTURAL DECISIONS:
   - Monitoring: Every asset reports its status and failures in the Dagster UI.
   - RetryPolicy: Exponential backoff handles temporary network/API errors gracefully.
   - Declarative Lineage: Dagster manages execution order via asset dependencies.
-  - Portability: shutil.which() dynamically resolves dbt executable locally and in Cloud Docker.
-  - Security: All credentials use os.getenv(), integrated with local .env and Dagster Cloud Secrets.
+*   - Portability: shutil.which() dynamically resolves dbt executable locally.
+*   - Security: All credentials use os.getenv(), integrated with local .env file.
 """
 
 import json
@@ -161,7 +161,7 @@ def dlt_reverse_etl(context: AssetExecutionContext):
         context.log.warning(
             "⚠️  HUBSPOT_ACCESS_TOKEN is missing or a placeholder. "
             "Skipping HubSpot Reverse ETL sync. "
-            "Please configure the real token in Dagster Cloud Env Vars for production."
+            "Please configure the real token in local .env for production."
         )
         return
 
