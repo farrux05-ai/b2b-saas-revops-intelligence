@@ -91,9 +91,9 @@ def validate_token(dry_run: bool):
 
 def get_db_cursor():
     """Connects to Snowflake if credentials exist, otherwise local DuckDB."""
-    account = os.getenv("SNOWFLAKE_ACCOUNT")
-    user = os.getenv("SNOWFLAKE_USER")
-    password = os.getenv("SNOWFLAKE_PASSWORD")
+    account = (os.getenv("SNOWFLAKE_ACCOUNT") or "").strip()
+    user = (os.getenv("SNOWFLAKE_USER") or "").strip()
+    password = (os.getenv("SNOWFLAKE_PASSWORD") or "").strip()
 
     if account and user and password:
         try:
@@ -102,9 +102,9 @@ def get_db_cursor():
                 account=account,
                 user=user,
                 password=password,
-                role=os.getenv("SNOWFLAKE_ROLE", "TRANSFORMER"),
-                warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
-                database=os.getenv("SNOWFLAKE_DATABASE", "REVOPS_INTELLIGENCE"),
+                role=(os.getenv("SNOWFLAKE_ROLE") or "TRANSFORMER").strip(),
+                warehouse=(os.getenv("SNOWFLAKE_WAREHOUSE") or "COMPUTE_WH").strip(),
+                database=(os.getenv("SNOWFLAKE_DATABASE") or "REVOPS_INTELLIGENCE").strip(),
                 schema="MARTS",
             )
             return conn.cursor(), "snowflake", conn
@@ -163,6 +163,7 @@ def revops_warehouse_source():
                     last_updated_at
                 FROM {table_prefix}dim_accounts
                 WHERE hubspot_company_id IS NOT NULL
+                  AND LENGTH(hubspot_company_id) > 8
                 ORDER BY mrr DESC NULLS LAST
             """
             cursor.execute(query)
@@ -202,6 +203,7 @@ def revops_warehouse_source():
                     ON p.workspace_id = u.internal_workspace_id
                 WHERE p.intent_tier IN ('HOT', 'WARM')
                   AND u.hubspot_contact_id IS NOT NULL
+                  AND u.hubspot_contact_id NOT LIKE 'contact_%'
                   AND u.user_role = 'owner'
             """
             cursor.execute(query)
@@ -234,6 +236,7 @@ def revops_warehouse_source():
                     u.match_method
                 FROM {identity_prefix}int_users_joined u
                 WHERE u.hubspot_contact_id IS NOT NULL
+                  AND u.hubspot_contact_id NOT LIKE 'contact_%'
                   AND u.hubspot_company_id_stitched IS NOT NULL
                   AND u.match_method IN ('email_match', 'domain_l2a')
             """
@@ -279,15 +282,19 @@ def hubspot_api_destination(items: TDataItems, table: TTableSchema) -> None:
 
 
 def _patch(url: str, payload: dict, label: str):
-    """PATCH a HubSpot object. Handles rate limits with exponential backoff."""
+    """PATCH a HubSpot object. Handles rate limits and missing objects gracefully."""
     if _DRY_RUN:
         logger.info(f"   [DRY RUN] PATCH {url}\n   Payload: {payload}")
         return
 
+    import requests as raw_requests
     for attempt in range(1, 4):
-        resp = requests.patch(url, headers=HEADERS, json=payload)
-        if resp.status_code == 200:
+        resp = raw_requests.patch(url, headers=HEADERS, json=payload)
+        if resp.status_code in (200, 204):
             logger.info(f"   ✅ {label}")
+            return
+        elif resp.status_code == 404:
+            logger.warning(f"   ⚠️ Object not found in HubSpot (404): {label}")
             return
         elif resp.status_code == 429:
             retry_after = int(resp.headers.get("Retry-After", 2))
