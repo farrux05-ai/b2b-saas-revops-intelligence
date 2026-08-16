@@ -106,9 +106,7 @@ When the VP of Sales asked *"Which accounts are 80%+ on seats but haven't expand
 
 ## 2. 🏗️ Solution & Architecture
 
-> 📹 **[Watch Section Video](#)** *(coming soon)*
-
-**One pipeline, full loop:** raw API data → Snowflake → dbt models → Slack AI agent → back into HubSpot.
+One pipeline, full loop: raw API data → Snowflake → dbt models → Slack AI agent → back into HubSpot.
 
 ![Full Data Architecture](screenshots/full_data_architecture.jpeg)
 
@@ -134,8 +132,6 @@ When the VP of Sales asked *"Which accounts are 80%+ on seats but haven't expand
 
 ## 3. 📥 Extract & Load (Ingestion)
 
-> 📹 **[Watch Section Video](#)** *(coming soon)*
-
 **[dlt (data load tool)](https://dlthub.com)** ingests from 5 sources into Snowflake's `RAW_DATA` schema — handling schema inference, incremental loading, and pagination automatically.
 
 | Source | Method | Key Tables |
@@ -154,7 +150,7 @@ When the VP of Sales asked *"Which accounts are 80%+ on seats but haven't expand
 
 **2. Snowflake `RAW_DATA` Schema Load State:**
 
-![Snowflake RAW_DATA Schema State](screenshots/snowflake_dlt_load_state.png)
+![Snowflake RAW_DATA Schema State](screenshots/snowflake_dlt_load_state.jpeg)
 
 <details>
 <summary><strong>📂 Two-Mode Ingestion (Dev vs Prod)</strong></summary>
@@ -178,8 +174,6 @@ RAW_DATA.ZENDESK__TICKETS
 
 ## 4. ⚙️ Transformation
 
-> 📹 **[Watch Section Video](#)** *(coming soon)*
-
 **dbt** transforms raw Snowflake data through a 3-layer medallion architecture into business-ready tables used by BI, Slack, and Reverse ETL.
 
 ```
@@ -188,6 +182,16 @@ RAW_DATA (Snowflake)
             └── INTERMEDIATE  ← Views: identity stitch, domain aggregation
                     └── MARTS ← Tables: facts & dims consumed by downstream
 ```
+
+### 📸 Transformation Execution & Lineage
+
+**1. `dbt build` Execution (Snowflake Warehouse):**
+
+![dbt Build Execution](screenshots/dbt_build.png)
+
+**2. dbt Lineage DAG & Documentation:**
+
+![dbt Documentation & Lineage DAG](screenshots/dbt_docs.png)
 
 ### Key Marts
 
@@ -263,8 +267,6 @@ END
 
 ## 5. 🧪 Data Validation & Observability
 
-> 📹 **[Watch Section Video](#)** *(coming soon)*
-
 **160 dbt tests** run inline on every `dbt build`. [Elementary](https://www.elementary-data.com/) monitors anomalies between runs and posts failures directly to Slack.
 
 | Layer | Count | Type |
@@ -273,7 +275,19 @@ END
 | Relationship tests | ~15 | FK integrity across marts |
 | Custom SQL assertions | ~15 | Business logic correctness |
 
-**Elementary monitors:** row count drops · freshness delays · schema drift · test failure trends → `#data-alerts`
+### 📸 Data Observability & Monitoring Dashboards
+
+**1. Elementary Observability Dashboard (Test Health & Coverage):**
+
+![Elementary Dashboard](screenshots/elementary_dashboard.png)
+
+**2. Test Execution Performance & Duration Tracking:**
+
+![Elementary Test Performance](screenshots/elementary_test_performance.png)
+
+**3. Anomaly Detection & Source Freshness Monitoring:**
+
+![Elementary Anomaly Detection](screenshots/elementary_anomaly_freshness.png)
 
 <details>
 <summary><strong>📋 Source Freshness SLAs & Composite Key Tests</strong></summary>
@@ -306,8 +320,6 @@ edr send-report --slack-token $SLACK_TOKEN --slack-channel data-alerts
 ---
 
 ## 6. 🧠 Semantic Layer + Slack AI Agent
-
-> 📹 **[Watch Section Video](#)** *(coming soon)*
 
 **The problem:** Every business question required an analyst to write SQL — days of delay. GTM teams made decisions on stale data.
 
@@ -347,8 +359,6 @@ No SQL. No BI tool login. No analyst in the loop.
 
 ## 7. 📊 BI Reporting
 
-> 📹 **[Watch Section Video](#)** *(coming soon)*
-
 **[Lightdash](https://lightdash.com)** connects directly to Snowflake via the dbt semantic layer. No separate metric definitions needed.
 
 | Dashboard | Audience | Answers |
@@ -365,8 +375,6 @@ No SQL. No BI tool login. No analyst in the loop.
 
 ## 8. 🔄 Reverse ETL
 
-> 📹 **[Watch Section Video](#)** *(coming soon)*
-
 Insights computed in Snowflake are pushed **back into HubSpot** so GTM teams act without leaving their CRM.
 
 | What gets pushed | HubSpot Property | Who acts |
@@ -377,10 +385,20 @@ Insights computed in Snowflake are pushed **back into HubSpot** so GTM teams act
 | `dim_accounts.arr` | `current_arr` | Finance / Sales — deal context |
 
 ```
-Snowflake → scripts/reverse_etl_dlt.py → HubSpot Companies API ✅
+Snowflake → scripts/reverse_etl_dlt.py → HubSpot Companies & Contacts API ✅
 ```
 
-→ **[Full Step-by-Step Demo](REVERSE_ETL_DEMO.md)**
+→ **[Full Step-by-Step Demo Guide](REVERSE_ETL_DEMO.md)**
+
+### 📸 Live Enriched Results in HubSpot CRM
+
+**1. HubSpot Company Record Enriched with Snowflake MRR & Health Signals:**
+
+![HubSpot Enriched Company Record](screenshots/reverse_etl_company.png)
+
+**2. HubSpot Contact Record Tagged with HOT PQL Intent & Action:**
+
+![HubSpot Enriched Contact Record](screenshots/reverse_etl_contacs.png)
 
 <details>
 <summary><strong>⚙️ Implementation Details</strong></summary>
@@ -404,8 +422,6 @@ python scripts/reverse_etl_dlt.py --resource pql
 
 ## 9. ⚙️ Orchestration
 
-> 📹 **[Watch Section Video](#)** *(coming soon)*
-
 **[Dagster](https://dagster.io)** runs the full pipeline daily at 07:00 UTC as an asset-based DAG — tracking data freshness, not just script execution.
 
 ```
@@ -420,15 +436,23 @@ dagster dev -f dagster_pipeline.py
 # → http://localhost:3000
 ```
 
-### 📸 Asset Lineage Graph
+### 📸 Dagster Orchestration Dashboards
 
-![Dagster Asset Lineage Graph](screenshots/dagster_linage.png)
+**1. Full End-to-End Asset Lineage Graph:**
+
+![Dagster Full Asset Lineage Graph](screenshots/dagster_full_linage.png)
+
+**2. Data Asset Catalog:**
+
+![Dagster Data Assets](screenshots/dagster_assets.png)
+
+**3. Asset Jobs & Execution Pipelines:**
+
+![Dagster Asset Jobs](screenshots/dagster_jobs.png)
 
 ---
 
 ## 10. 🔁 CI/CD
-
-> 📹 **[Watch Section Video](#)** *(coming soon)*
 
 Every Pull Request triggers automated quality gates via **GitHub Actions**.
 
@@ -438,10 +462,11 @@ Every Pull Request triggers automated quality gates via **GitHub Actions**.
 | `elementary_checks.yml` | PR open/update | Run data quality checks → post results as PR comment |
 | `dbt_docs_deploy.yml` | Merge to `main` | Generate + deploy dbt docs to GitHub Pages |
 
-**Slim CI** only rebuilds what changed — fast CI even at scale:
-```bash
-dbt build --select state:modified+ --defer --state ./prod-artifacts --target snowflake
-```
+### 📸 dbt Slim CI Execution Output
+
+**dbt Slim CI (`state:modified+`) executing on Snowflake in seconds:**
+
+![dbt Slim CI Execution Output](screenshots/slim_ci.png)
 
 > **Live Docs:** Every merge auto-deploys to **[farrux05-ai.github.io/b2b-saas-revops-intelligence](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/)**
 
@@ -524,6 +549,7 @@ python scripts/reverse_etl_dlt.py           # 4. Push to HubSpot
 | [Deployment Runbook](docs/DEPLOYMENT.md) | Snowflake setup, Lightdash config, CI/CD, Dagster scheduling |
 | [Case Study](docs/CASE_STUDY.md) | $45K ARR saved in 30 days — full story |
 | [Reverse ETL Demo](REVERSE_ETL_DEMO.md) | Step-by-step live pipeline walkthrough |
+| [Slim CI Demo](SLIM_CI_DEMO.md) | Step-by-step Slim CI demonstration guide |
 | [Live dbt Docs](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/) | Interactive lineage graph + column docs |
 
 ---
