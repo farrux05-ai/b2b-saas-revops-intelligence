@@ -357,17 +357,28 @@ No SQL. No BI tool login. No analyst in the loop.
 
 ---
 
-## 7. 📊 BI Reporting
+## 7. 📊 BI Reporting & Dashboards as Code
 
-**[Lightdash](https://lightdash.com)** connects directly to Snowflake via the dbt semantic layer. No separate metric definitions needed.
+**[Lightdash](https://lightdash.com)** connects directly to Snowflake via the dbt semantic layer (`meta` YAML tags). No separate metric definitions needed.
 
-| Dashboard | Audience | Answers |
-|:----------|:---------|:--------|
-| Revenue Overview | Finance / CEO | MRR Waterfall, NRR/GRR trend, ARR movements |
-| Account Health | Customer Success | At-risk list, signal breakdown, save plays |
-| PQL Pipeline | Sales | HOT/WARM/COLD intent, ICP × Intent matrix |
-| Product Activation | Product | Activation funnel, trial conversion, seat utilization |
-| Sales Pipeline | Sales | Deal stage funnel, weighted pipeline, days-to-close |
+| Dashboard | File | Audience | Answers |
+|:----------|:-----|:---------|:--------|
+| **Executive Overview** | [`executive-overview.yml`](lightdash/executive-overview.yml) | C-Suite / CEO | Total MRR, MRR at Risk, Account Health Distribution |
+| **Finance Revenue Analytics** | [`finance-revenue-analytics.yml`](lightdash/finance-revenue-analytics.yml) | Finance / CFO | MRR Waterfall, NRR vs GRR Trend, ARR Movements |
+| **CS Account Health** | [`cs-account-health.yml`](lightdash/cs-account-health.yml) | Customer Success | At-risk list, Churn Risk Reasons, CS Action Plan |
+| **Sales Pipeline** | [`sales-pipeline.yml`](lightdash/sales-pipeline.yml) | Sales Leaders / AEs | Deal stage funnel, Weighted Pipeline, Stale Deals |
+| **Product PLG Signals** | [`product-plg-signals.yml`](lightdash/product-plg-signals.yml) | Product / Growth | Activation Funnel, GTM Priority Matrix, Trial Risks |
+
+→ **[Full Lightdash Dashboards-as-Code Deployment Guide](lightdash/README.md)**
+
+```bash
+# 1. Compile Lightdash semantic layer from dbt meta
+npx @lightdash/cli compile
+
+# 2. Deploy semantic layer + dashboards as code
+npx @lightdash/cli deploy
+npx @lightdash/cli upload --force
+```
 
 > All dashboards registered in `models/marts/exposures.yml` — dbt lineage shows exactly which dashboards depend on which models.
 
