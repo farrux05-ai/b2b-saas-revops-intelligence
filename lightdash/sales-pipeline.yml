@@ -1,7 +1,7 @@
 name: Sales — Pipeline & Win Rate
 description: >
-  Sales jamoasi uchun: pipeline holati, stale deals,
-  win rate segment bo'yicha, deal velocity.
+  For Sales Leadership & AEs: pipeline health, stale deals,
+  win rate by segment, and deal velocity.
 slug: sales-pipeline
 updatedAt: "2025-08-16T00:00:00.000Z"
 spaceSlug: sales
@@ -19,7 +19,7 @@ tiles:
       hideTitle: true
       content: |-
         ## Sales — Pipeline & Win Rate
-        Ochiq pipeline, stale deals, segment bo'yicha win rate.
+        Open pipeline value, stale deals, and win rates by account segment.
 
   # ── Row 1: Pipeline by stage ──────────────────────────────────────────────
   - x: 0
@@ -54,7 +54,7 @@ tiles:
     tabUuid: null
     type: saved_chart
     properties:
-      title: "Stale Deals (90 kundan ko'p ochiq) — Darhol e'tibor kerak"
+      title: "Stale Deals (Open >90 Days) — Immediate Attention Needed"
       hideTitle: false
       chartSlug: sales-stale-deals
     tileSlug: sales-stale-deals
@@ -67,12 +67,12 @@ tiles:
     tabUuid: null
     type: markdown
     properties:
-      title: "Benchmark"
+      title: "Benchmarks & Guidelines"
       hideTitle: false
       content: |-
-        **Win Rate benchmark:** B2B SaaS da 20–30% sog'lom ko'rsatkich.
+        **Win Rate Benchmark:** 20–30% is healthy for B2B SaaS.
 
-        **Stale Deal:** 90 kundan ko'p ochiq = pipeline tiqilib qolish signali. CSM bilan hamkorlikda ko'rib chiqish tavsiya etiladi.
+        **Stale Deal:** Open >90 days signals pipeline friction. Collaborative review with CSM is recommended.
 
 filters:
   metrics: []

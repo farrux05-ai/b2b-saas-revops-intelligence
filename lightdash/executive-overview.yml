@@ -1,7 +1,7 @@
 name: Executive Overview
 description: >
-  C-Suite uchun asosiy KPIlar — MRR, account health, segment taqsimoti.
-  Har haftada yangilanadi.
+  Key C-Suite KPIs — MRR, account health, and segment distribution.
+  Updated automatically.
 slug: executive-overview
 updatedAt: "2025-08-16T00:00:00.000Z"
 spaceSlug: executive-overview
@@ -19,7 +19,7 @@ tiles:
       hideTitle: true
       content: |-
         ## RevOps Intelligence — Executive Overview
-        Asosiy biznes metrikalar. Manbai: Snowflake → dbt → Lightdash.
+        Core business metrics. Source: Snowflake → dbt → Lightdash.
 
   # ── Row 1: Big numbers ────────────────────────────────────────────────────
   - x: 0
@@ -56,8 +56,8 @@ tiles:
       title: "Healthy Accounts"
       hideTitle: false
       content: |-
-        Accounts with **Healthy** health status.
-        See Account Health dashboard for details.
+        Accounts with **Healthy** status.
+        See Account Health dashboard for breakdown.
 
   - x: 27
     "y": 2

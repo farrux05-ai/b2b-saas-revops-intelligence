@@ -1,7 +1,7 @@
 name: Customer Success — Account Health
 description: >
-  CS jamoasi uchun: churn prevention, at-risk accountlar,
-  3 ta churn sinyal (payment + intent + engagement).
+  For CS Team: churn prevention, at-risk accounts,
+  and 3 churn signals (payment + intent + engagement).
 slug: cs-account-health
 updatedAt: "2025-08-16T00:00:00.000Z"
 spaceSlug: customer-success
@@ -19,7 +19,7 @@ tiles:
       hideTitle: true
       content: |-
         ## CS — Account Health & Churn Prevention
-        3 ta churn sinyal: **Payment Failing** | **Churning Soon** | **Low Engagement**
+        3 Churn Signals: **Payment Failing** | **Churning Soon** | **Low Engagement**
 
   # ── Row 1: Key metrics ────────────────────────────────────────────────────
   - x: 0
@@ -41,14 +41,14 @@ tiles:
     tabUuid: null
     type: markdown
     properties:
-      title: "3 ta Churn Signali"
+      title: "3 Churn Signals"
       hideTitle: false
       content: |-
-        **Payment Failing** → Karta rad etilgan, CS murojaat qilsin
+        **Payment Failing** → Card declined, CS outreach required
 
-        **Churning Soon** → Bekor qilish boshlangan, saqlab qolish imkoniyati bor
+        **Churning Soon** → Cancellation initiated, save opportunity
 
-        **Low Engagement** → 30 kundan ko'p faoliyat yo'q, onboarding kerak
+        **Low Engagement** → >30 days inactive, onboarding required
 
   - x: 24
     "y": 2
@@ -57,10 +57,10 @@ tiles:
     tabUuid: null
     type: markdown
     properties:
-      title: "Expansion Imkoniyatlari"
+      title: "Expansion Opportunities"
       hideTitle: false
       content: |-
-        Seat utilization ≥ 90% bo'lgan accountlar upsell uchun tayyor.
+        Accounts with seat utilization ≥ 90% are ready for upsell.
 
         dim_accounts → is_ready_for_upsell = true
 
@@ -72,7 +72,7 @@ tiles:
     tabUuid: null
     type: saved_chart
     properties:
-      title: "Risk Sabablari bo'yicha Account Soni"
+      title: "Account Count by Risk Reason"
       hideTitle: false
       chartSlug: cs-churn-risk-reasons
     tileSlug: cs-churn-risk-reasons
@@ -84,15 +84,15 @@ tiles:
     tabUuid: null
     type: markdown
     properties:
-      title: "CS Harakat Plani"
+      title: "CS Action Playbook"
       hideTitle: false
       content: |-
-        | Health Reason | Harakat |
+        | Health Reason | Action Playbook |
         |---|---|
-        | Payment Failing | Karta yangilash eslatmasi yuborish |
-        | Support Critical | Eskalatsiya, CSM murojaat qilsin |
-        | Low Engagement | Onboarding call rejalashtirish |
-        | Expansion Target | Upsell taklif yuborish |
+        | Payment Failing | Send billing update reminder |
+        | Support Critical | Escalation, CSM direct outreach |
+        | Low Engagement | Schedule onboarding/re-engagement call |
+        | Expansion Target | Send expansion/upsell proposal |
 
   # ── Row 3: At-risk accounts table ─────────────────────────────────────────
   - x: 0
@@ -102,7 +102,7 @@ tiles:
     tabUuid: null
     type: saved_chart
     properties:
-      title: "At-Risk Accountlar — Prioritet bo'yicha"
+      title: "At-Risk Accounts — Priority Ordered"
       hideTitle: false
       chartSlug: cs-at-risk-accounts-table
     tileSlug: cs-at-risk-table

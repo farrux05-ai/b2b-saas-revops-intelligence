@@ -1,68 +1,69 @@
 # Lightdash Dashboards as Code
 
-## Fayl tuzilishi
+## Directory Structure
 
 ```
 lightdash/
-├── spaces/          # 6 ta space (jamoa bo'yicha)
-├── charts/          # 17 ta chart
-└── dashboards/      # 5 ta dashboard
+├── executive-overview.yml           # Executive C-Suite Dashboard
+├── cs-account-health.yml            # Customer Success & Churn Risk Dashboard
+├── finance-revenue-analytics.yml    # Finance & MRR Waterfall Dashboard
+├── sales-pipeline.yml               # Sales Pipeline & Win Rate Dashboard
+└── product-plg-signals.yml          # Product-Qualified Leads & Activation Dashboard
 ```
 
-## Dashboardlar
+## Dashboards Overview
 
-| Dashboard | Space | Auditoriya |
+| Dashboard | Target Audience | Primary Focus |
 |---|---|---|
-| `executive-overview` | Executive Overview | CEO, CFO |
-| `finance-revenue-analytics` | Finance | CFO, Finance jamoasi |
-| `cs-account-health` | Customer Success | CS jamoasi |
-| `sales-pipeline` | Sales | AE, SDR |
-| `marketing-lead-funnel` | Marketing | Marketing jamoasi |
-| `product-plg-signals` | Product | PM, Growth |
+| `executive-overview` | CEO, CFO, C-Suite | Total MRR, At-Risk ARR, Account Health Distribution |
+| `finance-revenue-analytics` | CFO, Finance Team | MRR Waterfall, NRR vs GRR Trends, Cohorts |
+| `cs-account-health` | Customer Success Team | 3-Signal Churn Prevention, At-Risk Accounts Table |
+| `sales-pipeline` | VP Sales, AEs, SDRs | Weighted Pipeline by Stage, Win Rate, Stale Deals |
+| `product-plg-signals` | PMs, Growth Leaders | Activation Funnel, GTM Priority Matrix, Trial Risks |
 
-## CLI — Birinchi marta deploy
+## CLI — Initial Deployment
 
 ```bash
-# 1. CLI o'rnatish
+# 1. Install Lightdash CLI globally
 npm install -g @lightdash/cli
 
-# 2. Login (Snowflake ulangan Lightdash instance)
+# 2. Login to your Lightdash cloud instance
 lightdash login https://your-lightdash.cloud
 
-# 3. Loyihani tanlash
+# 3. Select project
 lightdash config set-project
 
-# 4. dbt modellarni deploy (semantic layer)
+# 4. Deploy dbt semantic layer (dbt meta tags)
 lightdash deploy
 
-# 5. Barcha dashboardlarni birga deploy
+# 5. Upload all dashboards as code
 lightdash upload --force
 ```
 
-## CLI — O'zgarishlar deploy
+## CLI — Incremental Updates
 
 ```bash
-# Faqat o'zgargan fayllar upload qilinadi
+# Upload only modified dashboards
 lightdash upload
 
-# Bitta dashboard
+# Upload a single dashboard with embedded charts
 lightdash upload -d cs-account-health --include-charts
 
-# Bitta chart
+# Upload a single chart
 lightdash upload -c cs-mrr-at-risk
 ```
 
-## Validation (deploy oldidan)
+## Validation & Linting
 
 ```bash
+# Validate dashboard YAML syntax before deployment
 lightdash lint
 ```
 
-## CI/CD (GitHub Actions)
+## CI/CD Integration (GitHub Actions)
 
 ```yaml
-# .github/workflows/lightdash.yml
-name: Deploy Lightdash
+name: Deploy Lightdash Dashboards
 
 on:
   push:
@@ -72,21 +73,15 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: npm install -g @lightdash/cli
       - run: lightdash login ${{ secrets.LIGHTDASH_URL }} --token ${{ secrets.LIGHTDASH_API_KEY }}
       - run: lightdash config set-project --project ${{ secrets.LIGHTDASH_PROJECT }}
-      - run: lightdash deploy          # semantic layer (dbt meta)
-      - run: lightdash upload --force  # dashboards + charts
+      - run: lightdash deploy          # Semantic layer (dbt meta)
+      - run: lightdash upload --force  # Dashboards + charts
 ```
 
-## .gitignore ga qo'shish
-
-```
-lightdash/.lightdash-metadata.json
-```
-
-## schema.yml da meta tag qo'shish (dim_accounts misoli)
+## Adding Semantic Meta Tags in `schema.yml` (`dim_accounts` Example)
 
 ```yaml
 models:
