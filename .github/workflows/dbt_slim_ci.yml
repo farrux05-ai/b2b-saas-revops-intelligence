@@ -1,0 +1,88 @@
+name: dbt Slim CI & Observability
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  slim_ci:
+    name: dbt Slim CI (Snowflake)
+    runs-on: ubuntu-latest
+
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+      SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+      SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+      SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+      HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: 📦 Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install dbt-snowflake==1.9.0 elementary-data==0.25.1 dlt duckdb
+
+      - name: 🔌 Install dbt Packages
+        run: |
+          dbt deps
+
+      - name: 📂 Download Main Branch Manifest (State Deferral)
+        if: github.event_name == 'pull_request'
+        uses: dawidd6/action-download-artifact@v6
+        continue-on-error: true
+        with:
+          name: dbt-manifest
+          path: ./state
+          branch: main
+
+      - name: 🔍 Compile Fallback State (If Main Manifest Not Found)
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ ! -f ./state/manifest.json ]; then
+            echo "⚠️  Main manifest not found in artifacts. Compiling baseline manifest..."
+            mkdir -p ./state
+            dbt parse --target snowflake
+            cp target/manifest.json ./state/manifest.json
+          fi
+
+      - name: 🚀 Run dbt Slim CI (Modified Models & Downstream Dependencies Only)
+        if: github.event_name == 'pull_request'
+        run: |
+          dbt build \
+            --target ci \
+            --select state:modified+ \
+            --defer \
+            --state ./state \
+            --store-failures
+
+      - name: 🏗️ Full dbt Build on Main Merge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          dbt build --target snowflake --store-failures
+
+      - name: 🛡️ Elementary Data Observability Run
+        run: |
+          dbt run -s elementary --target snowflake
+
+      - name: 📤 Upload Production Manifest Artifact (For Future PR Deferral)
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-manifest
+          path: target/manifest.json
+          retention-days: 30
