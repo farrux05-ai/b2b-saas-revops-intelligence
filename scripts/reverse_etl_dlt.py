@@ -1,7 +1,7 @@
 """
 reverse_etl_dlt.py
 ==================
-Reads actionable insights from DuckDB warehouse and pushes them
+Reads actionable insights from Snowflake Data Warehouse (or local DuckDB) and pushes them
 back into HubSpot CRM (the "Reverse ETL" loop).
 
 WHAT IT SYNCS:
@@ -26,13 +26,10 @@ import time
 import argparse
 import logging
 from datetime import datetime
-from typing import Iterator
 
 import dlt
-try:
-    import duckdb
-except ImportError:
-    duckdb = None
+import duckdb
+import snowflake.connector
 from dotenv import load_dotenv
 from dlt.common.typing import TDataItems
 from dlt.common.schema import TTableSchema
@@ -89,22 +86,40 @@ def validate_token(dry_run: bool):
         logger.info("✅ HubSpot token verified.")
 
 # ---------------------------------------------------------------------------
-# SOURCES — DuckDB reads
+# SOURCES — Snowflake or DuckDB reads
 # ---------------------------------------------------------------------------
+
+def get_db_cursor():
+    """Connects to Snowflake if credentials exist, otherwise local DuckDB."""
+    account = os.getenv("SNOWFLAKE_ACCOUNT")
+    user = os.getenv("SNOWFLAKE_USER")
+    password = os.getenv("SNOWFLAKE_PASSWORD")
+
+    if account and user and password:
+        logger.info("🔌 Connecting to Snowflake Data Warehouse for Reverse ETL...")
+        conn = snowflake.connector.connect(
+            account=account,
+            user=user,
+            password=password,
+            role=os.getenv("SNOWFLAKE_ROLE", "TRANSFORMER"),
+            warehouse=os.getenv("SNOWFLAKE_WAREHOUSE", "COMPUTE_WH"),
+            database=os.getenv("SNOWFLAKE_DATABASE", "REVOPS_INTELLIGENCE"),
+            schema="MARTS",
+        )
+        return conn.cursor(), "snowflake", conn
+    elif os.path.exists(DB_PATH):
+        logger.info(f"🔌 Connecting to local DuckDB at {DB_PATH}...")
+        conn = duckdb.connect(DB_PATH, read_only=True)
+        return conn.cursor(), "duckdb", conn
+    else:
+        logger.warning("⚠️ Neither Snowflake credentials nor DuckDB file found.")
+        return None, "none", None
+
 
 @dlt.source(name="revops_warehouse")
 def revops_warehouse_source():
-    """Reads actionable data from the local DuckDB mart layer."""
+    """Reads actionable data from Snowflake or DuckDB mart layer."""
 
-    def _con():
-        return duckdb.connect(DB_PATH, read_only=True)
-
-    # ------------------------------------------------------------------
-    # Resource 1: Company Enrichment
-    # Pushes health, MRR, segment back to HubSpot Companies.
-    # Only updates accounts that already have a hubspot_company_id.
-    # Uses incremental loading — only syncs accounts updated since last run.
-    # ------------------------------------------------------------------
     @dlt.resource(
         name="company_enrichment",
         write_disposition="merge",
@@ -113,41 +128,47 @@ def revops_warehouse_source():
     def company_enrichment(
         updated_at=dlt.sources.incremental(
             "last_updated_at",
-            initial_value=datetime(2000, 1, 1),  # First run = full sync
+            initial_value=datetime(2000, 1, 1),
         )
     ):
         """Sync dim_accounts health + revenue data to HubSpot Companies."""
-        con = _con()
-        rows = con.execute(f"""
-            SELECT
-                hubspot_company_id,
-                workspace_name,
-                domain,
-                mrr,
-                arr,
-                account_segment,
-                health_status,
-                health_reason,
-                subscription_status,
-                seats_purchased,
-                seats_used,
-                seat_utilization_pct,
-                CAST(is_ready_for_upsell AS VARCHAR)    AS is_ready_for_upsell,
-                CAST(is_churning_soon AS VARCHAR)        AS is_churning_soon,
-                last_updated_at
-            FROM main_marts.dim_accounts
-            WHERE hubspot_company_id IS NOT NULL
-              AND last_updated_at > '{updated_at.last_value}'
-            ORDER BY mrr DESC NULLS LAST
-        """).df().to_dict("records")
-        con.close()
-        logger.info(f"[company_enrichment] {len(rows)} companies to sync.")
-        yield rows
+        cursor, db_type, conn = get_db_cursor()
+        if not cursor:
+            logger.warning("No warehouse connection available.")
+            yield []
+            return
 
-    # ------------------------------------------------------------------
-    # Resource 2: PQL Signal Tags
-    # Patches HOT contacts in HubSpot with their intent tier + action.
-    # ------------------------------------------------------------------
+        try:
+            table_prefix = "MARTS." if db_type == "snowflake" else "main_marts."
+            query = f"""
+                SELECT
+                    hubspot_company_id,
+                    workspace_name,
+                    domain,
+                    mrr,
+                    arr,
+                    account_segment,
+                    health_status,
+                    health_reason,
+                    subscription_status,
+                    seats_purchased,
+                    seats_used,
+                    seat_utilization_pct,
+                    CAST(is_ready_for_upsell AS VARCHAR)    AS is_ready_for_upsell,
+                    CAST(is_churning_soon AS VARCHAR)        AS is_churning_soon,
+                    last_updated_at
+                FROM {table_prefix}dim_accounts
+                WHERE hubspot_company_id IS NOT NULL
+                ORDER BY mrr DESC NULLS LAST
+            """
+            cursor.execute(query)
+            columns = [col[0].lower() for col in cursor.description]
+            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            logger.info(f"[company_enrichment] {len(rows)} companies loaded from {db_type}.")
+            yield rows
+        finally:
+            conn.close()
+
     @dlt.resource(
         name="pql_signals",
         write_disposition="merge",
@@ -155,31 +176,38 @@ def revops_warehouse_source():
     )
     def pql_signals():
         """Sync HOT PQL signals to HubSpot Contacts."""
-        con = _con()
-        rows = con.execute("""
-            SELECT
-                u.hubspot_contact_id,
-                u.email,
-                p.intent_tier,
-                p.gtm_priority,
-                p.recommended_action,
-                p.icp_tier,
-                p.gtm_priority_rank
-            FROM main_marts.fct_pql_signals p
-            JOIN main_identity.int_users_joined u
-                ON p.workspace_id = u.internal_workspace_id
-            WHERE p.intent_tier IN ('HOT', 'WARM')   -- Only actionable tiers
-              AND u.hubspot_contact_id IS NOT NULL
-              AND u.user_role = 'owner'
-        """).df().to_dict("records")
-        con.close()
-        logger.info(f"[pql_signals] {len(rows)} HOT/WARM contacts to tag.")
-        yield rows
+        cursor, db_type, conn = get_db_cursor()
+        if not cursor:
+            yield []
+            return
 
-    # ------------------------------------------------------------------
-    # Resource 3: L2A Associations
-    # Stitches contacts without a company link to their matched company.
-    # ------------------------------------------------------------------
+        try:
+            marts_prefix = "MARTS." if db_type == "snowflake" else "main_marts."
+            identity_prefix = "IDENTITY." if db_type == "snowflake" else "main_identity."
+            query = f"""
+                SELECT
+                    u.hubspot_contact_id,
+                    u.email,
+                    p.intent_tier,
+                    p.gtm_priority,
+                    p.recommended_action,
+                    p.icp_tier,
+                    p.gtm_priority_rank
+                FROM {marts_prefix}fct_pql_signals p
+                JOIN {identity_prefix}int_users_joined u
+                    ON p.workspace_id = u.internal_workspace_id
+                WHERE p.intent_tier IN ('HOT', 'WARM')
+                  AND u.hubspot_contact_id IS NOT NULL
+                  AND u.user_role = 'owner'
+            """
+            cursor.execute(query)
+            columns = [col[0].lower() for col in cursor.description]
+            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            logger.info(f"[pql_signals] {len(rows)} HOT/WARM contacts loaded from {db_type}.")
+            yield rows
+        finally:
+            conn.close()
+
     @dlt.resource(
         name="l2a_associations",
         write_disposition="merge",
@@ -187,21 +215,31 @@ def revops_warehouse_source():
     )
     def l2a_associations():
         """Fix unlinked contacts: associate them with their company in HubSpot."""
-        con = _con()
-        rows = con.execute("""
-            SELECT
-                u.email,
-                u.hubspot_contact_id,
-                u.hubspot_company_id_stitched  AS hubspot_company_id,
-                u.match_method
-            FROM main_identity.int_users_joined u
-            WHERE u.hubspot_contact_id IS NOT NULL
-              AND u.hubspot_company_id_stitched IS NOT NULL
-              AND u.match_method IN ('email_match', 'domain_l2a')
-        """).df().to_dict("records")
-        con.close()
-        logger.info(f"[l2a_associations] {len(rows)} contacts to associate.")
-        yield rows
+        cursor, db_type, conn = get_db_cursor()
+        if not cursor:
+            yield []
+            return
+
+        try:
+            identity_prefix = "IDENTITY." if db_type == "snowflake" else "main_identity."
+            query = f"""
+                SELECT
+                    u.email,
+                    u.hubspot_contact_id,
+                    u.hubspot_company_id_stitched  AS hubspot_company_id,
+                    u.match_method
+                FROM {identity_prefix}int_users_joined u
+                WHERE u.hubspot_contact_id IS NOT NULL
+                  AND u.hubspot_company_id_stitched IS NOT NULL
+                  AND u.match_method IN ('email_match', 'domain_l2a')
+            """
+            cursor.execute(query)
+            columns = [col[0].lower() for col in cursor.description]
+            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            logger.info(f"[l2a_associations] {len(rows)} contacts to associate from {db_type}.")
+            yield rows
+        finally:
+            conn.close()
 
     return [company_enrichment, pql_signals, l2a_associations]
 
@@ -210,7 +248,6 @@ def revops_warehouse_source():
 # DESTINATION — HubSpot API writer
 # ---------------------------------------------------------------------------
 
-# Global dry_run flag (set before running pipeline)
 _DRY_RUN: bool = False
 
 
@@ -228,16 +265,13 @@ def hubspot_api_destination(items: TDataItems, table: TTableSchema) -> None:
         try:
             if table_name == "company_enrichment":
                 _sync_company(item)
-
             elif table_name == "pql_signals":
                 _sync_pql_contact(item)
-
             elif table_name == "l2a_associations":
                 _sync_l2a(item)
-
         except Exception as e:
             logger.error(f"   ❌ Failed item ({table_name}): {e}")
-            raise  # Let dlt handle retry logic
+            raise
 
 
 def _patch(url: str, payload: dict, label: str):
@@ -246,9 +280,8 @@ def _patch(url: str, payload: dict, label: str):
         logger.info(f"   [DRY RUN] PATCH {url}\n   Payload: {payload}")
         return
 
-    for attempt in range(1, 4):  # max 3 retries
+    for attempt in range(1, 4):
         resp = requests.patch(url, headers=HEADERS, json=payload)
-
         if resp.status_code == 200:
             logger.info(f"   ✅ {label}")
             return
@@ -258,7 +291,7 @@ def _patch(url: str, payload: dict, label: str):
             time.sleep(retry_after)
         else:
             logger.warning(f"   ⚠️ {label} → {resp.status_code}: {resp.text[:200]}")
-            return  # Non-retriable error
+            return
 
     logger.error(f"   ❌ Gave up after 3 attempts: {label}")
 
@@ -270,24 +303,21 @@ def _sync_company(item: dict):
 
     payload = {
         "properties": {
-            # Standard HubSpot properties
             "name":                 item.get("workspace_name", ""),
             "domain":               item.get("domain", ""),
-
-            # Custom RevOps properties
-            "mrr":                  str(round(item.get("mrr") or 0, 2)),
-            "arr":                  str(round(item.get("arr") or 0, 2)),
+            "mrr":                  str(round(float(item.get("mrr") or 0), 2)),
+            "arr":                  str(round(float(item.get("arr") or 0), 2)),
             "account_segment":      item.get("account_segment") or "",
             "health_status":        item.get("health_status") or "",
             "health_reason":        item.get("health_reason") or "",
             "subscription_status":  item.get("subscription_status") or "",
-            "is_ready_for_upsell":  item.get("is_ready_for_upsell") or "false",
-            "is_churning_soon":     item.get("is_churning_soon") or "false",
+            "is_ready_for_upsell":  str(item.get("is_ready_for_upsell") or "false").lower(),
+            "is_churning_soon":     str(item.get("is_churning_soon") or "false").lower(),
         }
     }
     label = (
         f"Company {item.get('workspace_name', company_id)} | "
-        f"MRR=${item.get('mrr', 0):.0f} | "
+        f"MRR=${float(item.get('mrr') or 0):.0f} | "
         f"Health={item.get('health_status')}"
     )
     _patch(url, payload, label)
@@ -300,7 +330,6 @@ def _sync_pql_contact(item: dict):
 
     payload = {
         "properties": {
-            # Custom RevOps properties on Contact
             "intent_tier":          item.get("intent_tier", ""),
             "recommended_action":   item.get("recommended_action", ""),
             "gtm_priority":         item.get("gtm_priority", ""),
@@ -346,12 +375,11 @@ def _sync_l2a(item: dict):
 # PIPELINE RUNNER
 # ---------------------------------------------------------------------------
 
-# Maps CLI --resource arg to dlt resource name
 RESOURCE_MAP = {
     "companies": "company_enrichment",
     "pql":       "pql_signals",
     "l2a":       "l2a_associations",
-    "all":       None,  # None = run all
+    "all":       None,
 }
 
 
@@ -359,7 +387,7 @@ def run(dry_run: bool = False, resource: str = "all"):
     """
     Main entry point.
     Pipeline state is stored in .dlt/ directory (JSON, gitignored).
-    This enables incremental loading: only changed records are synced each run.
+    Enables incremental loading: only changed records are synced each run.
     """
     global _DRY_RUN
     _DRY_RUN = dry_run
@@ -367,14 +395,11 @@ def run(dry_run: bool = False, resource: str = "all"):
     validate_token(dry_run)
 
     logger.info("=" * 60)
-    logger.info("🔄 Reverse ETL: DuckDB → HubSpot CRM")
+    logger.info("🔄 Reverse ETL: Data Warehouse → HubSpot CRM")
     logger.info(f"   Mode     : {'DRY RUN' if dry_run else 'LIVE'}")
     logger.info(f"   Resource : {resource}")
-    logger.info(f"   DB path  : {DB_PATH}")
     logger.info("=" * 60)
 
-    # Pipeline state is stored locally in .dlt/<pipeline_name>/
-    # This tracks the incremental cursor (last_updated_at)
     pipeline = dlt.pipeline(
         pipeline_name="revops_to_hubspot",
         destination=hubspot_api_destination,
@@ -383,7 +408,6 @@ def run(dry_run: bool = False, resource: str = "all"):
 
     source = revops_warehouse_source()
 
-    # Filter to requested resource(s)
     selected = RESOURCE_MAP.get(resource)
     if selected:
         source = source.with_resources(selected)
@@ -404,7 +428,7 @@ def run(dry_run: bool = False, resource: str = "all"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Reverse ETL: DuckDB → HubSpot CRM"
+        description="Reverse ETL: Data Warehouse → HubSpot CRM"
     )
     parser.add_argument(
         "--dry-run",
