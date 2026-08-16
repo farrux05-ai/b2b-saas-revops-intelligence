@@ -1,65 +1,64 @@
+{{ config(materialized='view') }}
+
 -- =============================================================================
--- fct_accounts_health: Account Health & Churn Risk Dashboard
--- Mart: customer_success
+-- MODEL: fct_accounts_health
+-- MART: customer_success
+-- GRAIN: One row per paying account
 --
--- Primary mart for the CS (Customer Success) team.
--- Shows every paying account's health, churn risk signals, and support burden.
--- Intended for: Churn prevention workflows, QBRs, CS prioritization.
+-- TARGET AUDIENCE: Customer Success (CSM) Team — Churn prevention, QBRs, outreach.
+--
+-- BUSINESS LOGIC:
+--   Selects directly from dim_accounts for paying accounts (subscription_status is not null).
+--   Exposes pre-computed churn signals (is_payment_failing, is_churning_soon, is_low_engagement)
+--   and health scores derived in intermediate layers.
 -- =============================================================================
 
 with accounts as (
     select * from {{ ref('dim_accounts') }}
-),
-
-final as (
-    select
-        -- Identity
-        account_id,
-        domain,
-        workspace_name,
-        account_segment,
-        current_plan,
-
-        -- Revenue Exposure
-        mrr,
-        arr,
-        mrr_at_risk,
-
-        -- Health Signals
-        health_status,
-        health_reason,
-        subscription_status,
-
-        -- Churn Risk Signals (3 distinct warning types)
-        is_payment_failing,                             -- Silent churn: card declined
-        is_churning_soon,                               -- Intent churn: cancel scheduled
-        case
-            when last_activity_at is null
-                or last_activity_at < current_timestamp - interval '30 days'
-            then true else false
-        end                                             as is_low_engagement,
-
-        -- Support Burden
-        total_tickets,
-        open_tickets,
-        high_priority_tickets,
-        avg_resolution_hours,
-        last_ticket_at,
-
-        -- Product Engagement
-        product_events_count,
-        last_activity_at,
-        is_pql,
-
-        -- Expansion Signals
-        seat_utilization_pct,
-        seats_used,
-        seats_purchased,
-        is_ready_for_upsell
-
-    from accounts
-    -- CS team only cares about accounts that have entered billing
-    where subscription_status is not null
 )
 
-select * from final
+select
+    -- Identity & Segmentation
+    account_id,
+    domain,
+    workspace_name,
+    company_name,
+    account_segment,
+    current_plan,
+
+    -- Financial Impact
+    mrr,
+    arr,
+    mrr_at_risk,
+
+    -- Health Status & Primary Cause
+    health_status,
+    health_reason,
+    subscription_status,
+
+    -- 3 Distinct Churn Risk Signals
+    is_payment_failing,      -- 1. Silent Churn: Failed subscription payment
+    is_churning_soon,        -- 2. Intent Churn: Scheduled cancellation
+    is_low_engagement,       -- 3. Usage Churn: Inactive product telemetry
+
+    -- Support Burden Context
+    total_tickets,
+    open_tickets,
+    high_priority_tickets,
+    avg_resolution_hours,
+    last_ticket_at,
+
+    -- Product Activity Context
+    total_product_events,
+    last_activity_at,
+    is_pql,
+
+    -- Expansion & Seat Utilization Signals
+    seats_purchased,
+    seats_used,
+    seat_utilization_pct,
+    is_ready_for_upsell
+
+from accounts
+-- CSM team focuses strictly on paying / active subscription accounts
+where subscription_status is not null

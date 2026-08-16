@@ -1,10 +1,15 @@
+{{ config(materialized='view') }}
+
 -- =============================================================================
--- fct_pipeline: Sales Deal Pipeline & Win/Loss Analysis
--- Mart: sales
+-- MODEL: fct_pipeline
+-- MART: sales
+-- GRAIN: One row per hubspot_deal_id
 --
--- Primary mart for the Sales team. One row per HubSpot deal.
--- Shows pipeline health, deal velocity, and conversion metrics.
--- Intended for: Pipeline reviews, forecasting, rep performance.
+-- TARGET AUDIENCE: Sales Leaders & Reps — Pipeline health, deal velocity, forecasting.
+--
+-- BUSINESS CONTRACT:
+--   Consumes deal-level enriched model int_deals_enriched (resolves dbt Anti-pattern #13).
+--   Joins with dim_accounts for account context (MRR, Health Status, Segment).
 -- =============================================================================
 
 with deals as (
@@ -25,7 +30,7 @@ accounts as (
 
 final as (
     select
-        -- Deal Identity
+        -- Deal Identity & Foreign Keys
         d.hubspot_deal_id,
         d.deal_name,
         d.hubspot_company_id,
@@ -34,31 +39,29 @@ final as (
         a.domain,
         a.account_segment,
 
-        -- Pipeline Position
+        -- Sales Pipeline Stage
         d.pipeline,
         d.deal_stage,
 
-        -- Financials
+        -- Financial Amounts & Weighted Probability
         d.amount                                        as deal_amount,
         d.probability                                   as win_probability,
         d.weighted_amount,
 
-        -- Status Flags
+        -- Deal Status Flags
         d.is_won,
         d.is_lost,
         d.is_open,
 
-        -- Timing
+        -- Timestamps & Velocity
         d.created_at,
         d.closed_at,
-
-        -- Deal Velocity
         d.days_to_close,
         d.days_open,
         d.is_stale,
         d.deal_age_bucket,
 
-        -- Benchmark: Average days to close for WON deals
+        -- Benchmark: Window average days to close for Won deals
         avg(
             case
                 when d.is_won

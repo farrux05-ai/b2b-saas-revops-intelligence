@@ -1,10 +1,15 @@
+{{ config(materialized='table') }}
+
 -- =============================================================================
--- fct_subscriptions: Active Subscription Snapshot
--- Mart: finance
+-- MODEL: fct_subscriptions
+-- MART: finance
+-- GRAIN: One row per workspace subscription record
 --
--- One row per active subscription. Finance's source of truth for MRR/ARR
--- reporting, plan mix analysis, and churn intent signals.
--- MRR computation lives here (not in staging — thin staging principle).
+-- TARGET AUDIENCE: Finance & Executive Leadership — MRR/ARR reporting, plan mix, churn intent.
+--
+-- BUSINESS CONTRACT:
+--   Sourced directly from int_billing_aggregated.
+--   Computes active/trialing subscription statuses, seat utilization, and upsell candidate flags.
 -- =============================================================================
 
 with billing as (
@@ -17,27 +22,27 @@ spine as (
 
 final as (
     select
-        -- Identity
+        -- Identity & Foreign Keys
         b.customer_id,
         b.workspace_id,
         sp.account_id,
         sp.workspace_name,
         sp.domain,
 
-        -- Plan Info
+        -- Plan & Status Dimensions
         b.latest_subscription_status                    as subscription_status,
         b.current_plan                                  as plan_id,
 
-        -- Revenue
+        -- Revenue Computations
         b.active_mrr                                    as mrr_amount,
         b.active_mrr * 12                               as arr_amount,
 
-        -- Seat Utilization
+        -- Seat Utilization & Capacity
         b.seats_purchased,
         b.seats_used,
         b.seat_utilization_pct * 100                    as seat_utilization_pct,
 
-        -- Upsell/Downsell Signals
+        -- Upsell / Downsell Risk Flags
         b.is_upsell_candidate,
         b.is_downsell_risk,
 
@@ -48,7 +53,7 @@ final as (
         b.latest_subscription_status = 'canceled'       as is_canceled,
         b.is_churning_soon,
 
-        -- Billing Period
+        -- Subscription Billing Timestamps
         b.current_period_start_at,
         b.current_period_end_at,
         b.trial_end_at

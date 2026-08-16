@@ -3,9 +3,10 @@
 -- =============================================================================
 -- MODEL: fct_unit_economics
 -- MART: finance
--- GRAIN: One row per account_segment
+-- GRAIN: one row per account_segment
 --
--- TARGET AUDIENCE: Finance & Executive Leadership — LTV, ARPU, LTV:ARR ratio by account segment.
+-- AUDITORIYA: Finance + Investor — LTV, LTV:ARR ratio segment bo'yicha.
+-- O'ZGARISH yo'q — fct_retention_cohorts + fct_subscriptions + dim_accounts dan.
 -- =============================================================================
 
 with cohorts as (
@@ -21,7 +22,7 @@ accounts as (
     from {{ ref('dim_accounts') }}
 ),
 
--- Trailing 3-month average churn rate for metric stability
+-- Oxirgi 3 oylik o'rtacha churn rate (barqaror hisob uchun)
 recent_cohorts as (
     select
         avg(monthly_churn_rate_pct)                     as avg_monthly_churn_rate_pct,
@@ -33,7 +34,7 @@ recent_cohorts as (
       and monthly_churn_rate_pct is not null
 ),
 
--- Segment MRR aggregation (active subscriptions only)
+-- Segment bo'yicha MRR (faqat aktiv subscriptionlar)
 segment_mrr as (
     select
         a.account_segment,
@@ -59,12 +60,12 @@ select
     sm.total_segment_mrr,
     sm.avg_mrr_per_account,
 
-    -- Portfolio Retention Benchmarks (Trailing 3 months)
+    -- Retention benchmarklar (portfolio, oxirgi 3 oy)
     round(rc.avg_monthly_churn_rate_pct, 2)             as avg_monthly_churn_rate_pct,
     round(rc.avg_nrr_pct, 2)                            as avg_nrr_pct,
     round(rc.avg_grr_pct, 2)                            as avg_grr_pct,
 
-    -- Estimated Customer Lifetime Value (LTV = Avg MRR / Monthly Churn Rate)
+    -- LTV = Avg MRR / Monthly Churn Rate
     case
         when rc.avg_monthly_churn_rate_pct > 0
         then round(
@@ -75,7 +76,7 @@ select
     -- ARR per account
     round(sm.avg_mrr_per_account * 12, 2)               as avg_arr_per_account,
 
-    -- LTV:ARR Ratio (Healthy SaaS benchmark > 3x)
+    -- LTV:ARR ratio (sog'lom SaaS > 3x)
     case
         when rc.avg_monthly_churn_rate_pct > 0
          and sm.avg_mrr_per_account > 0
@@ -84,11 +85,11 @@ select
             / (sm.avg_mrr_per_account * 12), 2)
     end                                                 as ltv_arr_ratio,
 
-    -- Percentage Share of Total MRR
+    -- Jami MRR dagi ulushi
     round(sm.total_segment_mrr
         / nullif(o.total_active_mrr, 0) * 100, 2)      as pct_of_total_mrr,
 
-    -- MetricFlow / Semantic Layer Snapshot Date
+    -- MetricFlow vaqt dimensiyasi uchun
     cast(current_date as date)                          as snapshot_date
 
 from segment_mrr sm

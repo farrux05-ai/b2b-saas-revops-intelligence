@@ -1,0 +1,274 @@
+version: 2
+
+# =============================================================================
+# MART SCHEMAS: CS, Sales, Marketing, Product, Finance
+# =============================================================================
+
+models:
+
+  # ===========================================================================
+  # CUSTOMER SUCCESS
+  # ===========================================================================
+
+  - name: fct_accounts_health
+    description: >
+      CS jamoasi uchun mart. Billing ga kirgan har bir account uchun 1 qator.
+      3 ta churn sinyal: is_payment_failing + is_churning_soon + is_low_engagement.
+      is_low_engagement int_product_aggregated dan keladi (oldin mart da CASE edi).
+    columns:
+      - name: account_id
+        description: "Grain. FK to dim_accounts."
+        tests: [unique, not_null]
+
+      - name: mrr
+        description: "Account MRR."
+        tests: [not_null]
+
+      - name: health_status
+        tests:
+          - accepted_values:
+              values: ['Healthy', 'At Risk', 'Churned']
+
+      - name: account_segment
+        tests:
+          - accepted_values:
+              values: ['Enterprise', 'Mid-Market', 'SMB', 'Trial/Free']
+
+  # ===========================================================================
+  # SALES
+  # ===========================================================================
+
+  - name: fct_pipeline
+    description: >
+      Sales jamoasi uchun mart. Har bir HubSpot deal uchun 1 qator.
+      int_deals_enriched dan oladi (oldin stg_hubspot__deals dan edi — xato).
+      days_to_close, is_stale, deal_age_bucket int_deals_enriched da hisoblangan.
+      portfolio_avg_days_to_close window funksiyasi — ruxsat etilgan istisno.
+    columns:
+      - name: hubspot_deal_id
+        description: "Grain. HubSpot deal ID."
+        tests: [unique, not_null]
+
+      - name: deal_amount
+        description: "Bitim qiymati USD da."
+        tests: [not_null]
+
+      - name: win_probability
+        description: "Yutish ehtimoli (0–100)."
+        tests: [not_null]
+
+  - name: fct_activities
+    description: >
+      Sales faoliyat log (incremental). Har bir HubSpot engagement uchun 1 qator.
+      stg_hubspot__engagements dan to'g'ri oladi — ruxsat etilgan istisno
+      (row-level event data, int_crm_aggregated aggregated versiyasi).
+    columns:
+      - name: activity_id
+        description: "Grain. HubSpot engagement ID."
+        tests: [unique, not_null]
+
+      - name: activity_type
+        tests:
+          - accepted_values:
+              values: ['CALL', 'EMAIL', 'MEETING']
+
+  # ===========================================================================
+  # MARKETING
+  # ===========================================================================
+
+  - name: fct_lead_funnel
+    description: >
+      Marketing jamoasi uchun mart. Har bir HubSpot company (lead) uchun 1 qator.
+      stg_hubspot__companies dan to'g'ri oladi — ruxsat etilgan istisno
+      (ba'zi leadlar hali workspace ochmagan, int_accounts_joined da yo'q).
+    columns:
+      - name: hubspot_company_id
+        description: "Grain. HubSpot company ID."
+        tests: [unique, not_null]
+
+      - name: lifecycle_stage
+        tests:
+          - accepted_values:
+              values:
+                - 'subscriber'
+                - 'lead'
+                - 'marketingqualifiedlead'
+                - 'salesqualifiedlead'
+                - 'opportunity'
+                - 'customer'
+                - 'evangelist'
+                - 'other'
+
+  - name: fct_attribution
+    description: >
+      Marketing kanal attribution. Har bir account uchun 1 qator (first-touch).
+      int_crm_aggregated dan oladi (oldin int_sales_aggregated edi).
+    columns:
+      - name: account_id
+        description: "Grain. FK to dim_accounts."
+        tests: [unique, not_null]
+
+  # ===========================================================================
+  # PRODUCT
+  # ===========================================================================
+
+  - name: fct_product_activation
+    description: >
+      Product jamoasi uchun mart. Har bir workspace uchun 1 qator.
+      activation_rate, total_users → int_product_aggregated dan (oldin bu yerda edi).
+      is_trial_at_risk → int_billing_aggregated dan (oldin bu yerda edi).
+    columns:
+      - name: workspace_id
+        description: "Grain. Internal workspace ID."
+        tests: [unique, not_null]
+
+      - name: activation_rate
+        description: "activated_users / total_users. 0–1."
+        tests: [not_null]
+
+  - name: fct_pql_signals
+    description: >
+      GTM Priority Matrix. Faqat convert bo'lmagan workspacelar.
+      Intent (product faoliyat) × Fit (ICP) = gtm_priority.
+    columns:
+      - name: workspace_id
+        description: "Grain."
+        tests: [unique, not_null]
+
+      - name: intent_tier
+        tests:
+          - accepted_values:
+              values: ['HOT', 'WARM', 'COLD']
+
+      - name: icp_tier
+        tests:
+          - accepted_values:
+              values: ['High Fit', 'Medium Fit', 'Low Fit']
+
+      - name: gtm_priority
+        tests:
+          - accepted_values:
+              values:
+                - 'MUST WIN'
+                - 'ACTIVE'
+                - 'NOTIFY'
+                - 'HIGH POTENTIAL'
+                - 'NURTURE'
+                - 'MONITOR'
+                - 'INCUBATE'
+
+  - name: fct_feature_usage
+    description: >
+      Feature adoption heatmap (incremental).
+      Grain: workspace × feature_category × week.
+      stg_posthog__events dan to'g'ri oladi — ruxsat etilgan istisno
+      (boshqa grain: int_product_aggregated workspace darajasida).
+    columns:
+      - name: usage_id
+        description: "Grain. workspace × feature_category × week surrogate key."
+        tests: [unique, not_null]
+
+  - name: fct_trial_conversion
+    description: >
+      Trial → Paid konversiya funnel. Har bir trialing workspace uchun 1 qator.
+      int_billing_aggregated dan oladi (oldin int_subscriptions_enriched + int_payments_enriched edi).
+      is_at_risk_of_expiring → int_billing_aggregated.is_trial_at_risk dan keladi.
+    columns:
+      - name: workspace_id
+        description: "Grain."
+        tests: [unique, not_null]
+
+  # ===========================================================================
+  # FINANCE
+  # ===========================================================================
+
+  - name: fct_subscriptions
+    description: >
+      Aktiv subscription snapshot. Har bir workspace uchun 1 qator.
+      int_billing_aggregated dan oladi (workspace grain, Stripe subscription emas).
+      is_upsell_candidate, is_downsell_risk → int_billing_aggregated dan (oldin bu yerda edi).
+    columns:
+      - name: workspace_id
+        description: "Grain."
+        tests: [unique, not_null]
+
+      - name: mrr_amount
+        description: "Workspace MRR."
+        tests: [not_null]
+
+      - name: subscription_status
+        tests:
+          - accepted_values:
+              values:
+                - 'active'
+                - 'trialing'
+                - 'past_due'
+                - 'canceled'
+                - 'incomplete'
+                - 'incomplete_expired'
+                - 'unpaid'
+
+  - name: fct_mrr_waterfall
+    description: >
+      Oylik MRR harakati. Grain: account_id × month_date.
+      Date spine + LAG window — finance-specific, mart da qoladi.
+      int_billing_aggregated dan oladi (oldin int_subscriptions_enriched edi).
+    columns:
+      - name: waterfall_id
+        description: "Grain. account_id × month_date surrogate key."
+        tests: [unique, not_null]
+
+      - name: mrr
+        description: "Oy oxiridagi MRR."
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: mrr_movement_type
+        tests:
+          - accepted_values:
+              values:
+                - 'new'
+                - 'expansion'
+                - 'contraction'
+                - 'churn'
+                - 'resurrection'
+                - 'retained'
+
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: ['account_id', 'month_date']
+
+  - name: fct_arr_movements
+    description: "fct_mrr_waterfall dan derivatsiya (× 12). O'zgarish yo'q."
+    columns:
+      - name: arr_snapshot_id
+        tests: [unique, not_null]
+
+      - name: arr_movement_type
+        tests:
+          - accepted_values:
+              values:
+                - 'new'
+                - 'expansion'
+                - 'contraction'
+                - 'churn'
+                - 'resurrection'
+                - 'retained'
+
+  - name: fct_retention_cohorts
+    description: >
+      Oylik NRR/GRR cohort tahlil. Grain: month_date (portfolio aggregate).
+      Investor #1 metriki. fct_mrr_waterfall dan.
+    columns:
+      - name: month_date
+        tests: [unique, not_null]
+
+  - name: fct_unit_economics
+    description: >
+      LTV hisoblash segment bo'yicha. Grain: account_segment.
+      LTV = Avg MRR / Monthly Churn Rate. Sog'lom SaaS: LTV:ARR > 3x.
+    columns:
+      - name: account_segment
+        tests: [unique, not_null]

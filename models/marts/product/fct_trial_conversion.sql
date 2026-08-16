@@ -2,16 +2,15 @@
 
 -- =============================================================================
 -- MODEL: fct_trial_conversion
--- LAYER: Marts / Product
+-- MART: product
+-- GRAIN: One row per trialing subscription
 --
--- PURPOSE: Tracks Trial → Paid conversion funnel.
--- One row per trialing subscription. Shows which trials converted,
--- how long it took, and which ones are at risk of not converting.
+-- TARGET AUDIENCE: Growth & Product Operations — Trial-to-Paid conversion funnel.
 --
 -- KEY METRICS:
---   trial_conversion_rate = converted_trials / total_trials
---   avg_time_to_convert_days = avg days from trial_start to conversion
---   at_risk = trialing + trial expires within 3 days + no payment history
+--   - trial_conversion_rate = converted_trials / total_trials
+--   - time_to_convert_days = days from trial start to first payment
+--   - is_at_risk_of_expiring = trialing + expires within 3 days + no payment history
 -- =============================================================================
 
 with billing as (
@@ -38,24 +37,24 @@ trials as (
         b.current_plan                                  as plan_id,
         b.latest_subscription_status                    as subscription_status,
 
-        -- Trial window
+        -- Trial Window
         b.current_period_start_at                       as trial_started_at,
         b.trial_end_at,
         b.current_period_start_at,
         b.current_period_end_at,
 
-        -- Conversion
+        -- Conversion Details
         b.first_payment_at                              as converted_at,
         coalesce(b.successful_payments_count, 0)        as successful_payments,
         b.first_payment_at is not null                  as is_converted,
 
-        -- Days from trial start to first payment
+        -- Conversion Velocity: Days to first payment
         case
             when b.first_payment_at is not null
             then datediff('day', b.current_period_start_at, b.first_payment_at)
         end                                             as time_to_convert_days,
 
-        -- Trial days remaining
+        -- Trial Days Remaining
         case
             when b.trial_end_at is not null
             then datediff('day', current_timestamp, b.trial_end_at)
@@ -63,7 +62,7 @@ trials as (
 
         coalesce(b.is_trial_at_risk, false)             as is_at_risk_of_expiring,
 
-        -- Expired without converting
+        -- Expired Without Converting
         (
             b.trial_end_at < current_timestamp
             and b.first_payment_at is null

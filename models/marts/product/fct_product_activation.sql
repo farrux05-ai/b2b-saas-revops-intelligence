@@ -1,10 +1,14 @@
+{{ config(materialized='view') }}
+
 -- =============================================================================
--- fct_product_activation: Product Usage, Activation & PQL Signals
--- Mart: product
+-- MODEL: fct_product_activation
+-- MART: product
+-- GRAIN: One row per workspace_id
 --
--- Primary mart for the Product team. One row per workspace.
--- Tracks activation milestones, feature adoption, and PLG conversion signals.
--- Intended for: Activation funnels, PQL scoring, onboarding optimization.
+-- TARGET AUDIENCE: Product & Growth Teams — Activation funnel, feature adoption, PLG signals.
+--
+-- BUSINESS CONTRACT:
+--   Primary activation fact model. Sourced from int_product_aggregated and joined with dim_accounts.
 -- =============================================================================
 
 with usage as (
@@ -46,7 +50,7 @@ user_stats as (
 
 final as (
     select
-        -- Identity
+        -- Workspace Identity & Foreign Keys
         a.internal_workspace_id                         as workspace_id,
         a.account_id,
         a.workspace_name,
@@ -58,7 +62,7 @@ final as (
         a.mrr,
         a.subscription_status,
 
-        -- User Metrics
+        -- User & Activation Metrics
         coalesce(us.total_users, 0)                     as total_users,
         coalesce(us.activated_users, 0)                 as activated_users,
         coalesce(us.active_users_last_30d, 0)           as active_users_last_30d,
@@ -75,14 +79,14 @@ final as (
         a.seat_utilization_pct,
         a.is_ready_for_upsell,
 
-        -- PQL & Feature Adoption Signals
+        -- Product-Qualified Lead (PQL) & Telemetry Signals
         coalesce(u.is_pql, false)                       as is_pql,
         coalesce(u.has_connected_git, false)            as has_connected_git,
         coalesce(u.has_started_sprint, false)           as has_started_sprint,
         coalesce(u.total_product_events, 0)             as total_product_events,
         u.last_activity_at,
 
-        -- Onboarding Timestamps
+        -- Onboarding & Conversion Timestamps
         a.workspace_created_at,
         a.trial_started_at,
         a.trial_ended_at,

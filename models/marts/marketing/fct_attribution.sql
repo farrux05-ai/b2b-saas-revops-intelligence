@@ -1,9 +1,15 @@
+{{ config(materialized='view') }}
+
 -- =============================================================================
--- fct_attribution: Marketing Attribution 
--- Mart: marketing
+-- MODEL: fct_attribution
+-- MART: marketing
+-- GRAIN: One row per account_id
 --
--- Maps revenue (deals/MRR) to marketing channels using UTM parameters from
--- HubSpot companies (First-Touch attribution).
+-- TARGET AUDIENCE: Marketing Operations & Leadership — Campaign attribution & CAC analysis.
+--
+-- BUSINESS CONTRACT:
+--   Maps revenue (MRR & Lifetime Revenue) and won deal counts to acquisition channels
+--   using First-Touch UTM parameters stored on dim_accounts and int_crm_aggregated.
 -- =============================================================================
 
 with accounts as (
@@ -22,18 +28,18 @@ final as (
         a.account_id,
         a.workspace_name,
         
-        -- Real Attribution Fields
+        -- Marketing Attribution Dimensions
         a.utm_source                                    as acquisition_channel,
         a.utm_campaign                                  as first_touch_campaign,
         
-        -- Revenue Metrics
+        -- Realized Revenue Metrics
         a.mrr,
         a.lifetime_revenue,
         
-        -- Deal counts from this channel
+        -- Won Deal Volume
         coalesce(d.won_deals_count, 0)                  as won_deals_count,
 
-        -- MetricFlow requires a time dimension
+        -- Required Date Dimension for MetricFlow / Semantic Layer
         cast(a.workspace_created_at as date)            as account_created_at
         
     from accounts a

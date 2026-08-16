@@ -1,0 +1,258 @@
+version: 2
+
+# =============================================================================
+# MART SCHEMAS: CS, Sales, Marketing, Product, Finance
+# Schema contracts and test assertions for domain fact tables.
+# =============================================================================
+
+models:
+
+  # ===========================================================================
+  # CUSTOMER SUCCESS
+  # ===========================================================================
+
+  - name: fct_accounts_health
+    description: >
+      Customer Success Health Mart. One row per paying account.
+      3 distinct churn risk signals: is_payment_failing + is_churning_soon + is_low_engagement.
+    columns:
+      - name: account_id
+        description: "Grain. FK to dim_accounts."
+        tests: [unique, not_null]
+
+      - name: mrr
+        description: "Account MRR."
+        tests: [not_null]
+
+      - name: health_status
+        tests:
+          - accepted_values:
+              values: ['Healthy', 'At Risk', 'Churned']
+
+      - name: account_segment
+        tests:
+          - accepted_values:
+              values: ['Enterprise', 'Mid-Market', 'SMB', 'Trial/Free']
+
+  # ===========================================================================
+  # SALES
+  # ===========================================================================
+
+  - name: fct_pipeline
+    description: >
+      Sales Deal Pipeline Mart. One row per HubSpot deal.
+      Sourced from int_deals_enriched (resolves Anti-pattern #13).
+    columns:
+      - name: hubspot_deal_id
+        description: "Grain. HubSpot deal ID."
+        tests: [unique, not_null]
+
+      - name: deal_amount
+        description: "Deal amount in USD."
+        tests: [not_null]
+
+      - name: win_probability
+        description: "Win probability percentage (0–100)."
+        tests: [not_null]
+
+  - name: fct_activities
+    description: >
+      Sales Activity Log (Incremental). One row per HubSpot engagement.
+      Sourced directly from stg_hubspot__engagements for row-level event granularity.
+    columns:
+      - name: activity_id
+        description: "Grain. HubSpot engagement ID."
+        tests: [unique, not_null]
+
+      - name: activity_type
+        tests:
+          - accepted_values:
+              values: ['CALL', 'EMAIL', 'MEETING']
+
+  # ===========================================================================
+  # MARKETING
+  # ===========================================================================
+
+  - name: fct_lead_funnel
+    description: >
+      Marketing Lead Funnel Mart. One row per HubSpot company lead.
+      Sourced directly from stg_hubspot__companies to capture top-of-funnel leads.
+    columns:
+      - name: hubspot_company_id
+        description: "Grain. HubSpot company ID."
+        tests: [unique, not_null]
+
+      - name: lifecycle_stage
+        tests:
+          - accepted_values:
+              values:
+                - 'subscriber'
+                - 'lead'
+                - 'marketingqualifiedlead'
+                - 'salesqualifiedlead'
+                - 'opportunity'
+                - 'customer'
+                - 'evangelist'
+                - 'other'
+
+  - name: fct_attribution
+    description: >
+      Marketing Attribution Mart. One row per account (First-Touch).
+      Sourced from int_crm_aggregated and dim_accounts.
+    columns:
+      - name: account_id
+        description: "Grain. FK to dim_accounts."
+        tests: [unique, not_null]
+
+  # ===========================================================================
+  # PRODUCT
+  # ===========================================================================
+
+  - name: fct_product_activation
+    description: >
+      Product Activation Mart. One row per workspace_id.
+      Sourced from int_product_aggregated and dim_accounts.
+    columns:
+      - name: workspace_id
+        description: "Grain. Internal workspace ID."
+        tests: [unique, not_null]
+
+      - name: activation_rate
+        description: "activated_users / total_users (0.0 to 1.0)."
+        tests: [not_null]
+
+  - name: fct_pql_signals
+    description: >
+      GTM Priority Matrix Mart. Unconverted prospects only.
+      Computes Intent x Fit = gtm_priority.
+    columns:
+      - name: workspace_id
+        description: "Grain. Workspace ID."
+        tests: [unique, not_null]
+
+      - name: intent_tier
+        tests:
+          - accepted_values:
+              values: ['HOT', 'WARM', 'COLD']
+
+      - name: icp_tier
+        tests:
+          - accepted_values:
+              values: ['High Fit', 'Medium Fit', 'Low Fit']
+
+      - name: gtm_priority
+        tests:
+          - accepted_values:
+              values:
+                - 'MUST WIN'
+                - 'ACTIVE'
+                - 'NOTIFY'
+                - 'HIGH POTENTIAL'
+                - 'NURTURE'
+                - 'MONITOR'
+                - 'INCUBATE'
+
+  - name: fct_feature_usage
+    description: >
+      Feature Adoption Heatmap (Incremental).
+      Grain: workspace x feature_category x week.
+    columns:
+      - name: usage_id
+        description: "Grain. Surrogate key for workspace x feature_category x week."
+        tests: [unique, not_null]
+
+  - name: fct_trial_conversion
+    description: >
+      Trial-to-Paid Conversion Funnel Mart. One row per trialing workspace.
+      Sourced from int_billing_aggregated.
+    columns:
+      - name: workspace_id
+        description: "Grain. Workspace ID."
+        tests: [unique, not_null]
+
+  # ===========================================================================
+  # FINANCE
+  # ===========================================================================
+
+  - name: fct_subscriptions
+    description: >
+      Active Subscription Snapshot Mart. One row per workspace subscription.
+      Sourced from int_billing_aggregated.
+    columns:
+      - name: workspace_id
+        description: "Grain. Workspace ID."
+        tests: [unique, not_null]
+
+      - name: mrr_amount
+        description: "Workspace active MRR in USD."
+        tests: [not_null]
+
+      - name: subscription_status
+        tests:
+          - accepted_values:
+              values:
+                - 'active'
+                - 'trialing'
+                - 'past_due'
+                - 'canceled'
+                - 'incomplete'
+                - 'incomplete_expired'
+                - 'unpaid'
+
+  - name: fct_mrr_waterfall
+    description: >
+      Monthly SaaS MRR Waterfall Movements. Grain: account_id x month_date.
+      Sourced from int_billing_aggregated.
+    columns:
+      - name: waterfall_id
+        description: "Grain. account_id x month_date surrogate key."
+        tests: [unique, not_null]
+
+      - name: mrr
+        description: "End of month MRR."
+        tests:
+          - not_null
+
+      - name: mrr_movement_type
+        tests:
+          - accepted_values:
+              values:
+                - 'new'
+                - 'expansion'
+                - 'contraction'
+                - 'churn'
+                - 'resurrection'
+                - 'retained'
+
+  - name: fct_arr_movements
+    description: "Annualized ARR movements derived from fct_mrr_waterfall (* 12)."
+    columns:
+      - name: arr_snapshot_id
+        tests: [unique, not_null]
+
+      - name: arr_movement_type
+        tests:
+          - accepted_values:
+              values:
+                - 'new'
+                - 'expansion'
+                - 'contraction'
+                - 'churn'
+                - 'resurrection'
+                - 'retained'
+
+  - name: fct_retention_cohorts
+    description: >
+      Monthly NRR / GRR Cohort Analysis Mart. Grain: month_date (Portfolio aggregate).
+      Sourced from fct_mrr_waterfall.
+    columns:
+      - name: month_date
+        tests: [unique, not_null]
+
+  - name: fct_unit_economics
+    description: >
+      Unit Economics & LTV Metrics Mart. Grain: account_segment.
+      LTV = Avg MRR / Monthly Churn Rate.
+    columns:
+      - name: account_segment
+        tests: [unique, not_null]

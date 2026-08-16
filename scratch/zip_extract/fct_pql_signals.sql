@@ -3,15 +3,19 @@
 -- =============================================================================
 -- MODEL: fct_pql_signals
 -- MART: product
--- GRAIN: One row per unconverted workspace_id
+-- GRAIN: one row per workspace_id (faqat convert bo'lmaganlar)
 --
--- TARGET AUDIENCE: Sales & Customer Success Teams — GTM Priority Matrix, Outbound Outreach.
+-- AUDITORIYA: Sales + CS jamoasi — GTM priority matrix, outreach.
 --
--- BUSINESS LOGIC:
---   Computes Intent (Product Usage) x Fit (ICP Score) = GTM Priority Matrix.
---   HOT  = Git Connected + 50+ Events
---   WARM = Sprint Started + 10+ Events
---   COLD = Low activity
+-- MANTIQ:
+--   Intent (product faoliyati) × Fit (ICP) = GTM Priority
+--   HOT  = git_connected + 50+ event
+--   WARM = sprint_started + 10+ event
+--   COLD = hech narsa yo'q
+--
+-- O'ZGARISH:
+--   fct_product_activation dan keladi (int qatlamiga o'tilgan model).
+--   int_icp_scoring to'g'ridan-to'g'ri ishlatiladi.
 -- =============================================================================
 
 with activation as (
@@ -37,18 +41,18 @@ intent_scoring as (
         a.trial_started_at,
         a.trial_ended_at,
 
-        -- ICP Fit
+        -- ICP
         i.icp_score,
         i.icp_tier,
 
-        -- Activation Milestone Status
+        -- Activation milestone
         case
             when a.has_connected_git  then 'Activated (Git Connected)'
             when a.has_started_sprint then 'Started (Sprint Started)'
             else 'Signed Up'
         end                                             as activation_milestone,
 
-        -- Trial Days Remaining
+        -- Trial qolgan kun
         case
             when a.trial_ended_at is not null
             then greatest(0, datediff('day', current_timestamp, a.trial_ended_at))
@@ -57,9 +61,9 @@ intent_scoring as (
         a.total_product_events,
         a.is_pql,
         a.is_converted,
-        a.is_trial_expired_no_convert                   as is_at_risk_of_not_converting,
+        a.is_trial_at_risk                              as is_at_risk_of_not_converting,
 
-        -- Intent Tier Classification
+        -- Intent tier (product faoliyati asosida)
         case
             when a.total_product_events >= 50
              and a.has_connected_git               then 'HOT'
@@ -69,14 +73,14 @@ intent_scoring as (
 
     from activation a
     left join icp i on a.account_id = i.account_id
-    where a.is_converted = false  -- Focus strictly on unconverted prospects
+    where a.is_converted = false  -- faqat prospektlar
 ),
 
 final as (
     select
         *,
 
-        -- GTM Priority Matrix (Intent x Fit Matrix)
+        -- GTM Priority Matrix (Intent × Fit)
         case
             when intent_tier = 'HOT'  and icp_tier = 'High Fit'   then 'MUST WIN'
             when intent_tier = 'HOT'  and icp_tier = 'Medium Fit' then 'ACTIVE'
@@ -87,7 +91,7 @@ final as (
             else                                                        'INCUBATE'
         end                                             as gtm_priority,
 
-        -- Priority Numerical Rank for BI Sorting
+        -- Raqamli tartib (BI sorting uchun)
         case
             when intent_tier = 'HOT'  and icp_tier = 'High Fit'   then 1
             when intent_tier = 'HOT'  and icp_tier = 'Medium Fit' then 2
@@ -98,7 +102,7 @@ final as (
             else                                                         7
         end                                             as gtm_priority_rank,
 
-        -- Recommended GTM Action
+        -- Tavsiya etilgan harakat
         case
             when intent_tier = 'HOT' and icp_tier = 'High Fit'
                 then 'Immediate Executive Outreach'

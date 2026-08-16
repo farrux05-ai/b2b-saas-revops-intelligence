@@ -3,14 +3,15 @@
 -- =============================================================================
 -- MODEL: fct_lead_funnel
 -- MART: marketing
--- GRAIN: One row per hubspot_company_id
+-- GRAIN: one row per hubspot_company_id (lead)
 --
--- TARGET AUDIENCE: Marketing & Growth Teams — Lead funnel conversion, MQL quality, ROI.
+-- AUDITORIYA: Marketing jamoasi — funnel tahlil, MQL sifat, kampaniya ROI.
 --
--- ARCHITECTURAL RATIONALE:
---   Sourced directly from stg_hubspot__companies to capture all top-of-funnel CRM leads,
---   including prospects that have not yet registered a product workspace.
---   Enriched via LEFT JOIN with dim_accounts to append product usage and MRR metrics for converted leads.
+-- QOIDA: stg_hubspot__companies dan to'g'ri olish — ruxsat etilgan istisno.
+--        Sabab: bu mart HubSpot lead funnel ni ko'rsatadi.
+--        Ba'zi leadlar hali workspace ochmagan (crm-only) →
+--        int_accounts_joined da bo'lmasligi mumkin.
+--        dim_accounts LEFT JOIN: convert bo'lgan leadlar uchun MRR ko'rsatiladi.
 -- =============================================================================
 
 with companies as (
@@ -29,7 +30,7 @@ accounts as (
 )
 
 select
-    -- Identity & Metadata
+    -- ── Identity ──────────────────────────────────────────────────────────
     c.hubspot_company_id,
     a.account_id,
     c.company_name,
@@ -37,11 +38,11 @@ select
     c.industry,
     c.employee_count,
 
-    -- Lifecycle Funnel Position
+    -- ── Funnel pozitsiya ──────────────────────────────────────────────────
     c.lifecycle_stage,
     c.lead_status,
 
-    -- Lifecycle Conversion Flags
+    -- ── Konversiya flaglari ───────────────────────────────────────────────
     c.lifecycle_stage = 'customer'                      as is_customer,
     c.lifecycle_stage in (
         'salesqualifiedlead', 'opportunity', 'customer'
@@ -51,19 +52,19 @@ select
         'opportunity', 'customer'
     )                                                   as is_mql_or_beyond,
 
-    -- Product-Qualified Overlay (PLG)
+    -- ── PLG overlay ───────────────────────────────────────────────────────
     coalesce(a.is_pql, false)                           as is_pql,
     coalesce(a.total_product_events, 0)                 as product_events_count,
 
-    -- Revenue Realization
+    -- ── Revenue (faqat convert bo'lganlar uchun) ─────────────────────────
     coalesce(a.mrr, 0)                                  as current_mrr,
     a.subscription_status,
 
-    -- CRM Lead Timestamps
+    -- ── CRM vaqt ──────────────────────────────────────────────────────────
     c.created_at                                        as became_lead_at,
     c.updated_at                                        as last_crm_activity_at,
 
-    -- Lead Velocity
+    -- ── Lead yoshi ────────────────────────────────────────────────────────
     datediff('day', cast(c.created_at as date), current_date)
                                                         as lead_age_days
 

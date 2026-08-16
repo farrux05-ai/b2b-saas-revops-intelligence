@@ -10,19 +10,21 @@
 -- =============================================================================
 -- MODEL: fct_feature_usage
 -- MART: product
--- GRAIN: One row per workspace x feature_category x week
+-- GRAIN: one row per workspace × feature_category × week
 --
--- TARGET AUDIENCE: Product Management & Analytics — Feature adoption, stickiness, upsell.
+-- AUDITORIYA: Product jamoasi — feature adoption, stickiness, upsell.
 --
--- ARCHITECTURAL RATIONALE:
---   Sourced directly from stg_posthog__events to perform weekly feature category aggregations
---   at a lower grain than int_product_aggregated.
+-- QOIDA: stg_posthog__events dan to'g'ri olish — ruxsat etilgan istisno.
+--        Sabab: event-level raw data kerak (timestamp + event_name).
+--        int_product_aggregated da already aggregated (workspace darajasida).
+--        Bu mart feature_category × week darajasida aggregatsiya qiladi —
+--        boshqa grain, shu sababli STG dan to'g'ri olish to'g'ri.
 -- =============================================================================
 
 with events as (
     select * from {{ ref('stg_posthog__events') }}
     {% if is_incremental() %}
-    -- 3-day overlap window for late-arriving telemetry events
+    -- 3 kun overlap: late-arriving events uchun
     where occurred_at >= (
         select max(usage_week) - interval '3 days'
         from {{ this }}

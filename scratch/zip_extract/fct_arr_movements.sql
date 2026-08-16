@@ -3,12 +3,10 @@
 -- =============================================================================
 -- MODEL: fct_arr_movements
 -- MART: finance
--- GRAIN: One row per account_id x month_date
+-- GRAIN: one row per account_id × month_date
 --
--- TARGET AUDIENCE: Finance & Executive Leadership — Annualized ARR Movements (MRR * 12).
---
--- BUSINESS LOGIC:
---   Derived directly from fct_mrr_waterfall by scaling monthly MRR values to ARR (* 12).
+-- fct_mrr_waterfall dan derivatsiya — MRR × 12 = ARR.
+-- O'ZGARISH yo'q — fct_mrr_waterfall dan oladi (u o'zgargan).
 -- =============================================================================
 
 with mrr as (

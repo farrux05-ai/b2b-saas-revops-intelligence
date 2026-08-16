@@ -3,9 +3,11 @@
 -- =============================================================================
 -- MODEL: fct_retention_cohorts
 -- MART: finance
--- GRAIN: One row per month_date (Portfolio level aggregate)
+-- GRAIN: one row per month_date (portfolio aggregate)
+-- MATERIALIZED: table — fct_unit_economics ko'p so'raydi
 --
--- TARGET AUDIENCE: Finance & Board / Investors — Net Revenue Retention (NRR) & Gross Revenue Retention (GRR).
+-- AUDITORIYA: Finance + Investor — NRR/GRR cohort tahlil.
+-- O'ZGARISH yo'q — fct_mrr_waterfall dan oladi.
 -- =============================================================================
 
 with waterfall as (
@@ -47,7 +49,7 @@ monthly_movements as (
 select
     month_date,
 
-    -- MRR Portfolio Movements
+    -- MRR harakatlari
     starting_mrr,
     new_mrr,
     expansion_mrr,
@@ -58,12 +60,12 @@ select
     new_mrr + expansion_mrr + resurrection_mrr
         - contraction_mrr - churned_mrr                 as net_mrr_change,
 
-    -- Account Headcount Metrics
+    -- Account soni
     starting_accounts,
     ending_accounts,
     churned_accounts,
 
-    -- Gross Revenue Retention (GRR %): Excludes expansion, capped at 100%
+    -- ── GRR: expansion qo'shilmaydi, ceiling = 100% ──────────────────────
     case
         when starting_mrr > 0
         then round(
@@ -74,7 +76,7 @@ select
             ) * 100, 2)
     end                                                 as grr_pct,
 
-    -- Net Revenue Retention (NRR %): Includes expansion, can exceed 100%
+    -- ── NRR: expansion kiritiladi, 100%+ bo'lishi mumkin ─────────────────
     case
         when starting_mrr > 0
         then round(
@@ -82,13 +84,13 @@ select
             / nullif(starting_mrr, 0) * 100, 2)
     end                                                 as nrr_pct,
 
-    -- Monthly Revenue Churn Rate %
+    -- ── Oylik churn rate ──────────────────────────────────────────────────
     case
         when starting_mrr > 0
         then round(churned_mrr / nullif(starting_mrr, 0) * 100, 2)
     end                                                 as monthly_churn_rate_pct,
 
-    -- Logo Churn Rate % (Account Count basis)
+    -- ── Logo churn rate (account soni bo'yicha) ──────────────────────────
     case
         when starting_accounts > 0
         then round(
