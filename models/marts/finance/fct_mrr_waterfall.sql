@@ -19,12 +19,11 @@ subscriptions_with_mrr as (
         s.workspace_id,
         sp.account_id,
         sp.workspace_name,
-        s.created_at,
         s.current_period_start_at,
         s.current_period_end_at,
-        s.subscription_status,
-        s.mrr_amount
-    from {{ ref('int_subscriptions_enriched') }} s
+        s.latest_subscription_status                    as subscription_status,
+        s.total_mrr                                     as mrr_amount
+    from {{ ref('int_billing_aggregated') }} s
     join spine sp on s.workspace_id = sp.internal_workspace_id
 ),
 

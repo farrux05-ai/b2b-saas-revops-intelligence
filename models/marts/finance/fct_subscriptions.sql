@@ -7,82 +7,55 @@
 -- MRR computation lives here (not in staging — thin staging principle).
 -- =============================================================================
 
-with subscriptions as (
-    select * from {{ ref('int_subscriptions_enriched') }}
+with billing as (
+    select * from {{ ref('int_billing_aggregated') }}
 ),
 
 spine as (
     select * from {{ ref('int_accounts_joined') }}
 ),
 
--- Seat utilization from int_finance_aggregated (actual seats used vs purchased)
-finance as (
-    select
-        workspace_id,
-        seats_used,
-        seats_purchased
-    from {{ ref('int_finance_aggregated') }}
-),
-
 final as (
     select
         -- Identity
-        s.subscription_id,
-        s.customer_id,
-        s.workspace_id,
+        b.customer_id,
+        b.workspace_id,
         sp.account_id,
         sp.workspace_name,
         sp.domain,
 
         -- Plan Info
-        s.subscription_status,
-        s.plan_id,
+        b.latest_subscription_status                    as subscription_status,
+        b.current_plan                                  as plan_id,
 
-        -- Revenue (computed centrally in int_subscriptions_enriched)
-        s.unit_amount,
-        s.seats_purchased                               as seats,
-        s.mrr_amount,
-        s.mrr_amount * 12                               as arr_amount,
+        -- Revenue
+        b.active_mrr                                    as mrr_amount,
+        b.active_mrr * 12                               as arr_amount,
 
         -- Seat Utilization
-        coalesce(f.seats_used, 0)                       as seats_used,
-        case
-            when s.seats_purchased > 0
-            then round(
-                coalesce(f.seats_used, 0)::decimal / s.seats_purchased * 100,
-                1
-            )
-            else null
-        end                                             as seat_utilization_pct,
+        b.seats_purchased,
+        b.seats_used,
+        b.seat_utilization_pct * 100                    as seat_utilization_pct,
 
         -- Upsell/Downsell Signals
-        (
-            s.seats_purchased > 0
-            and coalesce(f.seats_used, 0)::decimal / s.seats_purchased >= 0.9
-        )                                               as is_upsell_candidate,
-        (
-            s.seats_purchased > 1
-            and coalesce(f.seats_used, 0)::decimal / s.seats_purchased < 0.3
-        )                                               as is_downsell_risk,
+        b.is_upsell_candidate,
+        b.is_downsell_risk,
 
         -- Status Flags
-        s.subscription_status = 'active'               as is_active,
-        s.subscription_status = 'trialing'             as is_trialing,
-        s.subscription_status = 'past_due'             as is_past_due,
-        s.subscription_status = 'canceled'             as is_canceled,
-        s.is_cancel_at_period_end                       as is_churning_soon,
+        b.latest_subscription_status = 'active'         as is_active,
+        b.latest_subscription_status = 'trialing'       as is_trialing,
+        b.latest_subscription_status = 'past_due'       as is_past_due,
+        b.latest_subscription_status = 'canceled'       as is_canceled,
+        b.is_churning_soon,
 
         -- Billing Period
-        s.current_period_start_at,
-        s.current_period_end_at,
-        s.trial_end_at,
-        s.created_at
+        b.current_period_start_at,
+        b.current_period_end_at,
+        b.trial_end_at
 
-    from subscriptions s
+    from billing b
     left join spine sp
-        on s.workspace_id = sp.internal_workspace_id
-    left join finance f
-        on s.workspace_id = f.workspace_id
+        on b.workspace_id = sp.internal_workspace_id
 )
 
 select * from final

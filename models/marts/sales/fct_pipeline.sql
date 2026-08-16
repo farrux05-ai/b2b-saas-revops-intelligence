@@ -8,7 +8,7 @@
 -- =============================================================================
 
 with deals as (
-    select * from {{ ref('stg_hubspot__deals') }}
+    select * from {{ ref('int_deals_enriched') }}
 ),
 
 accounts as (
@@ -39,58 +39,31 @@ final as (
         d.deal_stage,
 
         -- Financials
-        coalesce(d.amount, 0)                           as deal_amount,
-        coalesce(d.probability, 0)                      as win_probability,
-        coalesce(d.amount, 0)
-            * coalesce(d.probability, 0) / 100.0        as weighted_amount,
+        d.amount                                        as deal_amount,
+        d.probability                                   as win_probability,
+        d.weighted_amount,
 
         -- Status Flags
-        d.deal_stage in ('closedwon')                   as is_won,
-        d.deal_stage in ('closedlost')                  as is_lost,
-        d.deal_stage not in ('closedwon', 'closedlost') as is_open,
+        d.is_won,
+        d.is_lost,
+        d.is_open,
 
         -- Timing
         d.created_at,
         d.closed_at,
 
-        -- Deal Velocity: days from creation to close
-        case
-            when d.closed_at is not null
-             and d.closed_at > d.created_at
-            then date_diff('day', d.created_at, d.closed_at)
-        end                                             as days_to_close,
+        -- Deal Velocity
+        d.days_to_close,
+        d.days_open,
+        d.is_stale,
+        d.deal_age_bucket,
 
-        -- Days open (for open deals)
-        case
-            when d.deal_stage not in ('closedwon', 'closedlost')
-            then date_diff('day', d.created_at, current_timestamp)
-        end                                             as days_open,
-
-        -- Sales Velocity: Stale open deal (> 90 days with no close)
-        (
-            d.deal_stage not in ('closedwon', 'closedlost')
-            and date_diff('day', d.created_at, current_timestamp) > 90
-        )                                               as is_stale,
-
-        -- Deal Age Bucket for reporting
-        case
-            when d.deal_stage in ('closedwon', 'closedlost')
-                then 'Closed'
-            when date_diff('day', d.created_at, current_timestamp) <= 30
-                then '0-30 days'
-            when date_diff('day', d.created_at, current_timestamp) <= 60
-                then '31-60 days'
-            when date_diff('day', d.created_at, current_timestamp) <= 90
-                then '61-90 days'
-            else '90+ days (Stale)'
-        end                                             as deal_age_bucket,
-
-        -- Benchmark: Average days to close for WON deals (window across all won deals)
+        -- Benchmark: Average days to close for WON deals
         avg(
             case
-                when d.deal_stage = 'closedwon'
+                when d.is_won
                  and d.closed_at is not null
-                then date_diff('day', d.created_at, d.closed_at)
+                then d.days_to_close
             end
         ) over ()                                       as avg_won_days_to_close,
 

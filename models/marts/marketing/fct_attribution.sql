@@ -14,7 +14,7 @@ deals as (
     select 
         hubspot_company_id,
         won_deals_count
-    from {{ ref('int_sales_aggregated') }}
+    from {{ ref('int_crm_aggregated') }}
 ),
 
 final as (

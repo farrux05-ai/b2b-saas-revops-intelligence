@@ -8,7 +8,7 @@
 -- =============================================================================
 
 with usage as (
-    select * from {{ ref('int_usage_aggregated') }}
+    select * from {{ ref('int_product_aggregated') }}
 ),
 
 accounts as (
@@ -38,8 +38,8 @@ user_stats as (
     select
         account_id,
         count(*)                                        as total_users,
-        count(*) filter (where is_activated)            as activated_users,
-        count(*) filter (where is_active_last_30d)      as active_users_last_30d
+        count(case when is_activated then 1 end)        as activated_users,
+        count(case when is_active_last_30d then 1 end)  as active_users_last_30d
     from {{ ref('int_users_joined') }}
     group by 1
 ),
