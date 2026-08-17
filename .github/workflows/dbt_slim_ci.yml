@@ -56,7 +56,7 @@ jobs:
           if [ ! -f ./state/manifest.json ]; then
             echo "⚠️  Main manifest not found in artifacts. Compiling baseline manifest..."
             mkdir -p ./state
-            dbt parse --target snowflake
+            dbt parse --target snowflake --profiles-dir .
             cp target/manifest.json ./state/manifest.json
           fi
 
@@ -65,6 +65,7 @@ jobs:
         run: |
           dbt build \
             --target ci \
+            --profiles-dir . \
             --select state:modified+ \
             --defer \
             --state ./state \
@@ -73,11 +74,11 @@ jobs:
       - name: 🏗️ Full dbt Build on Main Merge
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          dbt build --target snowflake --store-failures
+          dbt build --target snowflake --profiles-dir . --store-failures
 
       - name: 🛡️ Elementary Data Observability Run
         run: |
-          dbt run -s elementary --target snowflake
+          dbt run -s elementary --target snowflake --profiles-dir .
 
       - name: 📤 Upload Production Manifest Artifact (For Future PR Deferral)
         if: github.ref == 'refs/heads/main'
