@@ -1,0 +1,100 @@
+name: Deploy dbt Docs & Elementary Report to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  deploy-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install dbt-snowflake elementary-data
+
+      - name: Generate dbt Docs & Elementary Report
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+        run: |
+          # Prepare deployment folder structure
+          mkdir -p public/dbt_docs
+          mkdir -p public/elementary
+
+          # 1. Generate dbt docs
+          dbt docs generate --target snowflake --profiles-dir .
+          cp target/index.html public/dbt_docs/
+          cp target/manifest.json public/dbt_docs/
+          cp target/catalog.json public/dbt_docs/
+
+          # Also keep root dbt docs fallback
+          cp target/index.html public/dbt_docs_index.html
+
+          # 2. Generate Elementary Observability Report
+          edr report --profiles-dir . --profile-target snowflake
+          cp edr_target/elementary_report.html public/elementary/index.html
+          cp edr_target/elementary_report.html public/elementary_report.html
+
+          # 3. Create Main Landing Page Portal (index.html)
+          cat << 'EOF' > public/index.html
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>RevOps Intelligence Hub</title>
+            <style>
+              body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; text-align: center; padding: 40px 20px; margin: 0; }
+              h1 { font-size: 2.2rem; margin-bottom: 10px; color: #38bdf8; }
+              p.subtitle { color: #94a3b8; font-size: 1.1rem; margin-bottom: 40px; }
+              .card-container { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; max-width: 900px; margin: 0 auto; }
+              .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px 24px; width: 340px; text-decoration: none; color: inherit; transition: all 0.2s ease-in-out; text-align: left; }
+              .card:hover { transform: translateY(-6px); border-color: #38bdf8; box-shadow: 0 12px 24px -10px rgba(56, 189, 248, 0.3); }
+              .card h2 { color: #38bdf8; margin-top: 0; font-size: 1.4rem; display: flex; align-items: center; gap: 8px; }
+              .card p { color: #cbd5e1; font-size: 0.95rem; line-height: 1.5; }
+              .badge { display: inline-block; background: #0284c7; color: white; padding: 4px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; margin-bottom: 12px; }
+            </style>
+          </head>
+          <body>
+            <span class="badge">RevOps Intelligence Engine</span>
+            <h1>Data Documentation & Quality Portal</h1>
+            <p class="subtitle">Select a portal below to view interactive lineage or data observability reports</p>
+            <div class="card-container">
+              <a class="card" href="dbt_docs/">
+                <h2>📚 dbt Lineage & Docs</h2>
+                <p>Interactive dbt DAG graph, data model schemas, column definitions, and data flow contracts across Snowflake schemas.</p>
+              </a>
+              <a class="card" href="elementary/">
+                <h2>🛡️ Elementary Observability</h2>
+                <p>Data quality test health, source freshness SLAs, test failure history, and data anomaly monitoring dashboard.</p>
+              </a>
+            </div>
+          </body>
+          </html>
+          EOF
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
