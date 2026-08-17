@@ -589,3 +589,91 @@ models:
                 type: sum
                 label: "% of Total MRR"
                 format: "percent"
+
+
+  # ─── fct_arr_movements ─────────────────────────────────────────────────────
+  - name: fct_arr_movements
+    description: "Annualized ARR movements derived from fct_mrr_waterfall."
+    config:
+      meta:
+        label: "ARR Waterfall Movements"
+        primary_key: arr_snapshot_id
+        groups: ['finance']
+        order_fields_by: 'index'
+        default_filters:
+          - month_date: 'inThePast 12 months'
+            required: false
+
+    columns:
+      - name: arr_snapshot_id
+        config:
+          meta:
+            label: "ARR Snapshot ID"
+            hidden: true
+
+      - name: account_id
+        config:
+          meta:
+            label: "Account ID"
+
+      - name: workspace_name
+        config:
+          meta:
+            label: "Workspace"
+
+      - name: company_name
+        config:
+          meta:
+            label: "Company"
+
+      - name: month_date
+        config:
+          meta:
+            label: "Month"
+            dimension:
+              type: date
+              time_intervals: ['MONTH', 'QUARTER', 'YEAR']
+
+      - name: arr_movement_type
+        config:
+          meta:
+            label: "ARR Movement Type"
+
+      - name: previous_arr
+        config:
+          meta:
+            format: "usd"
+            label: "Previous ARR"
+            metrics:
+              total_previous_arr:
+                type: sum
+                format: "usd"
+                label: "Total Previous ARR ($)"
+                spotlight:
+                  categories: ['finance']
+
+      - name: arr_amount
+        config:
+          meta:
+            format: "usd"
+            label: "ARR Change Amount"
+            metrics:
+              total_arr_change:
+                type: sum
+                format: "usd"
+                label: "Total ARR Change ($)"
+                spotlight:
+                  categories: ['finance']
+
+      - name: current_arr
+        config:
+          meta:
+            format: "usd"
+            label: "Current ARR"
+            metrics:
+              total_current_arr:
+                type: sum
+                format: "usd"
+                label: "Total Current ARR ($)"
+                spotlight:
+                  categories: ['finance', 'executive']
