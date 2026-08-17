@@ -41,6 +41,9 @@ jobs:
           mkdir -p public/dbt_docs
           mkdir -p public/elementary
 
+          # 0. Install dbt packages (elementary, dbt_utils, etc.)
+          dbt deps --profiles-dir .
+
           # 1. Generate dbt docs
           dbt docs generate --target snowflake --profiles-dir .
           cp target/index.html public/dbt_docs/
