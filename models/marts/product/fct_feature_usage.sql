@@ -24,7 +24,7 @@ with events as (
     {% if is_incremental() %}
     -- 3-day overlap window for late-arriving telemetry events
     where occurred_at >= (
-        select max(usage_week) - interval '3 days'
+        select max(usage_week) - interval '3 day'
         from {{ this }}
     )
     {% endif %}

@@ -25,7 +25,7 @@ with engagements as (
     {% if is_incremental() %}
     -- 3-day overlap window for late-arriving records
     where created_at >= (
-        select max(activity_at) - interval '3 days'
+        select max(activity_at) - interval '3 day'
         from {{ this }}
     )
     {% endif %}

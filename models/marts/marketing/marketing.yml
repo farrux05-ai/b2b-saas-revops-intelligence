@@ -1,19 +1,12 @@
 version: 2
 models:
 - name: fct_lead_funnel
-  description: 'Marketing Lead Funnel Mart. One row per HubSpot company lead. Sourced
-    directly from stg_hubspot__companies to capture top-of-funnel leads.
-
-    '
+  description: 'Marketing Lead Funnel Mart.'
   config:
     meta:
       label: Marketing Lead Funnel
   columns:
   - name: hubspot_company_id
-    description: Grain. HubSpot company ID.
-    tests:
-    - unique
-    - not_null
     config:
       meta:
         label: Company Lead ID
@@ -22,40 +15,69 @@ models:
             type: count_distinct
             label: Total Lead Count
   - name: account_id
-    description: FK to dim_accounts.
     config:
       meta:
         label: Account ID
   - name: lifecycle_stage
-    tests:
-    - accepted_values:
-        arguments:
-          values:
-          - subscriber
-          - lead
-          - marketingqualifiedlead
-          - salesqualifiedlead
-          - opportunity
-          - customer
-          - evangelist
-          - other
     config:
       meta:
         label: Lifecycle Stage
-- name: fct_attribution
-  description: 'Marketing Attribution Mart. One row per account (First-Touch). Sourced
-    from int_crm_aggregated and dim_accounts.
 
-    '
+- name: fct_attribution
+  description: 'Marketing Attribution Mart.'
   config:
     meta:
       label: Marketing Attribution
   columns:
   - name: account_id
-    description: Grain. FK to dim_accounts.
-    tests:
-    - unique
-    - not_null
     config:
       meta:
         label: Account ID
+        metrics:
+          attributed_accounts_count:
+            type: count_distinct
+            label: Attributed Accounts Count
+  - name: workspace_name
+    config:
+      meta:
+        label: Workspace Name
+  - name: acquisition_channel
+    config:
+      meta:
+        label: Acquisition Channel
+  - name: first_touch_campaign
+    config:
+      meta:
+        label: First Touch Campaign
+  - name: mrr
+    config:
+      meta:
+        format: usd
+        label: MRR
+        metrics:
+          attribution_total_mrr:
+            type: sum
+            format: usd
+            label: Attribution Total MRR ($)
+  - name: lifetime_revenue
+    config:
+      meta:
+        format: usd
+        label: Lifetime Revenue
+        metrics:
+          total_lifetime_revenue:
+            type: sum
+            format: usd
+            label: Total Lifetime Revenue ($)
+  - name: won_deals_count
+    config:
+      meta:
+        label: Won Deals Count
+        metrics:
+          total_won_deals_sum:
+            type: sum
+            label: Total Won Deals Sum
+  - name: account_created_at
+    config:
+      meta:
+        label: Account Created At

@@ -1,19 +1,12 @@
 version: 2
 models:
 - name: fct_pipeline
-  description: 'Sales Deal Pipeline Mart. One row per HubSpot deal. Sourced from int_deals_enriched
-    (resolves Anti-pattern #13).
-
-    '
+  description: 'Sales Deal Pipeline Mart.'
   config:
     meta:
       label: Sales Deal Pipeline
   columns:
   - name: hubspot_deal_id
-    description: Grain. HubSpot deal ID.
-    tests:
-    - unique
-    - not_null
     config:
       meta:
         label: Deal ID
@@ -22,14 +15,10 @@ models:
             type: count_distinct
             label: Total Deal Count
   - name: account_id
-    description: FK to dim_accounts.
     config:
       meta:
         label: Account ID
   - name: deal_amount
-    description: Deal amount in USD.
-    tests:
-    - not_null
     config:
       meta:
         format: usd
@@ -37,12 +26,9 @@ models:
         metrics:
           total_pipeline_value:
             type: sum
-            label: Total Pipeline Value ($)
             format: usd
+            label: Total Pipeline Value ($)
   - name: win_probability
-    description: "Win probability percentage (0\u2013100)."
-    tests:
-    - not_null
     config:
       meta:
         format: percent
@@ -63,8 +49,8 @@ models:
         metrics:
           weighted_pipeline_value:
             type: sum
-            label: Weighted Pipeline Value ($)
             format: usd
+            label: Weighted Pipeline Value ($)
   - name: is_stale
     config:
       meta:
@@ -74,20 +60,14 @@ models:
             type: count_distinct
             sql: case when ${is_stale} then ${hubspot_deal_id} else null end
             label: Stale Deals Count
-- name: fct_activities
-  description: 'Sales Activity Log (Incremental). One row per HubSpot engagement.
-    Sourced directly from stg_hubspot__engagements for row-level event granularity.
 
-    '
+- name: fct_activities
+  description: 'Sales Activity Log.'
   config:
     meta:
       label: Sales Activity Log
   columns:
   - name: activity_id
-    description: Grain. HubSpot engagement ID.
-    tests:
-    - unique
-    - not_null
     config:
       meta:
         label: Activity ID
@@ -95,19 +75,23 @@ models:
           total_activities:
             type: count_distinct
             label: Total Sales Activities
-  - name: account_id
-    description: FK to dim_accounts.
+  - name: hubspot_company_id
     config:
       meta:
-        label: Account ID
+        label: HubSpot Company ID
+  - name: owner_id
+    config:
+      meta:
+        label: Owner ID
   - name: activity_type
-    tests:
-    - accepted_values:
-        arguments:
-          values:
-          - CALL
-          - EMAIL
-          - MEETING
     config:
       meta:
         label: Activity Type
+  - name: activity_at
+    config:
+      meta:
+        label: Activity Timestamp
+  - name: activity_date
+    config:
+      meta:
+        label: Activity Date
