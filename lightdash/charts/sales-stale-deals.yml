@@ -7,7 +7,7 @@ version: 1
 metricQuery:
   exploreName: fct_pipeline
   dimensions:
-    - fct_pipeline_deal_id
+    - fct_pipeline_hubspot_deal_id
     - fct_pipeline_deal_stage
   metrics:
     - fct_pipeline_stale_deals

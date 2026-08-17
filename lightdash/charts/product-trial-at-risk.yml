@@ -7,8 +7,9 @@ version: 1
 metricQuery:
   exploreName: fct_trial_conversion
   dimensions:
-    - fct_trial_conversion_trial_id
-  metrics: []
+    - fct_trial_conversion_workspace_id
+  metrics:
+    - fct_trial_conversion_trials_at_risk
   filters: {}
   sorts: []
   tableCalculations: []

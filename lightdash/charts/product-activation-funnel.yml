@@ -6,9 +6,10 @@ spaceSlug: product
 version: 1
 metricQuery:
   exploreName: fct_product_activation
-  dimensions:
-    - fct_product_activation_account_id
-  metrics: []
+  dimensions: []
+  metrics: 
+    - fct_product_activation_total_users_sum
+    - fct_product_activation_activated_users_sum
   filters: {}
   sorts: []
   tableCalculations: []
@@ -19,12 +20,16 @@ chartConfig:
     eChartsConfig:
       series:
         - encode:
-            xRef:
-              field: fct_product_activation_account_id
             yRef:
-              field: fct_product_activation_account_id
+              field: fct_product_activation_total_users_sum
+          name: Total Users
+          type: bar
+        - encode:
+            yRef:
+              field: fct_product_activation_activated_users_sum
+          name: Activated Users
           type: bar
     layout:
-      xField: fct_product_activation_account_id
       yField:
-        - fct_product_activation_account_id
+        - fct_product_activation_total_users_sum
+        - fct_product_activation_activated_users_sum

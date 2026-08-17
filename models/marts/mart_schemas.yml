@@ -1,508 +1,562 @@
 version: 2
-
-# =============================================================================
-# MART SCHEMAS: CS, Sales, Marketing, Product, Finance
-# Schema contracts, test assertions, and Lightdash BI metadata for fact tables.
-# =============================================================================
-
 models:
+- name: fct_accounts_health
+  description: 'Customer Success Health Mart. One row per paying account. 3 distinct
+    churn risk signals: is_payment_failing + is_churning_soon + is_low_engagement.
 
-  # ===========================================================================
-  # CUSTOMER SUCCESS
-  # ===========================================================================
-
-  - name: fct_accounts_health
-    description: >
-      Customer Success Health Mart. One row per paying account.
-      3 distinct churn risk signals: is_payment_failing + is_churning_soon + is_low_engagement.
+    '
+  config:
+    meta:
+      label: Account Health & CS Prioritization
+  columns:
+  - name: account_id
+    description: Grain. FK to dim_accounts.
+    tests:
+    - unique
+    - not_null
     config:
       meta:
-        label: "Account Health & CS Prioritization"
-
-    columns:
-      - name: account_id
-        description: "Grain. FK to dim_accounts."
-        tests: [unique, not_null]
-        config:
-          meta:
-            label: "Account ID"
-
-      - name: mrr
-        description: "Account MRR."
-        tests: [not_null]
-        config:
-          meta:
-            format: "usd"
-            label: "MRR"
-            metrics:
-              cs_total_mrr:
-                type: sum
-                label: "CS Total MRR ($)"
-                format: "usd"
-
-      - name: health_status
-        tests:
-          - accepted_values:
-              arguments:
-                values: ['Healthy', 'At Risk', 'Churned']
-        config:
-          meta:
-            label: "Health Status"
-
-      - name: account_segment
-        tests:
-          - accepted_values:
-              arguments:
-                values: ['Enterprise', 'Mid-Market', 'SMB', 'Trial/Free']
-        config:
-          meta:
-            label: "Account Segment"
-
-  # ===========================================================================
-  # SALES
-  # ===========================================================================
-
-  - name: fct_pipeline
-    description: >
-      Sales Deal Pipeline Mart. One row per HubSpot deal.
-      Sourced from int_deals_enriched (resolves Anti-pattern #13).
+        label: Account ID
+        metrics:
+          at_risk_accounts:
+            type: count_distinct
+            sql: case when ${health_status} = 'At Risk' then ${account_id} else null
+              end
+            label: At Risk Accounts
+  - name: mrr
+    description: Account MRR.
+    tests:
+    - not_null
     config:
       meta:
-        label: "Sales Deal Pipeline"
-
-    columns:
-      - name: hubspot_deal_id
-        description: "Grain. HubSpot deal ID."
-        tests: [unique, not_null]
-        config:
-          meta:
-            label: "Deal ID"
-            metrics:
-              total_deals:
-                type: count_distinct
-                label: "Total Deal Count"
-
-      - name: account_id
-        description: "FK to dim_accounts."
-        config:
-          meta:
-            label: "Account ID"
-
-      - name: deal_amount
-        description: "Deal amount in USD."
-        tests: [not_null]
-        config:
-          meta:
-            format: "usd"
-            label: "Deal Amount"
-            metrics:
-              total_pipeline_value:
-                type: sum
-                label: "Total Pipeline Value ($)"
-                format: "usd"
-
-      - name: win_probability
-        description: "Win probability percentage (0–100)."
-        tests: [not_null]
-        config:
-          meta:
-            format: "percent"
-            label: "Win Probability"
-
-  - name: fct_activities
-    description: >
-      Sales Activity Log (Incremental). One row per HubSpot engagement.
-      Sourced directly from stg_hubspot__engagements for row-level event granularity.
+        format: usd
+        label: MRR
+        metrics:
+          cs_total_mrr:
+            type: sum
+            label: CS Total MRR ($)
+            format: usd
+  - name: health_status
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - Healthy
+          - At Risk
+          - Churned
     config:
       meta:
-        label: "Sales Activity Log"
-
-    columns:
-      - name: activity_id
-        description: "Grain. HubSpot engagement ID."
-        tests: [unique, not_null]
-        config:
-          meta:
-            label: "Activity ID"
-            metrics:
-              total_activities:
-                type: count_distinct
-                label: "Total Sales Activities"
-
-      - name: account_id
-        description: "FK to dim_accounts."
-        config:
-          meta:
-            label: "Account ID"
-
-      - name: activity_type
-        tests:
-          - accepted_values:
-              arguments:
-                values: ['CALL', 'EMAIL', 'MEETING']
-        config:
-          meta:
-            label: "Activity Type"
-
-  # ===========================================================================
-  # MARKETING
-  # ===========================================================================
-
-  - name: fct_lead_funnel
-    description: >
-      Marketing Lead Funnel Mart. One row per HubSpot company lead.
-      Sourced directly from stg_hubspot__companies to capture top-of-funnel leads.
+        label: Health Status
+  - name: account_segment
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - Enterprise
+          - Mid-Market
+          - SMB
+          - Trial/Free
     config:
       meta:
-        label: "Marketing Lead Funnel"
-
-    columns:
-      - name: hubspot_company_id
-        description: "Grain. HubSpot company ID."
-        tests: [unique, not_null]
-        config:
-          meta:
-            label: "Company Lead ID"
-            metrics:
-              total_leads:
-                type: count_distinct
-                label: "Total Lead Count"
-
-      - name: account_id
-        description: "FK to dim_accounts."
-        config:
-          meta:
-            label: "Account ID"
-
-      - name: lifecycle_stage
-        tests:
-          - accepted_values:
-              arguments:
-                values:
-                  - 'subscriber'
-                  - 'lead'
-                  - 'marketingqualifiedlead'
-                  - 'salesqualifiedlead'
-                  - 'opportunity'
-                  - 'customer'
-                  - 'evangelist'
-                  - 'other'
-        config:
-          meta:
-            label: "Lifecycle Stage"
-
-  - name: fct_attribution
-    description: >
-      Marketing Attribution Mart. One row per account (First-Touch).
-      Sourced from int_crm_aggregated and dim_accounts.
+        label: Account Segment
+  - name: mrr_at_risk
     config:
       meta:
-        label: "Marketing Attribution"
-
-    columns:
-      - name: account_id
-        description: "Grain. FK to dim_accounts."
-        tests: [unique, not_null]
-        config:
-          meta:
-            label: "Account ID"
-
-  # ===========================================================================
-  # PRODUCT
-  # ===========================================================================
-
-  - name: fct_product_activation
-    description: >
-      Product Activation Mart. One row per workspace_id.
-      Sourced from int_product_aggregated and dim_accounts.
+        format: usd
+        label: MRR at Risk
+        metrics:
+          total_mrr_at_risk:
+            type: sum
+            label: Total MRR at Risk ($)
+            format: usd
+  - name: health_reason
     config:
       meta:
-        label: "Product Activation"
+        label: Health Reason
+- name: fct_pipeline
+  description: 'Sales Deal Pipeline Mart. One row per HubSpot deal. Sourced from int_deals_enriched
+    (resolves Anti-pattern #13).
 
-    columns:
-      - name: workspace_id
-        description: "Grain. Internal workspace ID."
-        tests: [unique, not_null]
-        config:
-          meta:
-            label: "Workspace ID"
-
-      - name: account_id
-        description: "FK to dim_accounts."
-        config:
-          meta:
-            label: "Account ID"
-
-      - name: activation_rate
-        description: "activated_users / total_users (0.0 to 1.0)."
-        tests: [not_null]
-        config:
-          meta:
-            format: "percent"
-            label: "Activation Rate"
-
-  - name: fct_pql_signals
-    description: >
-      GTM Priority Matrix Mart. Unconverted prospects only.
-      Computes Intent x Fit = gtm_priority.
+    '
+  config:
+    meta:
+      label: Sales Deal Pipeline
+  columns:
+  - name: hubspot_deal_id
+    description: Grain. HubSpot deal ID.
+    tests:
+    - unique
+    - not_null
     config:
       meta:
-        label: "GTM Priority Matrix & PQL Signals"
-
-    columns:
-      - name: workspace_id
-        description: "Grain. Workspace ID."
-        tests: [unique, not_null]
-        config:
-          meta:
-            label: "Workspace ID"
-
-      - name: account_id
-        description: "FK to dim_accounts."
-        config:
-          meta:
-            label: "Account ID"
-
-      - name: intent_tier
-        tests:
-          - accepted_values:
-              arguments:
-                values: ['HOT', 'WARM', 'COLD']
-        config:
-          meta:
-            label: "Intent Tier"
-
-      - name: icp_tier
-        tests:
-          - accepted_values:
-              arguments:
-                values: ['High Fit', 'Medium Fit', 'Low Fit']
-        config:
-          meta:
-            label: "ICP Tier"
-
-      - name: gtm_priority
-        tests:
-          - accepted_values:
-              arguments:
-                values:
-                  - 'MUST WIN'
-                  - 'ACTIVE'
-                  - 'NOTIFY'
-                  - 'HIGH POTENTIAL'
-                  - 'NURTURE'
-                  - 'MONITOR'
-                  - 'INCUBATE'
-        config:
-          meta:
-            label: "GTM Priority"
-
-  - name: fct_feature_usage
-    description: >
-      Feature Adoption Heatmap (Incremental).
-      Grain: workspace x feature_category x week.
+        label: Deal ID
+        metrics:
+          total_deals:
+            type: count_distinct
+            label: Total Deal Count
+  - name: account_id
+    description: FK to dim_accounts.
     config:
       meta:
-        label: "Feature Usage Heatmap"
-
-    columns:
-      - name: usage_id
-        description: "Grain. Surrogate key for workspace x feature_category x week."
-        tests: [unique, not_null]
-        config:
-          meta:
-            label: "Usage Record ID"
-
-      - name: workspace_id
-        description: "FK to workspace."
-        config:
-          meta:
-            label: "Workspace ID"
-
-      - name: account_id
-        description: "FK to dim_accounts."
-        config:
-          meta:
-            label: "Account ID"
-
-  - name: fct_trial_conversion
-    description: >
-      Trial-to-Paid Conversion Funnel Mart. One row per trialing workspace.
-      Sourced from int_billing_aggregated.
+        label: Account ID
+  - name: deal_amount
+    description: Deal amount in USD.
+    tests:
+    - not_null
     config:
       meta:
-        label: "Trial Conversion Funnel"
-
-    columns:
-      - name: workspace_id
-        description: "Grain. Workspace ID."
-        tests: [unique, not_null]
-        config:
-          meta:
-            label: "Workspace ID"
-
-      - name: account_id
-        description: "FK to dim_accounts."
-        config:
-          meta:
-            label: "Account ID"
-
-  # ===========================================================================
-  # FINANCE
-  # ===========================================================================
-
-  - name: fct_subscriptions
-    description: >
-      Active Subscription Snapshot Mart. One row per workspace subscription.
-      Sourced from int_billing_aggregated.
+        format: usd
+        label: Deal Amount
+        metrics:
+          total_pipeline_value:
+            type: sum
+            label: Total Pipeline Value ($)
+            format: usd
+  - name: win_probability
+    description: "Win probability percentage (0\u2013100)."
+    tests:
+    - not_null
     config:
       meta:
-        label: "Active Subscriptions"
-
-    columns:
-      - name: workspace_id
-        description: "Grain. Workspace ID."
-        tests: [unique, not_null]
-        config:
-          meta:
-            label: "Workspace ID"
-
-      - name: account_id
-        description: "FK to dim_accounts."
-        config:
-          meta:
-            label: "Account ID"
-
-      - name: mrr_amount
-        description: "Workspace active MRR in USD."
-        tests: [not_null]
-        config:
-          meta:
-            format: "usd"
-            label: "MRR Amount"
-
-      - name: subscription_status
-        tests:
-          - accepted_values:
-              arguments:
-                values:
-                  - 'active'
-                  - 'trialing'
-                  - 'past_due'
-                  - 'canceled'
-                  - 'incomplete'
-                  - 'incomplete_expired'
-                  - 'unpaid'
-        config:
-          meta:
-            label: "Subscription Status"
-
-  - name: fct_mrr_waterfall
-    description: >
-      Monthly SaaS MRR Waterfall Movements. Grain: account_id x month_date.
-      Sourced from int_billing_aggregated.
+        format: percent
+        label: Win Probability
+  - name: deal_stage
     config:
       meta:
-        label: "SaaS MRR Waterfall"
-
-    columns:
-      - name: waterfall_id
-        description: "Grain. account_id x month_date surrogate key."
-        tests: [unique, not_null]
-        config:
-          meta:
-            label: "Waterfall Record ID"
-
-      - name: account_id
-        description: "FK to dim_accounts."
-        config:
-          meta:
-            label: "Account ID"
-
-      - name: mrr
-        description: "End of month MRR."
-        tests:
-          - not_null
-        config:
-          meta:
-            format: "usd"
-            label: "End of Month MRR"
-
-      - name: mrr_movement_type
-        tests:
-          - accepted_values:
-              arguments:
-                values:
-                  - 'new'
-                  - 'expansion'
-                  - 'contraction'
-                  - 'churn'
-                  - 'resurrection'
-                  - 'retained'
-        config:
-          meta:
-            label: "MRR Movement Type"
-
-  - name: fct_arr_movements
-    description: "Annualized ARR movements derived from fct_mrr_waterfall (* 12)."
+        label: Deal Stage
+  - name: account_segment
     config:
       meta:
-        label: "ARR Waterfall Movements"
-
-    columns:
-      - name: arr_snapshot_id
-        tests: [unique, not_null]
-        config:
-          meta:
-            label: "ARR Snapshot ID"
-
-      - name: account_id
-        description: "FK to dim_accounts."
-        config:
-          meta:
-            label: "Account ID"
-
-      - name: arr_movement_type
-        tests:
-          - accepted_values:
-              arguments:
-                values:
-                  - 'new'
-                  - 'expansion'
-                  - 'contraction'
-                  - 'churn'
-                  - 'resurrection'
-                  - 'retained'
-        config:
-          meta:
-            label: "ARR Movement Type"
-
-  - name: fct_retention_cohorts
-    description: >
-      Monthly NRR / GRR Cohort Analysis Mart. Grain: month_date (Portfolio aggregate).
-      Sourced from fct_mrr_waterfall.
+        label: Account Segment
+  - name: weighted_amount
     config:
       meta:
-        label: "NRR & GRR Retention Cohorts"
-
-    columns:
-      - name: month_date
-        tests: [unique, not_null]
-        config:
-          meta:
-            label: "Cohort Month"
-
-  - name: fct_unit_economics
-    description: >
-      Unit Economics & LTV Metrics Mart. Grain: account_segment.
-      LTV = Avg MRR / Monthly Churn Rate.
+        format: usd
+        label: Weighted Amount
+        metrics:
+          weighted_pipeline_value:
+            type: sum
+            label: Weighted Pipeline Value ($)
+            format: usd
+  - name: is_stale
     config:
       meta:
-        label: "Unit Economics & LTV"
+        label: Is Stale
+        metrics:
+          stale_deals:
+            type: count_distinct
+            sql: case when ${is_stale} then ${hubspot_deal_id} else null end
+            label: Stale Deals Count
+- name: fct_activities
+  description: 'Sales Activity Log (Incremental). One row per HubSpot engagement.
+    Sourced directly from stg_hubspot__engagements for row-level event granularity.
 
-    columns:
-      - name: account_segment
-        tests: [unique, not_null]
-        config:
-          meta:
-            label: "Account Segment"
+    '
+  config:
+    meta:
+      label: Sales Activity Log
+  columns:
+  - name: activity_id
+    description: Grain. HubSpot engagement ID.
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Activity ID
+        metrics:
+          total_activities:
+            type: count_distinct
+            label: Total Sales Activities
+  - name: account_id
+    description: FK to dim_accounts.
+    config:
+      meta:
+        label: Account ID
+  - name: activity_type
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - CALL
+          - EMAIL
+          - MEETING
+    config:
+      meta:
+        label: Activity Type
+- name: fct_lead_funnel
+  description: 'Marketing Lead Funnel Mart. One row per HubSpot company lead. Sourced
+    directly from stg_hubspot__companies to capture top-of-funnel leads.
+
+    '
+  config:
+    meta:
+      label: Marketing Lead Funnel
+  columns:
+  - name: hubspot_company_id
+    description: Grain. HubSpot company ID.
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Company Lead ID
+        metrics:
+          total_leads:
+            type: count_distinct
+            label: Total Lead Count
+  - name: account_id
+    description: FK to dim_accounts.
+    config:
+      meta:
+        label: Account ID
+  - name: lifecycle_stage
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - subscriber
+          - lead
+          - marketingqualifiedlead
+          - salesqualifiedlead
+          - opportunity
+          - customer
+          - evangelist
+          - other
+    config:
+      meta:
+        label: Lifecycle Stage
+- name: fct_attribution
+  description: 'Marketing Attribution Mart. One row per account (First-Touch). Sourced
+    from int_crm_aggregated and dim_accounts.
+
+    '
+  config:
+    meta:
+      label: Marketing Attribution
+  columns:
+  - name: account_id
+    description: Grain. FK to dim_accounts.
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Account ID
+- name: fct_product_activation
+  description: 'Product Activation Mart. One row per workspace_id. Sourced from int_product_aggregated
+    and dim_accounts.
+
+    '
+  config:
+    meta:
+      label: Product Activation
+  columns:
+  - name: workspace_id
+    description: Grain. Internal workspace ID.
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Workspace ID
+  - name: account_id
+    description: FK to dim_accounts.
+    config:
+      meta:
+        label: Account ID
+  - name: activation_rate
+    description: activated_users / total_users (0.0 to 1.0).
+    tests:
+    - not_null
+    config:
+      meta:
+        format: percent
+        label: Activation Rate
+  - name: total_users
+    config:
+      meta:
+        metrics:
+          total_users_sum:
+            type: sum
+            label: Total Users
+  - name: activated_users
+    config:
+      meta:
+        metrics:
+          activated_users_sum:
+            type: sum
+            label: Activated Users
+- name: fct_pql_signals
+  description: 'GTM Priority Matrix Mart. Unconverted prospects only. Computes Intent
+    x Fit = gtm_priority.
+
+    '
+  config:
+    meta:
+      label: GTM Priority Matrix & PQL Signals
+  columns:
+  - name: workspace_id
+    description: Grain. Workspace ID.
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Workspace ID
+        metrics:
+          pql_workspaces:
+            type: count_distinct
+            label: PQL Workspaces
+  - name: account_id
+    description: FK to dim_accounts.
+    config:
+      meta:
+        label: Account ID
+  - name: intent_tier
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - HOT
+          - WARM
+          - COLD
+    config:
+      meta:
+        label: Intent Tier
+  - name: icp_tier
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - High Fit
+          - Medium Fit
+          - Low Fit
+    config:
+      meta:
+        label: ICP Tier
+  - name: gtm_priority
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - MUST WIN
+          - ACTIVE
+          - NOTIFY
+          - HIGH POTENTIAL
+          - NURTURE
+          - MONITOR
+          - INCUBATE
+    config:
+      meta:
+        label: GTM Priority
+- name: fct_feature_usage
+  description: 'Feature Adoption Heatmap (Incremental). Grain: workspace x feature_category
+    x week.
+
+    '
+  config:
+    meta:
+      label: Feature Usage Heatmap
+  columns:
+  - name: usage_id
+    description: Grain. Surrogate key for workspace x feature_category x week.
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Usage Record ID
+  - name: workspace_id
+    description: FK to workspace.
+    config:
+      meta:
+        label: Workspace ID
+  - name: account_id
+    description: FK to dim_accounts.
+    config:
+      meta:
+        label: Account ID
+- name: fct_trial_conversion
+  description: 'Trial-to-Paid Conversion Funnel Mart. One row per trialing workspace.
+    Sourced from int_billing_aggregated.
+
+    '
+  config:
+    meta:
+      label: Trial Conversion Funnel
+  columns:
+  - name: workspace_id
+    description: Grain. Workspace ID.
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Workspace ID
+        metrics:
+          trials_at_risk:
+            type: count_distinct
+            label: Trials at Risk
+  - name: account_id
+    description: FK to dim_accounts.
+    config:
+      meta:
+        label: Account ID
+  - name: trial_id
+    config:
+      meta:
+        label: Trial ID
+- name: fct_subscriptions
+  description: 'Active Subscription Snapshot Mart. One row per workspace subscription.
+    Sourced from int_billing_aggregated.
+
+    '
+  config:
+    meta:
+      label: Active Subscriptions
+  columns:
+  - name: workspace_id
+    description: Grain. Workspace ID.
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Workspace ID
+  - name: account_id
+    description: FK to dim_accounts.
+    config:
+      meta:
+        label: Account ID
+  - name: mrr_amount
+    description: Workspace active MRR in USD.
+    tests:
+    - not_null
+    config:
+      meta:
+        format: usd
+        label: MRR Amount
+  - name: subscription_status
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - active
+          - trialing
+          - past_due
+          - canceled
+          - incomplete
+          - incomplete_expired
+          - unpaid
+    config:
+      meta:
+        label: Subscription Status
+- name: fct_mrr_waterfall
+  description: 'Monthly SaaS MRR Waterfall Movements. Grain: account_id x month_date.
+    Sourced from int_billing_aggregated.
+
+    '
+  config:
+    meta:
+      label: SaaS MRR Waterfall
+  columns:
+  - name: waterfall_id
+    description: Grain. account_id x month_date surrogate key.
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Waterfall Record ID
+  - name: account_id
+    description: FK to dim_accounts.
+    config:
+      meta:
+        label: Account ID
+  - name: mrr
+    description: End of month MRR.
+    tests:
+    - not_null
+    config:
+      meta:
+        format: usd
+        label: End of Month MRR
+  - name: mrr_movement_type
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - new
+          - expansion
+          - contraction
+          - churn
+          - resurrection
+          - retained
+    config:
+      meta:
+        label: MRR Movement Type
+- name: fct_arr_movements
+  description: Annualized ARR movements derived from fct_mrr_waterfall (* 12).
+  config:
+    meta:
+      label: ARR Waterfall Movements
+  columns:
+  - name: arr_snapshot_id
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: ARR Snapshot ID
+  - name: account_id
+    description: FK to dim_accounts.
+    config:
+      meta:
+        label: Account ID
+  - name: arr_movement_type
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - new
+          - expansion
+          - contraction
+          - churn
+          - resurrection
+          - retained
+    config:
+      meta:
+        label: ARR Movement Type
+- name: fct_retention_cohorts
+  description: 'Monthly NRR / GRR Cohort Analysis Mart. Grain: month_date (Portfolio
+    aggregate). Sourced from fct_mrr_waterfall.
+
+    '
+  config:
+    meta:
+      label: NRR & GRR Retention Cohorts
+  columns:
+  - name: month_date
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Cohort Month
+- name: fct_unit_economics
+  description: 'Unit Economics & LTV Metrics Mart. Grain: account_segment. LTV = Avg
+    MRR / Monthly Churn Rate.
+
+    '
+  config:
+    meta:
+      label: Unit Economics & LTV
+  columns:
+  - name: account_segment
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Account Segment
