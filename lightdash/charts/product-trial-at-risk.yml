@@ -8,10 +8,13 @@ metricQuery:
   exploreName: fct_trial_conversion
   dimensions:
     - fct_trial_conversion_workspace_id
+    - fct_trial_conversion_company_name
   metrics:
     - fct_trial_conversion_trials_at_risk
   filters: {}
-  sorts: []
+  sorts:
+    - fieldId: fct_trial_conversion_trials_at_risk
+      descending: true
   tableCalculations: []
   limit: 500
 chartConfig:

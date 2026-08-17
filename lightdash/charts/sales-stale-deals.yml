@@ -12,7 +12,9 @@ metricQuery:
   metrics:
     - fct_pipeline_stale_deals
   filters: {}
-  sorts: []
+  sorts:
+    - fieldId: fct_pipeline_stale_deals
+      descending: true
   tableCalculations: []
   limit: 500
 chartConfig:

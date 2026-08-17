@@ -1,79 +1,202 @@
 version: 2
-models:
-- name: fct_accounts_health
-  description: 'Customer Success Health Mart. One row per paying account. 3 distinct
-    churn risk signals: is_payment_failing + is_churning_soon + is_low_engagement.
 
-    '
-  config:
-    meta:
-      label: Account Health & CS Prioritization
-  columns:
-  - name: account_id
-    description: Grain. FK to dim_accounts.
-    tests:
-    - unique
-    - not_null
+# =============================================================================
+# MART SCHEMA: Customer Success
+# fct_accounts_health
+#
+# Key configs:
+#   - primary_key: account_id
+#   - groups: ['customer_success']
+#   - FIX: at_risk_accounts metric — health_status dimension bilan GROUP BY qilganda
+#          barcha statuslar uchun to'g'ri count beradi (count_distinct bilan CASE WHEN)
+# =============================================================================
+
+models:
+
+  - name: fct_accounts_health
+    description: >
+      Customer Success Health Mart. One row per paying account.
+      3 distinct churn risk signals: is_payment_failing + is_churning_soon + is_low_engagement.
     config:
       meta:
-        label: Account ID
-        metrics:
-          at_risk_accounts:
-            type: count_distinct
-            sql: case when ${health_status} = 'At Risk' then ${account_id} else null
-              end
-            label: At Risk Accounts
-  - name: mrr
-    description: Account MRR.
-    tests:
-    - not_null
-    config:
-      meta:
-        format: usd
-        label: MRR
-        metrics:
-          cs_total_mrr:
-            type: sum
-            label: CS Total MRR ($)
-            format: usd
-  - name: health_status
-    tests:
-    - accepted_values:
-        arguments:
-          values:
-          - Healthy
-          - At Risk
-          - Churned
-    config:
-      meta:
-        label: Health Status
-  - name: account_segment
-    tests:
-    - accepted_values:
-        arguments:
-          values:
-          - Enterprise
-          - Mid-Market
-          - SMB
-          - Trial/Free
-    config:
-      meta:
-        label: Account Segment
-  - name: mrr_at_risk
-    config:
-      meta:
-        format: usd
-        label: MRR at Risk
-        metrics:
-          total_mrr_at_risk:
-            type: sum
-            label: Total MRR at Risk ($)
-            format: usd
-  - name: health_reason
-    config:
-      meta:
-        label: Health Reason
-  - name: company_name
-    config:
-      meta:
-        label: Company Name
+        label: "Account Health & CS Prioritization"
+        primary_key: account_id
+        groups: ['customer_success']
+        order_fields_by: 'index'
+        # CS team: faqat subscription_status NOT NULL accountlar (already filtered in model)
+
+    columns:
+      - name: account_id
+        description: "Grain. FK to dim_accounts."
+        tests:
+          - unique
+          - not_null
+        config:
+          meta:
+            label: "Account ID"
+            metrics:
+              # Total CS accounts (barcha health statuslar uchun)
+              cs_total_accounts:
+                type: count_distinct
+                label: "Total CS Accounts"
+                spotlight:
+                  categories: ['customer_success']
+              # At-Risk accounts — CASE WHEN bilan (faqat At Risk statusdagilar)
+              at_risk_accounts:
+                type: count_distinct
+                sql: "case when ${health_status} = 'At Risk' then ${account_id} else null end"
+                label: "At Risk Accounts"
+                spotlight:
+                  categories: ['customer_success', 'executive']
+              # Churned accounts count
+              churned_accounts_count:
+                type: count_distinct
+                sql: "case when ${health_status} = 'Churned' then ${account_id} else null end"
+                label: "Churned Accounts"
+                spotlight:
+                  categories: ['customer_success']
+              # Healthy accounts count
+              healthy_accounts_count:
+                type: count_distinct
+                sql: "case when ${health_status} = 'Healthy' then ${account_id} else null end"
+                label: "Healthy Accounts"
+                spotlight:
+                  categories: ['customer_success', 'executive']
+
+      - name: mrr
+        description: "Account MRR."
+        tests:
+          - not_null
+        config:
+          meta:
+            format: "usd"
+            label: "MRR"
+            metrics:
+              cs_total_mrr:
+                type: sum
+                label: "CS Total MRR ($)"
+                format: "usd"
+                spotlight:
+                  categories: ['customer_success']
+
+      - name: mrr_at_risk
+        config:
+          meta:
+            format: "usd"
+            label: "MRR at Risk"
+            metrics:
+              total_mrr_at_risk:
+                type: sum
+                label: "Total MRR at Risk ($)"
+                format: "usd"
+                spotlight:
+                  categories: ['customer_success', 'executive']
+
+      - name: health_status
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - Healthy
+                  - At Risk
+                  - Churned
+        config:
+          meta:
+            label: "Health Status"
+
+      - name: health_reason
+        config:
+          meta:
+            label: "Health Reason"
+
+      - name: account_segment
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - Enterprise
+                  - Mid-Market
+                  - SMB
+                  - Trial/Free
+        config:
+          meta:
+            label: "Account Segment"
+
+      - name: company_name
+        config:
+          meta:
+            label: "Company Name"
+
+      - name: workspace_name
+        config:
+          meta:
+            label: "Workspace"
+
+      - name: current_plan
+        config:
+          meta:
+            label: "Plan"
+
+      - name: subscription_status
+        config:
+          meta:
+            label: "Subscription Status"
+
+      - name: is_payment_failing
+        config:
+          meta:
+            label: "Payment Failing?"
+
+      - name: is_churning_soon
+        config:
+          meta:
+            label: "Churning Soon?"
+
+      - name: is_low_engagement
+        config:
+          meta:
+            label: "Low Engagement?"
+
+      - name: is_ready_for_upsell
+        config:
+          meta:
+            label: "Upsell Ready?"
+
+      - name: total_tickets
+        config:
+          meta:
+            label: "Total Tickets"
+            metrics:
+              sum_total_tickets:
+                type: sum
+                label: "Total Support Tickets"
+
+      - name: open_tickets
+        config:
+          meta:
+            label: "Open Tickets"
+            metrics:
+              sum_open_tickets:
+                type: sum
+                label: "Open Tickets"
+                spotlight:
+                  categories: ['customer_success']
+
+      - name: high_priority_tickets
+        config:
+          meta:
+            label: "High Priority Tickets"
+            metrics:
+              sum_high_priority_tickets:
+                type: sum
+                label: "High Priority Tickets"
+                spotlight:
+                  categories: ['customer_success']
+
+      - name: last_activity_at
+        config:
+          meta:
+            label: "Last Active"
+            dimension:
+              type: timestamp
+              time_intervals: ['DAY', 'WEEK', 'MONTH']

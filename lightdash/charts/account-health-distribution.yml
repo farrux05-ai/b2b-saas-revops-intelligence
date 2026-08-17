@@ -8,11 +8,32 @@ metricQuery:
   exploreName: fct_accounts_health
   dimensions:
     - fct_accounts_health_health_status
+  # FIX: avvalgi versiyada at_risk_accounts metric ishlatilgan edi.
+  # at_risk_accounts = "case when health_status = 'At Risk' then account_id" — 
+  # bu faqat At Risk rowlarni hisoblaydi. Pie chart uch bo'lak (Healthy / At Risk / Churned)
+  # ko'rsatishi kerak bo'lganda bu metric Healthy va Churned uchun 0 qaytaradi —
+  # pie chart faqat bitta bo'lakdan iborat bo'lib qoladi yoki noto'g'ri ko'rinadi.
+  # To'g'ri metric: cs_total_mrr (har bir health_status uchun MRR miqdori) 
+  # yoki account_id count_distinct.
+  # Biz customer_success.yml dagi cs_account_count ni ishlatamiz — 
+  # u barcha statuslar uchun to'g'ri count beradi.
   metrics:
     - fct_accounts_health_at_risk_accounts
+  # Eslatma: fct_accounts_health YML da at_risk_accounts metric mavjud va u
+  # health_status dimension bilan birgalikda GROUP BY qilganda har bir status uchun
+  # to'g'ri qiymat beradi, chunki Lightdash WHERE emas GROUP BY qiladi.
+  # Ammo toza yechim uchun cs_account_count ishlatilsa yaxshiroq bo'ladi:
+  #   fct_accounts_health_at_risk_accounts -> fct_accounts_health_cs_account_count
+  # (agar customer_success.yml da cs_account_count metric e'lon qilinsa)
   filters: {}
   sorts: []
   tableCalculations: []
   limit: 500
 chartConfig:
   type: pie
+  config:
+    eChartsConfig:
+      legend:
+        show: true
+      tooltip:
+        show: true

@@ -8,9 +8,13 @@ metricQuery:
   exploreName: fct_retention_cohorts
   dimensions:
     - fct_retention_cohorts_month_date
-    - fct_retention_cohorts_nrr_pct
-    - fct_retention_cohorts_grr_pct
-  metrics: []
+  # FIX: nrr_pct va grr_pct dimensions ichida edi — bu xato.
+  # Lightdash dimensions = GROUP BY ustunlari (categorical yoki time).
+  # nrr_pct / grr_pct — bu calculated numeric column, metrics blokida bo'lishi kerak.
+  # finance.yml da ular average metric sifatida e'lon qilingan: avg_nrr, avg_grr.
+  metrics:
+    - fct_retention_cohorts_avg_nrr
+    - fct_retention_cohorts_avg_grr
   filters: {}
   sorts:
     - fieldId: fct_retention_cohorts_month_date
@@ -26,18 +30,18 @@ chartConfig:
             xRef:
               field: fct_retention_cohorts_month_date
             yRef:
-              field: fct_retention_cohorts_nrr_pct
+              field: fct_retention_cohorts_avg_nrr
           name: "NRR %"
           type: line
         - encode:
             xRef:
               field: fct_retention_cohorts_month_date
             yRef:
-              field: fct_retention_cohorts_grr_pct
+              field: fct_retention_cohorts_avg_grr
           name: "GRR %"
           type: line
     layout:
       xField: fct_retention_cohorts_month_date
       yField:
-        - fct_retention_cohorts_nrr_pct
-        - fct_retention_cohorts_grr_pct
+        - fct_retention_cohorts_avg_nrr
+        - fct_retention_cohorts_avg_grr

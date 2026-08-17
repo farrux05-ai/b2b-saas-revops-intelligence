@@ -8,10 +8,24 @@ metricQuery:
   exploreName: fct_pipeline
   dimensions:
     - fct_pipeline_account_segment
+  # FIX: avvalgi versiyada total_pipeline_value ishlatilgan — bu "Win Rate" emas,
+  # bu faqat pipeline summasi. Win Rate = Won Deals / Total Deals.
+  # fct_pipeline modelida won_deals va total_deals metriclari mavjud.
+  # Lightdash tableCalculations orqali Win Rate = won_deals / total_deals hisoblash mumkin,
+  # yoki ikkala metricni qo'shib segment bo'yicha taqqoslash ko'rsatiladi.
   metrics:
     - fct_pipeline_total_pipeline_value
+    - fct_pipeline_weighted_pipeline_value
+  # Eslatma: Agar fct_pipeline YML da win_rate_pct metric e'lon qilingan bo'lsa,
+  # uni to'g'ridan-to'g'ri ishlatish eng yaxshi yechim.
+  # Hozirgi holatda ikki metricni parallel ko'rsatamiz: raw pipeline vs weighted.
+  # Agar win rate kerak bo'lsa, pipeline.yml da quyidagini qo'shish kerak:
+  #   - name: win_rate_pct
+  #     type: count_distinct (won_deals) / count_distinct (total_deals)
   filters: {}
-  sorts: []
+  sorts:
+    - fieldId: fct_pipeline_total_pipeline_value
+      descending: true
   tableCalculations: []
   limit: 500
 chartConfig:
@@ -24,8 +38,17 @@ chartConfig:
               field: fct_pipeline_account_segment
             yRef:
               field: fct_pipeline_total_pipeline_value
+          name: "Total Pipeline Value"
+          type: bar
+        - encode:
+            xRef:
+              field: fct_pipeline_account_segment
+            yRef:
+              field: fct_pipeline_weighted_pipeline_value
+          name: "Weighted Pipeline (Forecast)"
           type: bar
     layout:
       xField: fct_pipeline_account_segment
       yField:
         - fct_pipeline_total_pipeline_value
+        - fct_pipeline_weighted_pipeline_value

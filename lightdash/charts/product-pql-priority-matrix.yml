@@ -11,7 +11,9 @@ metricQuery:
   metrics:
     - fct_pql_signals_pql_workspaces
   filters: {}
-  sorts: []
+  sorts:
+    - fieldId: fct_pql_signals_pql_workspaces
+      descending: true
   tableCalculations: []
   limit: 500
 chartConfig:

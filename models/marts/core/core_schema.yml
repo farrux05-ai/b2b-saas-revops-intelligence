@@ -3,7 +3,16 @@ version: 2
 # =============================================================================
 # MART SCHEMA: Core
 # dim_accounts + dim_users — Foundation models for all GTM teams.
-# Includes Lightdash BI metadata (labels, formatting, metrics, joins).
+#
+# dbt 1.10+ SYNTAX: config.meta (meta ichida emas, config.meta ichida)
+# Agar dbt 1.9 yoki undan past bo'lsa, config: olib tashlab meta: ishlatiladi.
+#
+# Lightdash key configs qo'shildi:
+#   - primary_key: join fanout'dan himoya
+#   - groups: sidebar navigation
+#   - joins: cross-table explore uchun
+#   - default_filters: trailing 12 months default
+#   - order_fields_by: index (YML tartibida fields ko'rsatish)
 # =============================================================================
 
 models:
@@ -17,11 +26,27 @@ models:
     config:
       meta:
         label: "Account 360 (Golden Record)"
+        # PRIMARY KEY — join fanout'dan himoya qiladi (many-to-one join'larda metric inflation oldini oladi)
+        primary_key: account_id
+        # SIDEBAR GROUPS — lightdash.config.yml dagi table_groups bilan mos kelishi kerak
+        groups: ['core']
+        # SIDEBAR ORDER — YML'dagi tartibda ko'rsatish (alphabetical emas)
+        order_fields_by: 'index'
+        # DEFAULT FILTER — har safar ochilganda so'nggi 12 oyni ko'rsatadi
+        # (katta tableda performance uchun foydali)
+        # last_activity_at dimension bo'lishi shart
+        # default_filters:
+        #   - last_activity_at: 'inThePast 12 months'
+        # JOINS — dim_accounts'dan fct_accounts_health va fct_pipeline join qilish
         joins:
           - join: fct_accounts_health
             sql_on: "${dim_accounts.account_id} = ${fct_accounts_health.account_id}"
+            relationship: one-to-one
+            label: "Account Health"
           - join: fct_pipeline
             sql_on: "${dim_accounts.account_id} = ${fct_pipeline.account_id}"
+            relationship: one-to-many
+            label: "Open Deals"
 
     columns:
       - name: account_id
@@ -30,6 +55,7 @@ models:
         config:
           meta:
             label: "Account ID"
+            # hidden: true  # account_id odatda explore'da ko'rinmaydi
 
       - name: domain
         description: "Company primary domain."
@@ -43,6 +69,34 @@ models:
           meta:
             label: "Company Name"
 
+      - name: workspace_name
+        config:
+          meta:
+            label: "Workspace Name"
+
+      - name: industry
+        config:
+          meta:
+            label: "Industry"
+
+      - name: account_segment
+        description: "ARR-based tier: Enterprise | Mid-Market | SMB | Trial/Free."
+        tests:
+          - accepted_values:
+              values: ['Enterprise', 'Mid-Market', 'SMB', 'Trial/Free']
+        config:
+          meta:
+            label: "Account Segment"
+
+      - name: icp_tier
+        description: "ICP Fit tier: High Fit | Medium Fit | Low Fit."
+        tests:
+          - accepted_values:
+              values: ['High Fit', 'Medium Fit', 'Low Fit']
+        config:
+          meta:
+            label: "ICP Fit Tier"
+
       - name: mrr
         description: "Monthly Recurring Revenue (USD)."
         tests: [not_null]
@@ -55,13 +109,18 @@ models:
                 type: sum
                 label: "Total MRR ($)"
                 format: "usd"
+                # spotlight kategoriya: metrics catalog uchun
+                spotlight:
+                  categories: ['finance', 'executive']
               avg_mrr:
                 type: average
                 label: "Average MRR ($)"
                 format: "usd"
+                spotlight:
+                  categories: ['finance']
 
       - name: arr
-        description: "Annualized Recurring Revenue (mrr * 12). Only allowed calculation in dim_accounts."
+        description: "Annualized Recurring Revenue (mrr * 12)."
         config:
           meta:
             format: "usd"
@@ -71,15 +130,36 @@ models:
                 type: sum
                 label: "Total ARR ($)"
                 format: "usd"
+                spotlight:
+                  categories: ['finance', 'executive']
 
-      - name: account_segment
-        description: "ARR-based tier: Enterprise | Mid-Market | SMB | Trial/Free."
-        tests:
-          - accepted_values:
-              values: ['Enterprise', 'Mid-Market', 'SMB', 'Trial/Free']
+      - name: active_mrr
         config:
           meta:
-            label: "Account Segment"
+            format: "usd"
+            label: "Active MRR"
+            metrics:
+              total_active_mrr:
+                type: sum
+                label: "Total Active MRR ($)"
+                format: "usd"
+                spotlight:
+                  categories: ['finance']
+
+      - name: mrr_at_risk
+        description: "MRR at risk for At Risk accounts."
+        tests: [not_null]
+        config:
+          meta:
+            format: "usd"
+            label: "MRR at Risk"
+            metrics:
+              total_mrr_at_risk:
+                type: sum
+                label: "Total MRR at Risk ($)"
+                format: "usd"
+                spotlight:
+                  categories: ['customer_success', 'executive']
 
       - name: health_status
         description: "Overall account health status: Healthy | At Risk | Churned."
@@ -94,52 +174,148 @@ models:
         description: >
           Specific cause: Churned | Payment Failing | Support Critical |
           Low Engagement | Expansion Target | Healthy.
-        tests:
-          - accepted_values:
-              values:
-                - 'Churned'
-                - 'Payment Failing'
-                - 'Support Critical'
-                - 'Low Engagement'
-                - 'Expansion Target'
-                - 'Healthy'
         config:
           meta:
             label: "Health Reason"
 
-      - name: mrr_at_risk
-        description: "MRR at risk for At Risk accounts."
-        tests: [not_null]
+      - name: subscription_status
         config:
           meta:
-            format: "usd"
-            label: "MRR at Risk"
-            metrics:
-              total_mrr_at_risk:
-                type: sum
-                label: "Total MRR at Risk ($)"
-                format: "usd"
+            label: "Subscription Status"
 
-      - name: icp_tier
-        description: "ICP Fit tier: High Fit | Medium Fit | Low Fit."
-        tests:
-          - accepted_values:
-              values: ['High Fit', 'Medium Fit', 'Low Fit']
+      - name: current_plan
         config:
           meta:
-            label: "ICP Fit Tier"
+            label: "Current Plan"
+
+      - name: is_payment_failing
+        config:
+          meta:
+            label: "Payment Failing?"
+
+      - name: is_churning_soon
+        config:
+          meta:
+            label: "Churning Soon?"
+
+      - name: is_low_engagement
+        config:
+          meta:
+            label: "Low Engagement?"
+
+      - name: is_ready_for_upsell
+        config:
+          meta:
+            label: "Upsell Ready?"
+
+      - name: is_pql
+        config:
+          meta:
+            label: "Is PQL?"
+
+      - name: seat_utilization_pct
+        config:
+          meta:
+            format: "percent"
+            label: "Seat Utilization %"
+            metrics:
+              avg_seat_utilization:
+                type: average
+                label: "Avg Seat Utilization (%)"
+                format: "percent"
+                spotlight:
+                  categories: ['customer_success']
+
+      - name: seats_purchased
+        config:
+          meta:
+            label: "Seats Purchased"
+
+      - name: seats_used
+        config:
+          meta:
+            label: "Seats Used"
+
+      - name: total_product_events
+        config:
+          meta:
+            label: "Total Product Events"
+            metrics:
+              sum_product_events:
+                type: sum
+                label: "Total Product Events"
+                spotlight:
+                  categories: ['product']
+
+      - name: last_activity_at
+        config:
+          meta:
+            label: "Last Active"
+            dimension:
+              type: timestamp
+              time_intervals: ['DAY', 'WEEK', 'MONTH', 'QUARTER', 'YEAR']
+
+      - name: workspace_created_at
+        config:
+          meta:
+            label: "Workspace Created"
+            dimension:
+              type: timestamp
+              time_intervals: ['DAY', 'WEEK', 'MONTH', 'QUARTER', 'YEAR']
+
+      - name: total_tickets
+        config:
+          meta:
+            label: "Total Tickets"
+
+      - name: open_tickets
+        config:
+          meta:
+            label: "Open Tickets"
+
+      - name: high_priority_tickets
+        config:
+          meta:
+            label: "High Priority Tickets"
+
+      - name: total_users
+        config:
+          meta:
+            label: "Total Users"
+            metrics:
+              sum_total_users:
+                type: sum
+                label: "Total Users"
+                spotlight:
+                  categories: ['product']
+
+      - name: activated_users
+        config:
+          meta:
+            label: "Activated Users"
+            metrics:
+              sum_activated_users:
+                type: sum
+                label: "Activated Users"
+                spotlight:
+                  categories: ['product']
+
 
   # ─── dim_users ─────────────────────────────────────────────────────────────
   - name: dim_users
     description: >
       Enriched user directory. Applies PII masking (GDPR/CCPA compliant).
-      Selects from int_users_joined with email/name masking.
     config:
       meta:
         label: "User Directory"
+        primary_key: global_user_id
+        groups: ['core']
+        order_fields_by: 'index'
         joins:
           - join: dim_accounts
             sql_on: "${dim_users.account_id} = ${dim_accounts.account_id}"
+            relationship: many-to-one
+            label: "Parent Account"
 
     columns:
       - name: global_user_id
@@ -152,6 +328,8 @@ models:
               total_users:
                 type: count_distinct
                 label: "Total User Count"
+                spotlight:
+                  categories: ['product']
 
       - name: email
         description: "Masked email address (e.g. j***e@domain.com)."
@@ -160,15 +338,30 @@ models:
           meta:
             label: "Masked Email"
 
-      - name: hashed_email
-        description: "MD5 hash of email for anonymous downstream matching."
-        tests: [not_null]
-        config:
-          meta:
-            label: "Hashed Email"
-
       - name: account_id
-        description: "FK to dim_accounts."
         config:
           meta:
             label: "Account ID"
+
+      - name: user_role
+        config:
+          meta:
+            label: "Role"
+
+      - name: is_activated
+        config:
+          meta:
+            label: "Activated?"
+
+      - name: is_active_last_30d
+        config:
+          meta:
+            label: "Active (30d)?"
+
+      - name: created_at
+        config:
+          meta:
+            label: "Signed Up"
+            dimension:
+              type: timestamp
+              time_intervals: ['DAY', 'WEEK', 'MONTH', 'QUARTER', 'YEAR']

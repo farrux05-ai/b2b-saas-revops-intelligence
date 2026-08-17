@@ -1,0 +1,65 @@
+# =============================================================================
+# lightdash.config.yml
+# Joylashuv: dbt_project.yml bilan bir xil papkada (project root)
+#
+# ESLATMA: lightdash.config.yml faqat CLI deploy yoki git integration bilan ishlaydi.
+#          dbt Cloud bilan to'g'ridan-to'g'ri bog'langan loyihalarda ISHLAMAYDI.
+# =============================================================================
+
+# ─── Metrics Catalog (Spotlight) ─────────────────────────────────────────────
+# Metrics Catalog'da metriclarni guruhlash va ko'rsatish sozlamalari
+spotlight:
+  default_visibility: "show"
+  categories:
+    finance:
+      label: "Finance"
+      color: "green"
+    customer_success:
+      label: "Customer Success"
+      color: "blue"
+    product:
+      label: "Product & PLG"
+      color: "violet"
+    sales:
+      label: "Sales"
+      color: "orange"
+    executive:
+      label: "Executive"
+      color: "red"
+
+# ─── Project-wide defaults ────────────────────────────────────────────────────
+defaults:
+  # Qo'shimcha column totals query'sini o'chirish — Snowflake xarajatini kamaytiradi
+  column_totals: false
+  # String filterlar case-insensitive bo'lsin (company_name, domain qidiruvda qulay)
+  case_sensitive: false
+  # Barcha date dimension'larga qo'shimcha QUARTER granularity
+  additional_time_intervals:
+    date:
+      - QUARTER
+    timestamp:
+      - HOUR
+      - QUARTER
+
+# ─── Table groups (Sidebar navigation) ───────────────────────────────────────
+# dbt model'larni sidebar'da guruhlash uchun
+# Model YML'da: meta: groups: ['finance', 'waterfall']
+table_groups:
+  core:
+    label: "🏛️ Core (Golden Records)"
+    description: "Foundation models — dim_accounts, dim_users"
+  finance:
+    label: "💰 Finance"
+    description: "MRR waterfall, retention cohorts, subscriptions, unit economics"
+  customer_success:
+    label: "🛡️ Customer Success"
+    description: "Account health, churn signals, CS prioritization"
+  product:
+    label: "🚀 Product & PLG"
+    description: "PQL signals, activation funnel, trial conversion"
+  sales:
+    label: "📊 Sales"
+    description: "Pipeline, win rate, deal velocity"
+  marketing:
+    label: "📣 Marketing"
+    description: "Lead funnel, attribution"

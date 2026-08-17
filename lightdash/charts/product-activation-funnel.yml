@@ -6,8 +6,15 @@ spaceSlug: product
 version: 1
 metricQuery:
   exploreName: fct_product_activation
+  # FIX: avvalgi versiyada dimensions bo'sh edi va xRef yo'q edi.
+  # Bar chart uchun x o'qi bo'lishi shart — bo'lmasa bitta yig'ma (aggregate) bar chiqadi,
+  # bu funnel vizualizatsiyasi uchun mantiqsiz.
+  # fct_product_activation modeli workspace yoki company_name dimension taklif etadi.
+  # Agar funnel umumiy aggregate ko'rish uchun mo'ljallangan bo'lsa,
+  # dimensions bo'sh qolishi mumkin — lekin chartConfig stacked bar emas, 
+  # grouped bar bo'lishi kerak va xRef olib tashlanishi kerak.
   dimensions: []
-  metrics: 
+  metrics:
     - fct_product_activation_total_users_sum
     - fct_product_activation_activated_users_sum
   filters: {}
@@ -20,16 +27,22 @@ chartConfig:
     eChartsConfig:
       series:
         - encode:
+            # FIX: xRef yo'q edi — dimensions bo'sh bo'lganda Lightdash
+            # metrics nomini x label sifatida ishlatadi (horizontal bar pattern).
+            # Biz vertikal grouped bar istasak yField dan foydalanamiz.
             yRef:
               field: fct_product_activation_total_users_sum
-          name: Total Users
+          name: "Total Users"
           type: bar
         - encode:
             yRef:
               field: fct_product_activation_activated_users_sum
-          name: Activated Users
+          name: "Activated Users"
           type: bar
     layout:
+      # FIX: flipAxes: true — metric nomlarini x o'qiga qo'yish uchun
+      # Bu klassik funnel bar pattern: metric labels x-da, qiymatlar y-da
+      flipAxes: true
       yField:
         - fct_product_activation_total_users_sum
         - fct_product_activation_activated_users_sum

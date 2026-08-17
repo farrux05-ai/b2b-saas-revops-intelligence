@@ -10,10 +10,14 @@ metricQuery:
     - fct_accounts_health_account_id
     - fct_accounts_health_health_status
     - fct_accounts_health_health_reason
+    - fct_accounts_health_company_name
   metrics:
+    - fct_accounts_health_cs_total_mrr
     - fct_accounts_health_total_mrr_at_risk
   filters: {}
-  sorts: []
+  sorts:
+    - fieldId: fct_accounts_health_total_mrr_at_risk
+      descending: true
   tableCalculations: []
   limit: 500
 chartConfig:
