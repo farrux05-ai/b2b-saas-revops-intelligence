@@ -29,20 +29,34 @@ with engagements as (
         from {{ this }}
     )
     {% endif %}
+),
+
+accounts as (
+    select
+        account_id,
+        hubspot_company_id,
+        workspace_name,
+        company_name
+    from {{ ref('dim_accounts') }}
 )
 
 select
     -- Identity & Foreign Keys
-    hubspot_engagement_id                               as activity_id,
-    hubspot_company_id,
-    owner_id,
+    e.hubspot_engagement_id                             as activity_id,
+    e.hubspot_company_id,
+    a.account_id,
+    a.company_name,
+    a.workspace_name,
+    e.owner_id,
 
     -- Activity Dimensions
-    engagement_type                                     as activity_type,
+    e.engagement_type                                   as activity_type,
 
     -- Activity Timestamps
-    created_at                                          as activity_at,
-    cast(date_trunc('day', created_at) as date)         as activity_date
+    e.created_at                                        as activity_at,
+    cast(date_trunc('day', e.created_at) as date)       as activity_date
 
-from engagements
-where hubspot_company_id is not null
+from engagements e
+left join accounts a
+    on e.hubspot_company_id = a.hubspot_company_id
+where e.hubspot_company_id is not null

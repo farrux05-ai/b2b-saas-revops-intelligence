@@ -1,7 +1,7 @@
 version: 2
 models:
 - name: fct_pipeline
-  description: 'Sales Deal Pipeline Mart.'
+  description: Sales Deal Pipeline Mart.
   config:
     meta:
       label: Sales Deal Pipeline
@@ -60,9 +60,12 @@ models:
             type: count_distinct
             sql: case when ${is_stale} then ${hubspot_deal_id} else null end
             label: Stale Deals Count
-
+  - name: company_name
+    config:
+      meta:
+        label: Company Name
 - name: fct_activities
-  description: 'Sales Activity Log.'
+  description: Sales Activity Log.
   config:
     meta:
       label: Sales Activity Log
@@ -95,3 +98,11 @@ models:
     config:
       meta:
         label: Activity Date
+  - name: company_name
+    config:
+      meta:
+        label: Company Name
+  - name: workspace_name
+    config:
+      meta:
+        label: Workspace Name

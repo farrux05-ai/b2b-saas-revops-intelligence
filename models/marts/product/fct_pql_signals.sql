@@ -31,6 +31,7 @@ intent_scoring as (
         a.workspace_id,
         a.account_id,
         a.workspace_name,
+        a.company_name,
         a.domain,
         a.account_segment,
         a.workspace_created_at,

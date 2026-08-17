@@ -22,8 +22,9 @@ spine as (
         account_id,
         internal_workspace_id,
         workspace_name,
+        company_name,
         domain
-    from {{ ref('int_accounts_joined') }}
+    from {{ ref('dim_accounts') }}
 ),
 
 trials as (
@@ -32,6 +33,7 @@ trials as (
         b.workspace_id,
         sp.account_id,
         sp.workspace_name,
+        sp.company_name,
         sp.domain,
 
         b.current_plan                                  as plan_id,

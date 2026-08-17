@@ -1,7 +1,7 @@
 version: 2
 models:
 - name: fct_subscriptions
-  description: 'Active Subscription Snapshot Mart. One row per workspace subscription.'
+  description: Active Subscription Snapshot Mart. One row per workspace subscription.
   config:
     meta:
       label: Active Subscriptions
@@ -108,9 +108,12 @@ models:
     config:
       meta:
         label: Is Churning Soon
-
+  - name: company_name
+    config:
+      meta:
+        label: Company Name
 - name: fct_mrr_waterfall
-  description: 'Monthly SaaS MRR Waterfall Movements.'
+  description: Monthly SaaS MRR Waterfall Movements.
   config:
     meta:
       label: SaaS MRR Waterfall
@@ -179,9 +182,12 @@ models:
     config:
       meta:
         label: MRR Movement Type
-
+  - name: company_name
+    config:
+      meta:
+        label: Company Name
 - name: fct_arr_movements
-  description: 'Annualized ARR movements.'
+  description: Annualized ARR movements.
   config:
     meta:
       label: ARR Waterfall Movements
@@ -236,9 +242,16 @@ models:
             type: sum
             format: usd
             label: Total Current ARR ($)
-
+  - name: company_name
+    config:
+      meta:
+        label: Company Name
+  - name: workspace_name
+    config:
+      meta:
+        label: Workspace Name
 - name: fct_retention_cohorts
-  description: 'Monthly NRR / GRR Cohort Analysis Mart.'
+  description: Monthly NRR / GRR Cohort Analysis Mart.
   config:
     meta:
       label: NRR & GRR Retention Cohorts
@@ -391,9 +404,8 @@ models:
             type: average
             format: percent
             label: Average Logo Churn Rate (%)
-
 - name: fct_unit_economics
-  description: 'Unit Economics & LTV Metrics Mart.'
+  description: Unit Economics & LTV Metrics Mart.
   config:
     meta:
       label: Unit Economics & LTV
@@ -483,7 +495,7 @@ models:
   - name: ltv_arr_ratio
     config:
       meta:
-        label: "LTV : ARR Ratio"
+        label: 'LTV : ARR Ratio'
         metrics:
           avg_ltv_arr_ratio:
             type: average
@@ -492,9 +504,9 @@ models:
     config:
       meta:
         format: percent
-        label: "% of Total MRR"
+        label: '% of Total MRR'
         metrics:
           sum_pct_of_total_mrr:
             type: sum
             format: percent
-            label: "% of Total MRR Sum"
+            label: '% of Total MRR Sum'

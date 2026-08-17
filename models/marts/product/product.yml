@@ -1,7 +1,7 @@
 version: 2
 models:
 - name: fct_product_activation
-  description: 'Product Activation Mart.'
+  description: Product Activation Mart.
   config:
     meta:
       label: Product Activation
@@ -52,9 +52,12 @@ models:
             type: average
             format: percent
             label: Average Activation Rate
-
+  - name: company_name
+    config:
+      meta:
+        label: Company Name
 - name: fct_pql_signals
-  description: 'GTM Priority Matrix & PQL Signals.'
+  description: GTM Priority Matrix & PQL Signals.
   config:
     meta:
       label: GTM Priority Matrix & PQL Signals
@@ -83,9 +86,12 @@ models:
     config:
       meta:
         label: GTM Priority
-
+  - name: company_name
+    config:
+      meta:
+        label: Company Name
 - name: fct_feature_usage
-  description: 'Feature Adoption Heatmap.'
+  description: Feature Adoption Heatmap.
   config:
     meta:
       label: Feature Usage Heatmap
@@ -134,9 +140,16 @@ models:
           avg_feature_active_days:
             type: average
             label: Average Active Days
-
+  - name: company_name
+    config:
+      meta:
+        label: Company Name
+  - name: workspace_name
+    config:
+      meta:
+        label: Workspace Name
 - name: fct_trial_conversion
-  description: 'Trial-to-Paid Conversion Funnel Mart.'
+  description: Trial-to-Paid Conversion Funnel Mart.
   config:
     meta:
       label: Trial Conversion Funnel
@@ -157,3 +170,7 @@ models:
     config:
       meta:
         label: Trial ID
+  - name: company_name
+    config:
+      meta:
+        label: Company Name

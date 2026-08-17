@@ -17,7 +17,7 @@ with billing as (
 ),
 
 spine as (
-    select * from {{ ref('int_accounts_joined') }}
+    select * from {{ ref('dim_accounts') }}
 ),
 
 final as (
@@ -27,6 +27,7 @@ final as (
         b.workspace_id,
         sp.account_id,
         sp.workspace_name,
+        sp.company_name,
         sp.domain,
 
         -- Plan & Status Dimensions

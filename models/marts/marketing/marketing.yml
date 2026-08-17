@@ -1,7 +1,7 @@
 version: 2
 models:
 - name: fct_lead_funnel
-  description: 'Marketing Lead Funnel Mart.'
+  description: Marketing Lead Funnel Mart.
   config:
     meta:
       label: Marketing Lead Funnel
@@ -22,9 +22,12 @@ models:
     config:
       meta:
         label: Lifecycle Stage
-
+  - name: company_name
+    config:
+      meta:
+        label: Company Name
 - name: fct_attribution
-  description: 'Marketing Attribution Mart.'
+  description: Marketing Attribution Mart.
   config:
     meta:
       label: Marketing Attribution
@@ -81,3 +84,7 @@ models:
     config:
       meta:
         label: Account Created At
+  - name: company_name
+    config:
+      meta:
+        label: Company Name

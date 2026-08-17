@@ -14,7 +14,7 @@
 
 -- Step 0: Account identity spine
 with spine as (
-    select * from {{ ref('int_accounts_joined') }}
+    select * from {{ ref('dim_accounts') }}
 ),
 
 -- Step 1: Billing subscriptions with active date ranges
@@ -23,6 +23,7 @@ subscriptions_with_mrr as (
         s.workspace_id,
         sp.account_id,
         sp.workspace_name,
+        sp.company_name,
         s.current_period_start_at,
         s.current_period_end_at,
         s.latest_subscription_status                    as subscription_status,
@@ -49,9 +50,10 @@ accounts_active_range as (
     select
         account_id,
         workspace_name,
+        company_name,
         date_trunc('month', min(current_period_start_at))::date as first_active_month
     from subscriptions_with_mrr
-    group by 1, 2
+    group by 1, 2, 3
 ),
 
 -- Step 4: Account-Month Spine
@@ -59,6 +61,7 @@ account_month_spine as (
     select
         a.account_id,
         a.workspace_name,
+        a.company_name,
         m.month_date
     from accounts_active_range a
     cross join months m
@@ -91,6 +94,7 @@ mrr_history as (
     select
         ams.account_id,
         ams.workspace_name,
+        ams.company_name,
         ams.month_date,
         coalesce(mm.mrr, 0)                             as mrr,
         coalesce(mm.at_risk_mrr, 0)                     as at_risk_mrr,
@@ -112,6 +116,7 @@ final as (
         {{ dbt_utils.generate_surrogate_key(['account_id', 'month_date']) }} as waterfall_id,
         account_id,
         workspace_name,
+        company_name,
         month_date,
         mrr,
         at_risk_mrr,

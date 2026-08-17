@@ -21,6 +21,7 @@ accounts as (
         account_id,
         hubspot_company_id,
         workspace_name,
+        company_name,
         domain,
         account_segment,
         mrr,
@@ -36,6 +37,7 @@ final as (
         d.hubspot_company_id,
         a.account_id,
         a.workspace_name,
+        a.company_name,
         a.domain,
         a.account_segment,
 

@@ -27,6 +27,7 @@ final as (
     select
         a.account_id,
         a.workspace_name,
+        a.company_name,
         
         -- Marketing Attribution Dimensions
         a.utm_source                                    as acquisition_channel,

@@ -73,3 +73,7 @@ models:
     config:
       meta:
         label: Health Reason
+  - name: company_name
+    config:
+      meta:
+        label: Company Name

@@ -34,6 +34,8 @@ accounts as (
     select
         internal_workspace_id                           as workspace_id,
         account_id,
+        workspace_name,
+        company_name,
         account_segment
     from {{ ref('dim_accounts') }}
 ),
@@ -79,6 +81,8 @@ select
     ]) }}                                               as usage_id,
     a.account_id,
     u.workspace_id,
+    a.workspace_name,
+    a.company_name,
     u.feature_category,
     u.usage_week,
     u.total_events,

@@ -19,6 +19,8 @@ select
     {{ dbt_utils.generate_surrogate_key(['account_id', 'month_date']) }}
                                                         as arr_snapshot_id,
     account_id,
+    workspace_name,
+    company_name,
     month_date,
     mrr_movement_type                                   as arr_movement_type,
     previous_month_mrr * 12                             as previous_arr,
