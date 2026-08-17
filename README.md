@@ -1,7 +1,7 @@
 # 🚀 B2B SaaS RevOps Intelligence Engine
 
 > [!IMPORTANT]
-> **[View Live Data Documentation & Lineage Graph](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/)**
+> **[🌐 Live Data & Quality Portal](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/)** | **[📚 Live dbt Lineage Graph](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/dbt_docs/)** | **[🛡️ Live Elementary Observability Report](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/elementary_report.html)**
 
 ![Snowflake](https://img.shields.io/badge/Snowflake-29B5E8?style=for-the-badge&logo=snowflake&logoColor=white)
 ![dbt](https://img.shields.io/badge/dbt-FF694B?style=for-the-badge&logo=python&logoColor=white)
@@ -268,6 +268,8 @@ END
 ## 5. 🧪 Data Validation & Observability
 
 **160 dbt tests** run inline on every `dbt build`. [Elementary](https://www.elementary-data.com/) monitors anomalies between runs and posts failures directly to Slack.
+
+> 🛡️ **[View Live Elementary Observability Report](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/elementary_report.html)**
 
 | Layer | Count | Type |
 |:------|:------|:-----|
@@ -575,7 +577,9 @@ python scripts/reverse_etl_dlt.py           # 4. Push to HubSpot
 | [Case Study](docs/CASE_STUDY.md) | $45K ARR saved in 30 days — full story |
 | [Reverse ETL Demo](REVERSE_ETL_DEMO.md) | Step-by-step live pipeline walkthrough |
 | [Slim CI Demo](SLIM_CI_DEMO.md) | Step-by-step Slim CI demonstration guide |
-| [Live dbt Docs](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/) | Interactive lineage graph + column docs |
+| [Live Data & Quality Portal](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/) | Main portal connecting dbt docs and Elementary |
+| [Live dbt Docs](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/dbt_docs/) | Interactive lineage graph + column docs |
+| [Live Elementary Report](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/elementary_report.html) | Data observability, freshness SLAs + test failure report |
 
 ---
 
