@@ -63,8 +63,8 @@ months as (
     from (
         {{ dbt_utils.date_spine(
             datepart="month",
-            start_date="cast(date_trunc('year', current_date - interval '2 years') as date)",
-            end_date="cast(date_trunc('month', current_date + interval '1 month') as date)"
+            start_date="cast(date_trunc('year', dateadd(year, -2, current_date())) as date)",
+            end_date="cast(date_trunc('month', dateadd(month, 1, current_date())) as date)"
         ) }}
     )
 ),
