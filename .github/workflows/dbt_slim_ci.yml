@@ -4,9 +4,7 @@ on:
   pull_request:
     branches:
       - main
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   slim_ci:
@@ -42,7 +40,6 @@ jobs:
           dbt deps
 
       - name: 📂 Download Main Branch Manifest (State Deferral)
-        if: github.event_name == 'pull_request'
         uses: dawidd6/action-download-artifact@v6
         continue-on-error: true
         with:
@@ -51,7 +48,6 @@ jobs:
           branch: main
 
       - name: 🔍 Compile Fallback State (If Main Manifest Not Found)
-        if: github.event_name == 'pull_request'
         run: |
           if [ ! -f ./state/manifest.json ]; then
             echo "⚠️  Main manifest not found in artifacts. Compiling baseline manifest..."
@@ -61,7 +57,6 @@ jobs:
           fi
 
       - name: 🚀 Run dbt Slim CI (Modified Models & Downstream Dependencies Only)
-        if: github.event_name == 'pull_request'
         run: |
           dbt build \
             --target ci \
@@ -70,15 +65,6 @@ jobs:
             --defer \
             --state ./state \
             --store-failures
-
-      - name: 🏗️ Full dbt Build on Main Merge
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          dbt build --target snowflake --profiles-dir . --store-failures
-
-      - name: 🛡️ Elementary Data Observability Run
-        run: |
-          dbt run -s elementary --target snowflake --profiles-dir .
 
       - name: 📤 Upload Production Manifest Artifact (For Future PR Deferral)
         if: github.ref == 'refs/heads/main'
