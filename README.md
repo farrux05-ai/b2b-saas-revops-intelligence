@@ -333,6 +333,10 @@ edr send-report --slack-token $SLACK_TOKEN --slack-channel data-alerts
 
 No SQL. No BI tool login. No analyst in the loop.
 
+### 🎬 Slack AI Bot Live Interaction Demo
+
+<video src="screenshots/slack_ai_bot_demo.mp4" controls width="100%"></video>
+
 <details>
 <summary><strong>📊 Metric Definitions by Domain</strong></summary>
 
@@ -381,6 +385,16 @@ npx @lightdash/cli upload --force
 ```
 
 > All dashboards registered in `models/marts/exposures.yml` — dbt lineage shows exactly which dashboards depend on which models.
+
+### 📸 Lightdash Dashboards & Semantic Layer
+
+**1. Lightdash Executive Overview Dashboard:**
+
+![Lightdash Executive Overview](screenshots/lighdash_oveview.png)
+
+**2. Lightdash Metrics & Semantic Layer:**
+
+![Lightdash Metrics & Semantic Layer](screenshots/lightdash_metrics.png)
 
 ---
 
