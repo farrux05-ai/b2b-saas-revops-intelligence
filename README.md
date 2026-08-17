@@ -335,7 +335,7 @@ No SQL. No BI tool login. No analyst in the loop.
 
 ### 🎬 Slack AI Bot Live Interaction Demo
 
-<video src="screenshots/slack_ai_bot_demo.mp4" controls width="100%"></video>
+![Slack AI Bot Live Interaction Demo](screenshots/slack_ai_bot_demo.gif)
 
 <details>
 <summary><strong>📊 Metric Definitions by Domain</strong></summary>
