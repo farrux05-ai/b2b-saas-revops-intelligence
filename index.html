@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RevOps Intelligence Hub</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; text-align: center; padding: 40px 20px; margin: 0; }
+    h1 { font-size: 2.2rem; margin-bottom: 10px; color: #38bdf8; }
+    p.subtitle { color: #94a3b8; font-size: 1.1rem; margin-bottom: 40px; }
+    .card-container { display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; max-width: 900px; margin: 0 auto; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px 24px; width: 340px; text-decoration: none; color: inherit; transition: all 0.2s ease-in-out; text-align: left; }
+    .card:hover { transform: translateY(-6px); border-color: #38bdf8; box-shadow: 0 12px 24px -10px rgba(56, 189, 248, 0.3); }
+    .card h2 { color: #38bdf8; margin-top: 0; font-size: 1.4rem; display: flex; align-items: center; gap: 8px; }
+    .card p { color: #cbd5e1; font-size: 0.95rem; line-height: 1.5; }
+    .badge { display: inline-block; background: #0284c7; color: white; padding: 4px 10px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <span class="badge">RevOps Intelligence Engine</span>
+  <h1>Data Documentation & Quality Portal</h1>
+  <p class="subtitle">Select a portal below to view interactive lineage or data observability reports</p>
+  <div class="card-container">
+    <a class="card" href="dbt_docs/">
+      <h2>📚 dbt Lineage & Docs</h2>
+      <p>Interactive dbt DAG graph, data model schemas, column definitions, and data flow contracts across Snowflake schemas.</p>
+    </a>
+    <a class="card" href="elementary/">
+      <h2>🛡️ Elementary Observability</h2>
+      <p>Data quality test health, source freshness SLAs, test failure history, and data anomaly monitoring dashboard.</p>
+    </a>
+  </div>
+</body>
+</html>
