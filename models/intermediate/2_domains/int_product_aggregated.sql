@@ -15,6 +15,18 @@
 --   Computes activation milestones (Git integration, Sprint start, AI prioritization),
 --   Product Qualified Lead (PQL) status, workspace activation rate, and low-engagement
 --   churn risk signals.
+--
+-- FIX (2026-08, audit): the final join used to be
+--   `from event_aggregation e left join user_stats us ...`
+-- which meant a workspace only appeared in this model AT ALL if it had at
+-- least one PostHog event. Workspaces with real registered users but zero
+-- product events (arguably the highest churn-risk group) were silently
+-- dropped, which understated total_users/activation_rate downstream and
+-- made the documented "last_activity_at is NULL -> severe churn risk" case
+-- for is_low_engagement impossible to actually occur. We now drive the
+-- grain from user_stats (every workspace that has users) and left join
+-- event data onto it, so never-active workspaces correctly show up with
+-- total_users > 0, total_product_events = 0, last_activity_at = NULL.
 -- =============================================================================
 
 with events as (
@@ -67,41 +79,42 @@ event_aggregation as (
 
 final as (
     select
-        e.workspace_id,
+        us.workspace_id,
 
         -- ── Activity & Usage ───────────────────────────────────────────
-        e.total_product_events,
+        coalesce(e.total_product_events, 0)             as total_product_events,
         e.last_activity_at,
 
         -- ── Activation Milestones & PQL ────────────────────────────────
-        e.has_connected_git,
-        e.has_started_sprint,
-        e.has_used_ai_prioritization,
-        e.is_pql,
+        coalesce(e.has_connected_git, false)            as has_connected_git,
+        coalesce(e.has_started_sprint, false)           as has_started_sprint,
+        coalesce(e.has_used_ai_prioritization, false)   as has_used_ai_prioritization,
+        coalesce(e.is_pql, false)                       as is_pql,
 
         -- ── User Demographics & Adoption ───────────────────────────────
-        coalesce(us.total_users, 0)                     as total_users,
-        coalesce(us.activated_users, 0)                 as activated_users,
-        coalesce(us.active_users_last_30d, 0)           as active_users_last_30d,
+        us.total_users,
+        us.activated_users,
+        us.active_users_last_30d,
 
         -- Workspace activation rate (% of invited users who completed onboarding/activation)
         case
-            when coalesce(us.total_users, 0) > 0
-            then coalesce(us.activated_users, 0)::float
+            when us.total_users > 0
+            then us.activated_users::float
                  / us.total_users::float
             else 0
         end                                             as activation_rate,
 
         -- ── Low Engagement Churn Risk Signal ───────────────────────────
         -- Flagged true if inactive for 30+ days or never performed an event
+        -- (never-active workspaces now genuinely reach this branch — see FIX above)
         case
             when e.last_activity_at is null
               or e.last_activity_at < current_timestamp - interval '30 days'
             then true else false
         end                                             as is_low_engagement
 
-    from event_aggregation e
-    left join user_stats us on e.workspace_id = us.workspace_id
+    from user_stats us
+    left join event_aggregation e on us.workspace_id = e.workspace_id
 )
 
 select * from final

@@ -12,6 +12,12 @@
 --   HOT  = Git Connected + 50+ Events
 --   WARM = Sprint Started + 10+ Events
 --   COLD = Low activity
+--
+-- FIX (2026-08, audit): the WARM branch only checked total_product_events
+-- >= 10 and silently ignored the "Sprint Started" condition stated in the
+-- spec above, so any workspace with 10+ events of ANY kind (not necessarily
+-- having started a Sprint) was tagged WARM. Added the missing
+-- has_started_sprint check so intent_tier matches its own documented rule.
 -- =============================================================================
 
 with activation as (
@@ -61,10 +67,12 @@ intent_scoring as (
         a.is_trial_expired_no_convert                   as is_at_risk_of_not_converting,
 
         -- Intent Tier Classification
+        -- FIX: WARM now requires has_started_sprint, matching the documented spec.
         case
             when a.total_product_events >= 50
              and a.has_connected_git               then 'HOT'
-            when a.total_product_events >= 10      then 'WARM'
+            when a.total_product_events >= 10
+             and a.has_started_sprint               then 'WARM'
             else 'COLD'
         end                                             as intent_tier
 

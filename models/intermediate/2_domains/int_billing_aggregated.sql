@@ -7,7 +7,7 @@
 --
 -- CONSOLIDATION RATIONALE:
 --   Consolidates 3 legacy domain models (int_subscriptions_enriched,
---   int_finance_aggregated, int_payments_enriched) into a single canonical 
+--   int_finance_aggregated, int_payments_enriched) into a single canonical
 --   workspace-level billing domain model.
 --
 -- BUSINESS RESPONSIBILITY:
@@ -16,6 +16,18 @@
 --   Computes active MRR, churn risk indicators, seat utilization, trial conversion,
 --   and payment failure categories.
 --   Note: account_id is omitted here and resolved downstream in 3_integration.
+--
+-- FIX (2026-08, audit): active_mrr / total_mrr / seats_purchased used to be
+-- computed with a blind SUM(...) across every subscription row a workspace
+-- ever had (all historical statuses included), while every other field in
+-- this model correctly isolated the CURRENT subscription via
+-- recency_rank = 1. For any workspace with more than one subscription in
+-- its history (plan upgrade/downgrade, cancel + resubscribe), that blind
+-- SUM silently inflated MRR, ARR and seat counts. We now isolate the
+-- current subscription once (current_subscription CTE) and use it
+-- consistently for every "point-in-time" metric in this model.
+-- Historical month-by-month MRR (for the waterfall) is handled separately
+-- in int_mrr_monthly, which is sourced from Stripe invoices instead.
 -- =============================================================================
 
 with subscriptions as (
@@ -43,10 +55,18 @@ with subscriptions as (
         -- Identify latest subscription for workspace-level plan/status extraction
         row_number() over (
             partition by workspace_id
-            order by created_at desc
+            order by created_at desc, subscription_id desc
         )                                               as recency_rank
 
     from {{ ref('stg_stripe__subscriptions') }}
+),
+
+-- FIX: The single source of truth for "what is this workspace's subscription
+-- right now". Exactly one row per workspace_id.
+current_subscription as (
+    select *
+    from subscriptions
+    where recency_rank = 1
 ),
 
 invoices as (
@@ -113,6 +133,10 @@ user_seat_counts as (
 ),
 
 -- Determine worst payment failure category at workspace level (Severity: fraud > funds > card > other)
+-- NOTE: intentionally matches against ALL historical subscription_ids (not just
+-- current_subscription), because a failed payment can belong to a prior
+-- subscription record while still being the correct "worst failure" signal
+-- for the workspace today.
 payment_failures as (
     select
         i.subscription_id,
@@ -138,81 +162,72 @@ payment_failures as (
     group by i.subscription_id, s.workspace_id
 ),
 
--- Aggregate all billing & financial metrics at the workspace grain
+-- Aggregate current-state billing metrics at the workspace grain.
+-- FIX: current_subscription already has exactly 1 row per workspace_id, so
+-- this is a plain join (no SUM/GROUP BY needed) — this is what removes the
+-- history-inflation bug.
 workspace_billing as (
     select
-        s.workspace_id,
+        cs.workspace_id,
+        cs.customer_id,
 
-        -- Stripe Customer Bridge
-        max(s.customer_id)                              as customer_id,
-
-        -- ── MRR Metrics ──────────────────────────────────────────────────
-        sum(case when s.subscription_status = 'active'
-            then s.mrr_amount else 0 end)               as active_mrr,
-        sum(s.mrr_amount)                               as total_mrr,
+        -- ── MRR Metrics (current subscription only) ─────────────────────
+        case when cs.subscription_status = 'active'
+            then cs.mrr_amount else 0 end               as active_mrr,
+        case when cs.subscription_status != 'canceled'
+            then cs.mrr_amount else 0 end               as total_mrr,
 
         -- ── Subscription Lifecycle State ────────────────────────────────
-        max(case when s.recency_rank = 1
-            then s.subscription_status end)             as latest_subscription_status,
-        max(case when s.recency_rank = 1
-            then s.plan_id end)                         as current_plan,
-        max(case when s.recency_rank = 1
-            then s.trial_end_at end)                    as trial_end_at,
-        max(case when s.recency_rank = 1
-            then s.current_period_end_at end)           as current_period_end_at,
-        max(case when s.recency_rank = 1
-            then s.current_period_start_at end)         as current_period_start_at,
+        cs.subscription_status                          as latest_subscription_status,
+        cs.plan_id                                       as current_plan,
+        cs.trial_end_at,
+        cs.current_period_end_at,
+        cs.current_period_start_at,
 
         -- ── Churn Risk Signals ──────────────────────────────────────────
         -- Silent Churn: Payment past due but subscription not yet canceled
-        max(case when s.subscription_status = 'past_due'
-            then 1 else 0 end)                          as is_payment_failing,
+        case when cs.subscription_status = 'past_due'
+            then 1 else 0 end                           as is_payment_failing,
         -- Intentional Churn: User requested cancellation at period end
-        max(case when s.is_cancel_at_period_end
-            then 1 else 0 end)                          as is_churning_soon,
+        case when cs.is_cancel_at_period_end
+            then 1 else 0 end                           as is_churning_soon,
 
-        -- ── Seat Utilization ────────────────────────────────────────────
-        sum(s.seats_purchased)                          as seats_purchased,
+        -- ── Seat Utilization (current subscription only) ────────────────
+        cs.seats_purchased,
 
         -- ── Conversion Metrics ──────────────────────────────────────────
-        max(fp.first_payment_at)                        as first_payment_at,
-        max(fp.successful_payments_count)               as successful_payments_count,
+        fp.first_payment_at,
+        fp.successful_payments_count,
 
         -- ── Expansion & Contraction Signals ─────────────────────────────
         -- Upsell candidate: >= 90% seat utilization
         case
-            when sum(s.seats_purchased) > 0
-             and coalesce(max(uc.actual_seats_used), 0)::float
-                 / nullif(sum(s.seats_purchased), 0) >= 0.9
+            when cs.seats_purchased > 0
+             and coalesce(uc.actual_seats_used, 0)::float
+                 / nullif(cs.seats_purchased, 0) >= 0.9
             then true else false
         end                                             as is_upsell_candidate,
         -- Downsell risk: < 30% seat utilization on multi-seat plans
         case
-            when sum(s.seats_purchased) > 1
-             and coalesce(max(uc.actual_seats_used), 0)::float
-                 / nullif(sum(s.seats_purchased), 0) < 0.3
+            when cs.seats_purchased > 1
+             and coalesce(uc.actual_seats_used, 0)::float
+                 / nullif(cs.seats_purchased, 0) < 0.3
             then true else false
         end                                             as is_downsell_risk,
 
         -- ── Trial Conversion Risk ───────────────────────────────────────
         -- Trial expiring within 3 days without a recorded payment
         case
-            when max(case when s.recency_rank = 1
-                     then s.subscription_status end) = 'trialing'
-             and max(case when s.recency_rank = 1
-                     then s.trial_end_at end) is not null
-             and datediff('day',
-                 current_timestamp,
-                 max(case when s.recency_rank = 1
-                     then s.trial_end_at end)) between 0 and 3
-             and max(fp.first_payment_at) is null
+            when cs.subscription_status = 'trialing'
+             and cs.trial_end_at is not null
+             and datediff('day', current_timestamp, cs.trial_end_at) between 0 and 3
+             and fp.first_payment_at is null
             then true else false
         end                                             as is_trial_at_risk
 
-    from subscriptions s
-    left join first_payments fp   on s.customer_id = fp.customer_id
-    left join user_seat_counts uc on s.workspace_id = uc.workspace_id
-    group by s.workspace_id
+    from current_subscription cs
+    left join first_payments fp   on cs.customer_id = fp.customer_id
+    left join user_seat_counts uc on cs.workspace_id = uc.workspace_id
 )
 
 select

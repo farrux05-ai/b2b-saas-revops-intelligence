@@ -6,6 +6,7 @@
 -- GRAIN: One row per account_id
 --
 -- SCORING PRIORITY CASCADE (Strict Order):
+--   0. Not a Customer   : CRM-only lead, never had a product workspace.
 --   1. Churned          : Subscription status is canceled.
 --   2. Payment Failing  : Silent churn (past_due payment state).
 --   3. Support Critical : High ticket burden (> 5 open support tickets).
@@ -17,6 +18,19 @@
 --   Enriches int_accounts_integrated with health_reason, health_status, and mrr_at_risk.
 --   Derives health_status and mrr_at_risk directly from health_reason to prevent logical drift.
 --   Consumed downstream by dim_accounts in Marts.
+--
+-- FIX (2026-08, audit): CRM-only leads (hubspot company with no linked
+-- workspace, internal_workspace_id is null) never had billing, product or
+-- support activity, so is_low_engagement defaulted to TRUE for them
+-- (coalesce(..., true) in int_accounts_integrated). Before this fix, that
+-- pushed every such lead into health_reason = 'Low Engagement' ->
+-- health_status = 'At Risk', even though they were never real customers to
+-- begin with. This skewed Account Health Distribution with leads that
+-- don't belong there. They are now classified separately as
+-- 'Not a Customer' / 'Not a Customer' and excluded from the churn cascade.
+-- (fct_accounts_health already filters `where subscription_status is not
+-- null`, so CS-facing marts were not affected — this fix is about
+-- dim_accounts / the Account 360 record being correct at the source.)
 -- =============================================================================
 
 with master as (
@@ -28,6 +42,10 @@ health_reasons as (
     select
         *,
         case
+            -- 0. Not a Customer: CRM-only lead, no product workspace ever created
+            when internal_workspace_id is null
+                then 'Not a Customer'
+
             -- 1. Churned: Subscription has been canceled
             when latest_subscription_status = 'canceled'
                 then 'Churned'
@@ -63,6 +81,8 @@ final as (
 
         -- High-level health status category for executive dashboards
         case
+            when r.health_reason = 'Not a Customer'
+                then 'Not a Customer'
             when r.health_reason = 'Churned'
                 then 'Churned'
             when r.health_reason in (
