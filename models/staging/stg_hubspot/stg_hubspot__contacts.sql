@@ -10,7 +10,12 @@ with source as (
         linkedin_url,
         is_enriched,
         createdate,
-        lastmodifieddate
+        lastmodifieddate,
+        -- Deduplicate raw contacts by hs_object_id (picking most recently updated record)
+        row_number() over (
+            partition by hs_object_id
+            order by lastmodifieddate desc nulls last, createdate desc nulls last
+        ) as rn
     from {{ source('hubspot', 'contacts') }}
 ),
 
@@ -37,6 +42,7 @@ renamed as (
         cast(lastmodifieddate as timestamp)             as updated_at
 
     from source
+    where rn = 1
 )
 
 select * from renamed
