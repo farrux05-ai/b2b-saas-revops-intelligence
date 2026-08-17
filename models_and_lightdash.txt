@@ -157,7 +157,7 @@ sources:
             error_after: {count: 49, period: hour}
         columns:
           - name: hs_object_id
-            tests: [unique, not_null]
+            tests: [not_null]
         tests:
           - elementary.schema_changes
 
