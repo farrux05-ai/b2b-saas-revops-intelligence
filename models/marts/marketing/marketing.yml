@@ -1,0 +1,61 @@
+version: 2
+models:
+- name: fct_lead_funnel
+  description: 'Marketing Lead Funnel Mart. One row per HubSpot company lead. Sourced
+    directly from stg_hubspot__companies to capture top-of-funnel leads.
+
+    '
+  config:
+    meta:
+      label: Marketing Lead Funnel
+  columns:
+  - name: hubspot_company_id
+    description: Grain. HubSpot company ID.
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Company Lead ID
+        metrics:
+          total_leads:
+            type: count_distinct
+            label: Total Lead Count
+  - name: account_id
+    description: FK to dim_accounts.
+    config:
+      meta:
+        label: Account ID
+  - name: lifecycle_stage
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - subscriber
+          - lead
+          - marketingqualifiedlead
+          - salesqualifiedlead
+          - opportunity
+          - customer
+          - evangelist
+          - other
+    config:
+      meta:
+        label: Lifecycle Stage
+- name: fct_attribution
+  description: 'Marketing Attribution Mart. One row per account (First-Touch). Sourced
+    from int_crm_aggregated and dim_accounts.
+
+    '
+  config:
+    meta:
+      label: Marketing Attribution
+  columns:
+  - name: account_id
+    description: Grain. FK to dim_accounts.
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Account ID

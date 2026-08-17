@@ -1,0 +1,75 @@
+version: 2
+models:
+- name: fct_accounts_health
+  description: 'Customer Success Health Mart. One row per paying account. 3 distinct
+    churn risk signals: is_payment_failing + is_churning_soon + is_low_engagement.
+
+    '
+  config:
+    meta:
+      label: Account Health & CS Prioritization
+  columns:
+  - name: account_id
+    description: Grain. FK to dim_accounts.
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Account ID
+        metrics:
+          at_risk_accounts:
+            type: count_distinct
+            sql: case when ${health_status} = 'At Risk' then ${account_id} else null
+              end
+            label: At Risk Accounts
+  - name: mrr
+    description: Account MRR.
+    tests:
+    - not_null
+    config:
+      meta:
+        format: usd
+        label: MRR
+        metrics:
+          cs_total_mrr:
+            type: sum
+            label: CS Total MRR ($)
+            format: usd
+  - name: health_status
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - Healthy
+          - At Risk
+          - Churned
+    config:
+      meta:
+        label: Health Status
+  - name: account_segment
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - Enterprise
+          - Mid-Market
+          - SMB
+          - Trial/Free
+    config:
+      meta:
+        label: Account Segment
+  - name: mrr_at_risk
+    config:
+      meta:
+        format: usd
+        label: MRR at Risk
+        metrics:
+          total_mrr_at_risk:
+            type: sum
+            label: Total MRR at Risk ($)
+            format: usd
+  - name: health_reason
+    config:
+      meta:
+        label: Health Reason

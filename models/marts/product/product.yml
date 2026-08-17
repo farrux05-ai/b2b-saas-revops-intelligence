@@ -1,0 +1,166 @@
+version: 2
+models:
+- name: fct_product_activation
+  description: 'Product Activation Mart. One row per workspace_id. Sourced from int_product_aggregated
+    and dim_accounts.
+
+    '
+  config:
+    meta:
+      label: Product Activation
+  columns:
+  - name: workspace_id
+    description: Grain. Internal workspace ID.
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Workspace ID
+  - name: account_id
+    description: FK to dim_accounts.
+    config:
+      meta:
+        label: Account ID
+  - name: activation_rate
+    description: activated_users / total_users (0.0 to 1.0).
+    tests:
+    - not_null
+    config:
+      meta:
+        format: percent
+        label: Activation Rate
+  - name: total_users
+    config:
+      meta:
+        metrics:
+          total_users_sum:
+            type: sum
+            label: Total Users
+  - name: activated_users
+    config:
+      meta:
+        metrics:
+          activated_users_sum:
+            type: sum
+            label: Activated Users
+- name: fct_pql_signals
+  description: 'GTM Priority Matrix Mart. Unconverted prospects only. Computes Intent
+    x Fit = gtm_priority.
+
+    '
+  config:
+    meta:
+      label: GTM Priority Matrix & PQL Signals
+  columns:
+  - name: workspace_id
+    description: Grain. Workspace ID.
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Workspace ID
+        metrics:
+          pql_workspaces:
+            type: count_distinct
+            label: PQL Workspaces
+  - name: account_id
+    description: FK to dim_accounts.
+    config:
+      meta:
+        label: Account ID
+  - name: intent_tier
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - HOT
+          - WARM
+          - COLD
+    config:
+      meta:
+        label: Intent Tier
+  - name: icp_tier
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - High Fit
+          - Medium Fit
+          - Low Fit
+    config:
+      meta:
+        label: ICP Tier
+  - name: gtm_priority
+    tests:
+    - accepted_values:
+        arguments:
+          values:
+          - MUST WIN
+          - ACTIVE
+          - NOTIFY
+          - HIGH POTENTIAL
+          - NURTURE
+          - MONITOR
+          - INCUBATE
+    config:
+      meta:
+        label: GTM Priority
+- name: fct_feature_usage
+  description: 'Feature Adoption Heatmap (Incremental). Grain: workspace x feature_category
+    x week.
+
+    '
+  config:
+    meta:
+      label: Feature Usage Heatmap
+  columns:
+  - name: usage_id
+    description: Grain. Surrogate key for workspace x feature_category x week.
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Usage Record ID
+  - name: workspace_id
+    description: FK to workspace.
+    config:
+      meta:
+        label: Workspace ID
+  - name: account_id
+    description: FK to dim_accounts.
+    config:
+      meta:
+        label: Account ID
+- name: fct_trial_conversion
+  description: 'Trial-to-Paid Conversion Funnel Mart. One row per trialing workspace.
+    Sourced from int_billing_aggregated.
+
+    '
+  config:
+    meta:
+      label: Trial Conversion Funnel
+  columns:
+  - name: workspace_id
+    description: Grain. Workspace ID.
+    tests:
+    - unique
+    - not_null
+    config:
+      meta:
+        label: Workspace ID
+        metrics:
+          trials_at_risk:
+            type: count_distinct
+            label: Trials at Risk
+  - name: account_id
+    description: FK to dim_accounts.
+    config:
+      meta:
+        label: Account ID
+  - name: trial_id
+    config:
+      meta:
+        label: Trial ID
