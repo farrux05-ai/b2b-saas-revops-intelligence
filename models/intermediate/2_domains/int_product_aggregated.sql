@@ -107,9 +107,12 @@ final as (
         -- ── Low Engagement Churn Risk Signal ───────────────────────────
         -- Flagged true if inactive for 30+ days or never performed an event
         -- (never-active workspaces now genuinely reach this branch — see FIX above)
+        -- FIX (2026-08): Anchored reference date to max event timestamp in dataset
+        -- to prevent static/historical dataset drift where current_timestamp
+        -- causes 100% of accounts to evaluate as low engagement.
         case
             when e.last_activity_at is null
-              or e.last_activity_at < current_timestamp - interval '30 days'
+              or e.last_activity_at < coalesce((select max(occurred_at) from events), current_timestamp) - interval '30 days'
             then true else false
         end                                             as is_low_engagement
 

@@ -133,7 +133,7 @@ user_account_stitching as (
         *,
         -- Activation status (Shared logic moved from marts to intermediate)
         activated_at is not null                        as is_activated,
-        last_seen_at >= current_timestamp 
+        last_seen_at >= coalesce((select max(last_seen_at) from internal_users), current_timestamp) 
             - interval '30 days'                        as is_active_last_30d,
 
         -- Logic for Reverse ETL: Is there a mismatch between HubSpot and our Truth?
