@@ -24,6 +24,7 @@ with accounts as (
         subscription_status,
         is_payment_failing,
         open_tickets,
+        is_low_engagement,
         last_activity_at
     from {{ ref('dim_accounts') }}
 ),
@@ -52,7 +53,7 @@ violations as (
       and (
             is_payment_failing = 1
          or open_tickets > 5
-         or last_activity_at < current_timestamp - interval '30 days'
+         or is_low_engagement = true
       )
 
     union all

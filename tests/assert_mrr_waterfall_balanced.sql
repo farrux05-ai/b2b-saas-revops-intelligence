@@ -30,10 +30,11 @@ monthly as (
     select
         month_date,
         sum(mrr)                                                    as total_mrr,
-        sum(case when mrr_movement_type = 'new'        then mrr else 0 end) as new_mrr,
-        sum(case when mrr_movement_type = 'expansion'  then mrr_change_amount else 0 end) as expansion_mrr,
-        sum(case when mrr_movement_type = 'contraction' then abs(mrr_change_amount) else 0 end) as contraction_mrr,
-        sum(case when mrr_movement_type = 'churn'      then previous_month_mrr else 0 end) as churn_mrr
+        sum(case when mrr_movement_type = 'new'          then mrr else 0 end) as new_mrr,
+        sum(case when mrr_movement_type = 'resurrection' then mrr else 0 end) as resurrection_mrr,
+        sum(case when mrr_movement_type = 'expansion'    then mrr_change_amount else 0 end) as expansion_mrr,
+        sum(case when mrr_movement_type = 'contraction'  then abs(mrr_change_amount) else 0 end) as contraction_mrr,
+        sum(case when mrr_movement_type = 'churn'        then previous_month_mrr else 0 end) as churn_mrr
     from waterfall
     group by month_date
 ),
@@ -51,11 +52,11 @@ imbalanced as (
         month_date,
         total_mrr,
         prev_total_mrr,
-        coalesce(prev_total_mrr, 0) + new_mrr + expansion_mrr
+        coalesce(prev_total_mrr, 0) + new_mrr + resurrection_mrr + expansion_mrr
             - contraction_mrr - churn_mrr                           as calculated_mrr,
         abs(
             total_mrr
-            - (coalesce(prev_total_mrr, 0) + new_mrr + expansion_mrr - contraction_mrr - churn_mrr)
+            - (coalesce(prev_total_mrr, 0) + new_mrr + resurrection_mrr + expansion_mrr - contraction_mrr - churn_mrr)
         )                                                           as mrr_diff
     from monthly_with_prev
     where prev_total_mrr is not null   -- Skip first month (no prior state)
