@@ -13,6 +13,25 @@
 
 ---
 
+## Table of Contents
+
+1. [What This Is](#what-this-is)
+2. [Business Context](#business-context)
+3. [Architecture](#architecture)
+4. [Ingestion (EL)](#1-ingestion-el)
+5. [Transformation (dbt)](#2-transformation-dbt)
+6. [Data Quality & Observability](#3-data-quality--observability)
+7. [Semantic Layer & Slack AI Agent](#4-semantic-layer--slack-ai-agent)
+8. [BI Dashboards](#5-bi-dashboards-dashboards-as-code)
+9. [Reverse ETL](#6-reverse-etl)
+10. [Orchestration](#7-orchestration)
+11. [CI/CD](#8-cicd)
+12. [Quick Start](#quick-start)
+13. [Repository Structure](#repository-structure)
+14. [Related Docs](#related-docs)
+
+---
+
 ## What This Is
 
 A production-grade **Revenue Operations data pipeline** that unifies CRM, billing, support, and product data into a single source of truth — then delivers actionable insights back to GTM teams automatically.
