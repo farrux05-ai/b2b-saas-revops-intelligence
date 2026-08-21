@@ -1,7 +1,6 @@
-# 🚀 B2B SaaS RevOps Intelligence Engine
+# B2B SaaS RevOps Intelligence Engine
 
-> [!IMPORTANT]
-> **[🌐 Live Data & Quality Portal](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/)** | **[📚 Live dbt Lineage Graph](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/dbt_docs/)** | **[🛡️ Live Elementary Observability Report](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/elementary_report.html)**
+> **[🌐 Live Portal](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/)** · **[📚 dbt Docs](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/dbt_docs/)** · **[🛡️ Observability Report](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/elementary_report.html)**
 
 ![Snowflake](https://img.shields.io/badge/Snowflake-29B5E8?style=for-the-badge&logo=snowflake&logoColor=white)
 ![dbt](https://img.shields.io/badge/dbt-FF694B?style=for-the-badge&logo=python&logoColor=white)
@@ -10,129 +9,81 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 ![HubSpot](https://img.shields.io/badge/HubSpot-FF7A59?style=for-the-badge&logo=hubspot&logoColor=white)
 ![Stripe](https://img.shields.io/badge/Stripe-635BFF?style=for-the-badge&logo=stripe&logoColor=white)
-![PostHog](https://img.shields.io/badge/PostHog-1D4ED8?style=for-the-badge&logo=posthog&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
 
 ---
 
-## ⚡ TL;DR — What This Is
+## What This Is
 
-> A full-stack **Revenue Operations data pipeline** built on Snowflake and dbt. It unifies CRM, billing, support, and product data into a single source of truth — then delivers insights back into Slack and HubSpot automatically.
+A production-grade **Revenue Operations data pipeline** that unifies CRM, billing, support, and product data into a single source of truth — then delivers actionable insights back to GTM teams automatically.
 
 | | |
 |:-|:-|
-| **The problem** | 4 disconnected tools (HubSpot, Stripe, Zendesk, PostHog) — no shared identity, silent churn, inaccurate MRR |
-| **The solution** | End-to-end pipeline: ingestion → transformation → semantic layer → Slack AI agent → Reverse ETL back to CRM |
-| **The result** | First run surfaced 23 at-risk accounts ($87K at risk). CS saved **$45K ARR in 30 days** |
+| **Problem** | 4 disconnected tools (HubSpot · Stripe · Zendesk · PostHog) — no shared identity, silent churn, unreliable MRR |
+| **Solution** | End-to-end pipeline: ingestion → transformation → semantic layer → Slack AI agent → Reverse ETL to CRM |
+| **Outcome** | First run surfaced **23 at-risk accounts ($87K ARR)**. CS saved **$45K ARR in 30 days** |
 | **Stack** | dlt · dbt · Snowflake · Dagster · Lightdash · Elementary · Slack Bot |
-| **Cost** | $0/month — Snowflake free tier + open-source tools |
+| **Infra cost** | $0/month — Snowflake free tier + open-source tooling |
 
 ---
 
-## Table of Contents
+## Business Context
 
-1. [Business Context & Problem](#1--business-context--problem)
-2. [Solution & Architecture](#2--solution--architecture)
-3. [Extract & Load (Ingestion)](#3--extract--load-ingestion)
-4. [Transformation](#4--transformation)
-5. [Data Validation & Observability](#5--data-validation--observability)
-6. [Semantic Layer + Slack AI Agent](#6--semantic-layer--slack-ai-agent)
-7. [BI Reporting](#7--bi-reporting)
-8. [Reverse ETL](#8--reverse-etl)
-9. [Orchestration](#9--orchestration)
-10. [CI/CD](#10--cicd)
+**[StackFlow AI](https://stackflow.ai)** — B2B SaaS Engineering Management Platform. $3M ARR, $10M Series A, 60+ employees. Hyper-growth exposed a structural gap: each team ran best-in-class tools that never communicated.
 
----
+| Team | Blind Spot |
+|:-----|:-----------|
+| Sales (HubSpot) | Couldn't see if won deals ever activated in the product |
+| Finance (Stripe) | No visibility into which campaign/rep drove each subscription |
+| Customer Success (Zendesk) | Didn't know product engagement levels of at-risk accounts |
+| Product (PostHog) | Couldn't quantify the ARR risk behind low-engagement accounts |
 
-## 1. 💼 Business Context & Problem
-
-**[StackFlow AI](https://stackflow.ai)** is a B2B SaaS Engineering Management Platform — AI-driven task prioritization, Git-native sprint orchestration, and team velocity tracking. The company raised a **$10M Series A**, crossed **$3M ARR**, and grew from 15 to 60+ employees in under 18 months.
-
-But hyper-growth exposed a structural weakness: **the company was flying blind on its own revenue.**
-
-Each department ran on best-in-class tools — but none of them talked to each other:
-
-| Department | Tool | What They Knew | What They Couldn't See |
-|:-----------|:-----|:---------------|:-----------------------|
-| Sales | HubSpot | Pipeline, deal stages, rep activity | Whether those deals actually activated in the product |
-| Finance | Stripe | MRR, invoices, payment status | Which marketing campaign or sales rep drove each subscription |
-| Customer Success | Zendesk | Support tickets, CSAT, escalations | Seat utilization or product engagement of the complaining account |
-| Product | Internal DB + PostHog | Git connections, sprint creation, AI usage | The ARR risk tied to low-engagement accounts |
-
-<details>
-<summary><strong>📌 Product & Pricing Context</strong></summary>
-
-**Seat-Based Pricing Tiers**
-
-| Tier | Price/Seat/mo | Seat Limit | Target Segment |
-|:-----|:-------------|:-----------|:---------------|
-| **Starter** | $12 | 10 | Early-stage teams |
-| **Growth** | $25 | 50 | Scaling mid-market |
-| **Enterprise** | $60 | 500+ | Large orgs, custom contracts |
-
-**The Activation ("Aha!") Moment:** A team connects their Git provider **and** completes their first AI-assisted Sprint. Accounts that hit this milestone churn at 3×-lower rates than those that don't.
-
-**PQL Intent Tiers** *(Product-Qualified Lead scoring)*
-
-| Tier | Criteria | GTM Action |
-|:-----|:---------|:-------------|
-| 🔥 **HOT** | Git connected + >50 product events in 14 days | Immediate Sales call |
-| ⚡ **WARM** | Sprint started + >10 product events | Automated nurture sequence |
-| 🔘 **COLD** | Signed up — no activation milestones reached | Marketing onboarding emails |
-
-</details>
+**Real losses:**
+- **Silent churn** — A $12K/yr Enterprise account cancelled after 3 weeks past-due on Stripe, 6 weeks zero Git activity, and 4 open critical tickets. Every team saw one signal. Nobody saw all three.
+- **Missed expansion** — 30% of accounts had >80% seat utilization. Sales was cold-prospecting instead.
+- **Inaccurate MRR** — Finance built the board report manually: 16 hrs/month, always 2–3 weeks stale, ±8% off.
+- **Analyst bottleneck** — A simple segmentation question took 3 days. The data existed — across 4 systems.
 
 ---
 
-### What the business was losing every week
+## Architecture
 
-The real cost wasn't complexity — it was **silent, preventable revenue loss** across four areas:
-
-**💸 Revenue walking out the door undetected**
-A $12K/year Enterprise account cancelled without warning. They had been past-due on Stripe for 3 weeks, had zero Git activity for 6 weeks, and had 4 open high-priority Zendesk tickets. Every team saw one signal. Nobody saw all three. CS only found out after the cancellation email arrived.
-
-**📉 Expansion revenue left on the table**
-Finance knew which accounts had unused seats — but couldn't tell Sales. Sales was prospecting cold leads while 30% of existing accounts had >80% seat utilization and were operationally ready to expand. Every week of delay was missed upsell.
-
-**🔢 Board numbers that couldn't be trusted**
-The CFO's MRR report was built by hand — a Finance analyst spent 16 hours/month exporting Stripe CSVs into Excel, manually reconciling prorations, mid-month plan changes, and failed payments. The number the CEO presented at board meetings was always 2–3 weeks stale and ±8% inaccurate.
-
-**⏱️ Every metric required an analyst**
-When the VP of Sales asked *"Which accounts are 80%+ on seats but haven't expanded?"*, the answer took 3 days. The data existed — in 4 separate systems — but assembling it required a custom SQL query and a manual join nobody had time to write. Decisions were delayed. Opportunities were missed.
-
-> **Result:** The first `dbt build` run surfaced **23 at-risk accounts** representing **$87K ARR**. CS intervened within 48 hours → **$45K saved in 30 days**.
-
----
-
-## 2. 🏗️ Solution & Architecture
-
-One pipeline, full loop: raw API data → Snowflake → dbt models → Slack AI agent → back into HubSpot.
+```
+HubSpot · Stripe · Zendesk · PostHog · Internal DB
+            ↓  (dlt — incremental, schema-inferred)
+         Snowflake RAW_DATA
+            ↓  (dbt — 3-layer medallion)
+    STAGING → INTERMEDIATE → MARTS
+            ↓                      ↓
+    Lightdash + Slack AI      Reverse ETL → HubSpot
+            ↓
+       Dagster (daily 07:00 UTC orchestration)
+```
 
 ![Full Data Architecture](screenshots/full_data_architecture.jpeg)
 
 <details>
-<summary><strong>🛠️ Full Tech Stack</strong></summary>
+<summary><strong>Full Tech Stack</strong></summary>
 
-| Layer | Tool | Why |
-|:------|:-----|:----|
-| **Ingestion (Dev)** | `ingestion/stackflow_pipeline.py` (dlt) | Mock data → Snowflake dev target |
-| **Ingestion (Prod)** | [`b2b_dlt/`](b2b_dlt/) | Live connectors: HubSpot, Stripe, Zendesk, PostHog, Postgres CDC |
-| **Transformation** | [dbt](https://getdbt.com) | DAG-based SQL with tests, docs, lineage on Snowflake |
-| **Cloud Warehouse** | [Snowflake](https://www.snowflake.com/) | Enterprise cloud data warehouse |
-| **Data Quality** | [Elementary](https://www.elementary-data.com/) | Anomaly detection, test observability, Slack alerts |
-| **Semantic Layer** | [Lightdash](https://lightdash.com) | Metrics-as-code from dbt `meta` YAML |
-| **Slack AI Agent** | Lightdash AI + Slack Bot | Natural language Q&A — no SQL needed |
-| **Orchestration** | [Dagster](https://dagster.io) | Asset-based DAG — tracks *data*, not just *scripts* |
-| **Reverse ETL** | Python + dlt | Pushes insights back into HubSpot |
-| **CI/CD** | GitHub Actions | dbt slim CI, Elementary checks, dbt docs auto-deploy |
+| Layer | Tool | Role |
+|:------|:-----|:-----|
+| Ingestion | dlt | 5 live connectors → Snowflake; incremental, schema-inferred |
+| Transformation | dbt | DAG-based SQL with tests, docs, and lineage |
+| Warehouse | Snowflake | Cloud data warehouse |
+| Observability | Elementary | Anomaly detection + Slack alerting |
+| Semantic Layer | Lightdash | Metrics-as-code from dbt `meta` YAML |
+| AI Q&A | Lightdash AI + Slack Bot | Natural language → Snowflake; no SQL needed |
+| Orchestration | Dagster | Asset-based DAG — tracks data freshness, not script runs |
+| Reverse ETL | Python + dlt | Pushes insights back to HubSpot |
+| CI/CD | GitHub Actions | Slim CI, Elementary checks, auto-deploy dbt docs |
 
 </details>
 
 ---
 
-## 3. 📥 Extract & Load (Ingestion)
+## 1. Ingestion (EL)
 
-**[dlt (data load tool)](https://dlthub.com)** ingests from 5 sources into Snowflake's `RAW_DATA` schema — handling schema inference, incremental loading, and pagination automatically.
+**dlt** ingests 5 sources into Snowflake `RAW_DATA` with automatic schema inference, incremental loading, and pagination.
 
 | Source | Method | Key Tables |
 |:-------|:-------|:-----------|
@@ -142,101 +93,56 @@ One pipeline, full loop: raw API data → Snowflake → dbt models → Slack AI 
 | PostHog Events | REST API | `events`, `persons` |
 | Internal DB | PostgreSQL CDC (logical replication) | `users`, `workspaces`, `seats` |
 
-### 📸 Execution & Load Verification
+**Dev mode:** `ingestion/stackflow_pipeline.py` — mock data → `DEV_RAW_DATA`  
+**Prod mode:** [`b2b_dlt/`](b2b_dlt/) — live API connectors → `RAW_DATA`
 
-**1. `dlt` Ingestion Terminal Output (Snowflake Target):**
-
-![dlt Ingestion Terminal Output](screenshots/dlt_load_snowflake_terminal.png)
-
-**2. Snowflake `RAW_DATA` Schema Load State:**
-
-![Snowflake RAW_DATA Schema State](screenshots/snowflake_dlt_load_state.jpeg)
-
-<details>
-<summary><strong>📂 Two-Mode Ingestion (Dev vs Prod)</strong></summary>
-
-| Mode | File | Purpose |
-|:-----|:-----|:--------|
-| **Dev** | `ingestion/stackflow_pipeline.py` | Reads JSON mock data → Snowflake `DEV_RAW_DATA` schema |
-| **Prod** | [`b2b_dlt/main.py`](b2b_dlt/main.py) | Live API connectors → Snowflake `RAW_DATA` schema |
-
-All raw data lands in Snowflake:
-```
-RAW_DATA.HUBSPOT__COMPANIES
-RAW_DATA.HUBSPOT__CONTACTS
-RAW_DATA.STRIPE__SUBSCRIPTIONS
-RAW_DATA.ZENDESK__TICKETS
-...
-```
-</details>
+![dlt Ingestion Output](screenshots/dlt_load_snowflake_terminal.png)
 
 ---
 
-## 4. ⚙️ Transformation
+## 2. Transformation (dbt)
 
-**dbt** transforms raw Snowflake data through a 3-layer medallion architecture into business-ready tables used by BI, Slack, and Reverse ETL.
+3-layer medallion architecture on Snowflake:
 
 ```
-RAW_DATA (Snowflake)
-    └── STAGING    ← Views: type-cast, rename, dedupe
-            └── INTERMEDIATE  ← Views: identity stitch, domain aggregation
-                    └── MARTS ← Tables: facts & dims consumed by downstream
+RAW_DATA  →  STAGING (views: cast, rename, dedupe)
+          →  INTERMEDIATE (identity stitch, domain aggregation)
+          →  MARTS (tables: consumed by BI, Slack, Reverse ETL)
 ```
 
-### 📸 Transformation Execution & Lineage
+![dbt Build](screenshots/dbt_build.png)
 
-**1. `dbt build` Execution (Snowflake Warehouse):**
+### Data Models (13 marts)
 
-![dbt Build Execution](screenshots/dbt_build.png)
-
-**2. dbt Lineage DAG & Documentation:**
-
-![dbt Documentation & Lineage DAG](screenshots/dbt_docs.png)
-
-### Key Marts
-
-| Model | What it answers |
-|:------|:----------------|
-| `dim_accounts` | Full account snapshot: MRR, ARR, health, ICP tier, upsell readiness |
-| `fct_accounts_health` | 3-signal risk model: payment · engagement · support |
-| `fct_mrr_waterfall` | New / Expansion / Contraction / Churn / Resurrection per account/month |
-| `fct_pql_signals` | HOT / WARM / COLD intent scoring per workspace |
-| `fct_retention_cohorts` | NRR, GRR, logo churn by monthly cohort |
-
-<details>
-<summary><strong>📐 Full Data Model Map (all 13 marts)</strong></summary>
-
-| Model | Grain | Key Metrics / Fields |
-|:------|:------|:---------------------|
-| `dim_accounts` | 1 row/account | `mrr`, `arr`, `health_status`, `icp_tier`, `is_ready_for_upsell`, `seat_utilization_pct` |
-| `dim_users` | 1 row/user | `global_user_id`, `hubspot_contact_id`, `user_role` |
-| `dim_dates` | 1 row/calendar day | Date spine for all time-series joins |
-| `fct_accounts_health` | 1 row/paying account | 3-signal health model: payment · engagement · support |
-| `fct_mrr_waterfall` | 1 row/account/month | `new_mrr`, `expansion_mrr`, `contraction_mrr`, `churn_mrr` |
-| `fct_arr_movements` | 1 row/account/month | `arr_start`, `arr_end`, `arr_change_type` |
-| `fct_pql_signals` | 1 row/workspace | `intent_tier` (HOT/WARM/COLD), `recommended_action` |
-| `fct_pipeline` | 1 row/deal | `deal_stage`, `amount`, `win_probability`, `avg_won_days_to_close` |
-| `fct_subscriptions` | 1 row/subscription | Subscription state, `seat_utilization_pct`, `is_upsell_candidate` |
-| `fct_product_activation` | 1 row/account | Activation milestones, `activation_rate` |
-| `fct_retention_cohorts` | 1 row/month | NRR, GRR, Logo Churn by cohort |
-| `fct_trial_conversion` | 1 row/trial | `is_converted`, `time_to_convert_days`, `is_at_risk_of_expiring` |
-| `fct_unit_economics` | 1 row/account segment | LTV, LTV:ARR ratio, avg NRR/GRR |
-
-</details>
+| Model | Grain | Business Question Answered |
+|:------|:------|:--------------------------|
+| `dim_accounts` | 1 row/account | MRR, ARR, health status, ICP tier, upsell readiness |
+| `fct_accounts_health` | 1 row/account | 3-signal churn risk: payment · engagement · support |
+| `fct_mrr_waterfall` | account/month | New / Expansion / Contraction / Churn / Resurrection |
+| `fct_arr_movements` | account/month | ARR start, end, and change type |
+| `fct_pql_signals` | 1 row/workspace | HOT / WARM / COLD intent scoring + recommended GTM action |
+| `fct_pipeline` | 1 row/deal | Deal stage, win probability, days-to-close |
+| `fct_subscriptions` | 1 row/subscription | Seat utilization, upsell candidacy |
+| `fct_product_activation` | 1 row/account | Activation milestones, activation rate |
+| `fct_retention_cohorts` | 1 row/cohort-month | NRR, GRR, Logo Churn |
+| `fct_trial_conversion` | 1 row/trial | Conversion status, time-to-convert, expiry risk |
+| `fct_unit_economics` | 1 row/segment | LTV, LTV:ARR ratio |
+| `dim_users` | 1 row/user | Stitched identity across all systems |
+| `dim_dates` | 1 row/day | Date spine for time-series joins |
 
 <details>
-<summary><strong>🔬 Critical Business Logic (health scoring, MRR waterfall, identity resolution)</strong></summary>
+<summary><strong>Key Business Logic</strong></summary>
 
-**Health Score — 3-Signal Additive Risk Model** (`fct_accounts_health`)
+**Health Score — 3-Signal Risk Model** (`fct_accounts_health`)
 
-Any 2+ signals = `At Risk`:
+Any 2+ signals → `At Risk`:
 ```sql
 is_payment_failing = (subscription_status = 'past_due')
 is_churning_soon   = (cancel_at_period_end = true)
 is_low_engagement  = (DATEDIFF('day', last_activity_at, CURRENT_DATE) > 30)
 
 health_status = CASE
-    WHEN subscription_status = 'canceled' THEN 'Churned'
+    WHEN subscription_status = 'canceled'                                THEN 'Churned'
     WHEN (is_payment_failing + is_churning_soon + is_low_engagement) >= 2 THEN 'At Risk'
     ELSE 'Healthy'
 END
@@ -255,77 +161,45 @@ END
 **Identity Resolution** (`int_users_joined`) — hierarchical fallback:
 ```sql
 match_method = CASE
-  WHEN u.stripe_customer_id IS NOT NULL THEN 'direct_id'
-  WHEN h.hubspot_contact_id IS NOT NULL THEN 'email_match'
-  WHEN c.hubspot_company_id IS NOT NULL THEN 'domain_l2a'
+  WHEN u.stripe_customer_id  IS NOT NULL THEN 'direct_id'
+  WHEN h.hubspot_contact_id  IS NOT NULL THEN 'email_match'
+  WHEN c.hubspot_company_id  IS NOT NULL THEN 'domain_l2a'
   ELSE 'unresolved'
 END
 ```
+
 </details>
 
 ---
 
-## 5. 🧪 Data Validation & Observability
+## 3. Data Quality & Observability
 
-**160 dbt tests** run inline on every `dbt build`. [Elementary](https://www.elementary-data.com/) monitors anomalies between runs and posts failures directly to Slack.
+**160 dbt tests** run on every `dbt build`. **Elementary** monitors anomalies between runs and posts failures to Slack.
 
-> 🛡️ **[View Live Elementary Observability Report](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/elementary_report.html)**
+> 🛡️ **[Live Observability Report](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/elementary_report.html)**
 
-| Layer | Count | Type |
-|:------|:------|:-----|
+| Layer | Count | Types |
+|:------|:------|:------|
 | Schema tests | ~130 | `unique`, `not_null`, `accepted_values` |
 | Relationship tests | ~15 | FK integrity across marts |
 | Custom SQL assertions | ~15 | Business logic correctness |
 
-### 📸 Data Observability & Monitoring Dashboards
-
-**1. Elementary Observability Dashboard (Test Health & Coverage):**
-
-![Elementary Dashboard](screenshots/elementary_dashboard.png)
-
-**2. Test Execution Performance & Duration Tracking:**
-
-![Elementary Test Performance](screenshots/elementary_test_performance.png)
-
-**3. Anomaly Detection & Source Freshness Monitoring:**
-
-![Elementary Anomaly Detection](screenshots/elementary_anomaly_freshness.png)
-
-<details>
-<summary><strong>📋 Source Freshness SLAs & Composite Key Tests</strong></summary>
-
-**Source Freshness SLAs**
+**Source Freshness SLAs:**
 
 | Source | Warn After | Error After |
 |:-------|:-----------|:------------|
-| Product Events (PostHog) | 2 hours | 6 hours |
-| HubSpot (leads/deals) | 6 hours | 24 hours |
-| Stripe (billing) | 12 hours | 48 hours |
-| Zendesk (tickets) | 24 hours | 48 hours |
+| PostHog Events | 2 hours | 6 hours |
+| HubSpot | 6 hours | 24 hours |
+| Stripe | 12 hours | 48 hours |
+| Zendesk | 24 hours | 48 hours |
 
-**Key composite key tests:**
-- `fct_mrr_waterfall`: `unique_combination_of_columns(account_id, month_date)`
-- `fct_arr_movements`: `unique(arr_snapshot_id)`
-
-```bash
-# Run dbt tests
-dbt build --target snowflake --store-failures
-
-# Run Elementary observability report
-edr report --target snowflake
-
-# Push failures to Slack
-edr send-report --slack-token $SLACK_TOKEN --slack-channel data-alerts
-```
-</details>
+![Elementary Dashboard](screenshots/elementary_dashboard.png)
 
 ---
 
-## 6. 🧠 Semantic Layer + Slack AI Agent
+## 4. Semantic Layer & Slack AI Agent
 
-**The problem:** Every business question required an analyst to write SQL — days of delay. GTM teams made decisions on stale data.
-
-**The solution:** Metrics defined once in dbt YAML → Lightdash semantic layer → Slack AI bot answers questions in plain English, directly from Snowflake.
+Business questions answered in plain English — no SQL, no BI login, no analyst delay.
 
 ```
 "How many at-risk accounts this week?"
@@ -333,219 +207,89 @@ edr send-report --slack-token $SLACK_TOKEN --slack-channel data-alerts
   → "14 accounts — $63K MRR at risk 📊"
 ```
 
-No SQL. No BI tool login. No analyst in the loop.
+Metrics defined once in dbt YAML → served by Lightdash → consumed by Slack AI bot.
 
-### 🎬 Slack AI Bot Live Interaction Demo
+![Slack AI Bot Demo](screenshots/slack_ai_bot_demo.gif)
 
-![Slack AI Bot Live Interaction Demo](screenshots/slack_ai_bot_demo.gif)
-
-<details>
-<summary><strong>📊 Metric Definitions by Domain</strong></summary>
-
-| Schema File | Models Covered | Key Metrics |
-|:------------|:--------------|:------------|
-| `core_schema.yml` | `dim_accounts`, `dim_users` | `total_arr`, `total_mrr`, `avg_seat_utilization` |
-| `cs_schema.yml` | `fct_accounts_health` | `at_risk_accounts`, `total_mrr_at_risk`, `upsell_ready_cs` |
-| `finance_schema.yml` | `fct_mrr_waterfall`, `fct_retention_cohorts` | `total_new_mrr`, `total_churn_mrr`, `avg_nrr`, `avg_grr`, `avg_ltv` |
-| `sales_schema.yml` | `fct_pipeline` | `total_pipeline_value`, `weighted_pipeline_value`, `stale_deals` |
-| `product_schema.yml` | `fct_product_activation`, `fct_trial_conversion` | `pql_workspaces`, `converted_trials`, `avg_time_to_convert` |
-| `marketing_schema.yml` | `fct_lead_funnel`, `fct_attribution` | `total_leads`, `mqls`, `conversion_rate` |
-
-> **Convention:** Finance metrics use `_movements` suffix (e.g. `total_arr_movements`) to avoid collision with `total_arr` on `dim_accounts`.
-
-**ICP × Intent Matrix**
-
-| | High Intent | Low Intent |
-|:--|:-----------|:-----------|
-| **High ICP Fit** | 🎯 MUST WIN — Sales call | 📧 NURTURE — Marketing email |
-| **Low ICP Fit** | 👀 MONITOR — Track usage | 🔕 DEPRIORITIZE |
-</details>
+**Metric domains:** Core (MRR/ARR) · CS (health, upsell) · Finance (waterfall, NRR/GRR) · Sales (pipeline) · Product (PQL, activation) · Marketing (funnel, attribution)
 
 ---
 
-## 7. 📊 BI Reporting & Dashboards as Code
+## 5. BI Dashboards (Dashboards-as-Code)
 
-**[Lightdash](https://lightdash.com)** connects directly to Snowflake via the dbt semantic layer (`meta` YAML tags). No separate metric definitions needed.
+Lightdash connects directly to Snowflake via the dbt semantic layer. All dashboards are version-controlled YAML.
 
-| Dashboard | File | Audience | Answers |
-|:----------|:-----|:---------|:--------|
-| **Executive Overview** | [`executive-overview.yml`](lightdash/executive-overview.yml) | C-Suite / CEO | Total MRR, MRR at Risk, Account Health Distribution |
-| **Finance Revenue Analytics** | [`finance-revenue-analytics.yml`](lightdash/finance-revenue-analytics.yml) | Finance / CFO | MRR Waterfall, NRR vs GRR Trend, ARR Movements |
-| **CS Account Health** | [`cs-account-health.yml`](lightdash/cs-account-health.yml) | Customer Success | At-risk list, Churn Risk Reasons, CS Action Plan |
-| **Sales Pipeline** | [`sales-pipeline.yml`](lightdash/sales-pipeline.yml) | Sales Leaders / AEs | Deal stage funnel, Weighted Pipeline, Stale Deals |
-| **Product PLG Signals** | [`product-plg-signals.yml`](lightdash/product-plg-signals.yml) | Product / Growth | Activation Funnel, GTM Priority Matrix, Trial Risks |
+| Dashboard | Audience | Key Metrics |
+|:----------|:---------|:------------|
+| Executive Overview | CEO / C-Suite | Total MRR, MRR at Risk, Account Health |
+| Finance Revenue Analytics | CFO / Finance | MRR Waterfall, NRR vs GRR, ARR Movements |
+| CS Account Health | Customer Success | At-risk list, Churn Reasons, Save Plays |
+| Sales Pipeline | Sales Leaders / AEs | Deal Funnel, Weighted Pipeline, Stale Deals |
+| Product PLG Signals | Product / Growth | Activation Funnel, PQL Matrix, Trial Risk |
 
-→ **[Full Lightdash Dashboards-as-Code Deployment Guide](lightdash/README.md)**
-
-```bash
-# 1. Compile Lightdash semantic layer from dbt meta
-npx @lightdash/cli compile
-
-# 2. Deploy semantic layer + dashboards as code
-npx @lightdash/cli deploy
-npx @lightdash/cli upload --force
-```
-
-> All dashboards registered in `models/marts/exposures.yml` — dbt lineage shows exactly which dashboards depend on which models.
-
-### 📸 Lightdash Dashboards & Semantic Layer
-
-**1. Lightdash Executive Overview Dashboard:**
-
-![Lightdash Executive Overview](screenshots/lighdash_oveview.png)
-
-**2. Lightdash Metrics & Semantic Layer:**
-
-![Lightdash Metrics & Semantic Layer](screenshots/lightdash_metrics.png)
+![Lightdash Dashboard](screenshots/lighdash_oveview.png)
 
 ---
 
-## 8. 🔄 Reverse ETL
+## 6. Reverse ETL
 
-Insights computed in Snowflake are pushed **back into HubSpot** so GTM teams act without leaving their CRM.
+Computed insights pushed **back into HubSpot** so GTM teams act without leaving their CRM.
 
-| What gets pushed | HubSpot Property | Who acts |
-|:-----------------|:----------------|:---------|
-| `fct_pql_signals.intent_tier` | `pql_intent_tier` | Sales — triggers outreach sequences |
-| `fct_accounts_health.health_status` | `health_status` | CS — triggers save plays |
-| `dim_accounts.is_ready_for_upsell` | `is_upsell_candidate` | Sales — triggers expansion workflows |
-| `dim_accounts.arr` | `current_arr` | Finance / Sales — deal context |
+| Signal | HubSpot Property | GTM Action |
+|:-------|:----------------|:-----------|
+| `fct_pql_signals.intent_tier` | `pql_intent_tier` | Sales outreach sequence |
+| `fct_accounts_health.health_status` | `health_status` | CS save play trigger |
+| `dim_accounts.is_ready_for_upsell` | `is_upsell_candidate` | Expansion workflow |
+| `dim_accounts.arr` | `current_arr` | Deal context for Finance & Sales |
 
 ```
-Snowflake → scripts/reverse_etl_dlt.py → HubSpot Companies & Contacts API ✅
+Snowflake → scripts/reverse_etl_dlt.py → HubSpot Companies & Contacts API
 ```
 
-→ **[Full Step-by-Step Demo Guide](REVERSE_ETL_DEMO.md)**
+![HubSpot Enriched Record](screenshots/reverse_etl_company.png)
 
-### 📸 Live Enriched Results in HubSpot CRM
+> **Constraint:** Only accounts with a resolved identity (`match_method != 'unresolved'`) receive Reverse ETL enrichment.
 
-**1. HubSpot Company Record Enriched with Snowflake MRR & Health Signals:**
-
-![HubSpot Enriched Company Record](screenshots/reverse_etl_company.png)
-
-**2. HubSpot Contact Record Tagged with HOT PQL Intent & Action:**
-
-![HubSpot Enriched Contact Record](screenshots/reverse_etl_contacs.png)
-
-<details>
-<summary><strong>⚙️ Implementation Details</strong></summary>
-
-```bash
-# Dry run (preview without API calls)
-python scripts/reverse_etl_dlt.py --dry-run
-
-# Live run
-python scripts/reverse_etl_dlt.py
-
-# Target specific resources
-python scripts/reverse_etl_dlt.py --resource companies
-python scripts/reverse_etl_dlt.py --resource pql
-```
-
-> **Identity requirement:** Only accounts with `match_method != 'unresolved'` in `int_users_joined` can receive Reverse ETL enrichment. Unresolved accounts must be manually reconciled in HubSpot first.
-</details>
+→ **[Full Reverse ETL Demo](REVERSE_ETL_DEMO.md)**
 
 ---
 
-## 9. ⚙️ Orchestration
+## 7. Orchestration
 
-**[Dagster](https://dagster.io)** runs the full pipeline daily at 07:00 UTC as an asset-based DAG — tracking data freshness, not just script execution.
+Dagster runs the full pipeline daily at **07:00 UTC** as an asset-based DAG — tracking data freshness, not just script execution.
 
 ```
-07:00 UTC  →  Step 1: Ingest (dlt → Snowflake RAW_DATA)
-           →  Step 2: Transform + Test (dbt build + Elementary on Snowflake)
-           →  Step 3: Reverse ETL (Snowflake → HubSpot)
+07:00 UTC
+  Step 1: Ingest    — dlt → Snowflake RAW_DATA
+  Step 2: Transform — dbt build + Elementary tests
+  Step 3: Activate  — Reverse ETL → HubSpot
 ```
 
 ```bash
-# Launch Dagster UI
-dagster dev -f dagster_pipeline.py
-# → http://localhost:3000
+dagster dev -f dagster_pipeline.py   # → http://localhost:3000
 ```
 
-### 📸 Dagster Orchestration Dashboards
-
-**1. Full End-to-End Asset Lineage Graph:**
-
-![Dagster Full Asset Lineage Graph](screenshots/dagster_full_linage.png)
-
-**2. Data Asset Catalog:**
-
-![Dagster Data Assets](screenshots/dagster_assets.png)
-
-**3. Asset Jobs & Execution Pipelines:**
-
-![Dagster Asset Jobs](screenshots/dagster_jobs.png)
+![Dagster Asset Lineage](screenshots/dagster_full_linage.png)
 
 ---
 
-## 10. 🔁 CI/CD
+## 8. CI/CD
 
-Every Pull Request triggers automated quality gates via **GitHub Actions**.
+Every PR triggers automated quality gates via GitHub Actions.
 
 | Workflow | Trigger | Action |
 |:---------|:--------|:-------|
-| `dbt_slim_ci.yml` | PR open/update | Build only changed models + downstream on Snowflake |
-| `elementary_checks.yml` | PR open/update | Run data quality checks → post results as PR comment |
+| `dbt_slim_ci.yml` | PR open/update | Build only changed + downstream models on Snowflake |
+| `elementary_checks.yml` | PR open/update | Data quality checks → post results as PR comment |
 | `dbt_docs_deploy.yml` | Merge to `main` | Generate + deploy dbt docs to GitHub Pages |
 
-### 📸 dbt Slim CI Execution Output
+![Slim CI](screenshots/slim_ci.png)
 
-**dbt Slim CI (`state:modified+`) executing on Snowflake in seconds:**
-
-![dbt Slim CI Execution Output](screenshots/slim_ci.png)
-
-> **Live Docs:** Every merge auto-deploys to **[farrux05-ai.github.io/b2b-saas-revops-intelligence](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/)**
+> Every merge auto-deploys to **[farrux05-ai.github.io/b2b-saas-revops-intelligence](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/)**
 
 ---
 
-## 📁 Repository Structure
-
-<details>
-<summary><strong>Expand full structure</strong></summary>
-
-```
-b2b-saas-revops/
-├── dagster_pipeline.py           # Orchestration: jobs, assets, daily schedule
-├── b2b_dlt/                      # 🌐 PRODUCTION ELT: Live API pipelines → Snowflake
-│   ├── main.py                   # Production pipeline orchestrator CLI
-│   ├── hubspot/                  # HubSpot CRM live API connector
-│   ├── stripe_analytics/         # Stripe payments live API connector
-│   ├── zendesk/                  # Zendesk incremental API connector
-│   └── pg_replication/           # PostgreSQL CDC logical replication
-├── ingestion/
-│   └── stackflow_pipeline.py     # 🧪 DEV ELT: dlt pipeline (mock data → Snowflake)
-├── models/
-│   ├── staging/                  # 8 source-aligned views
-│   ├── intermediate/             # Identity resolution + domain aggregation
-│   ├── marts/
-│   │   ├── core/                 # dim_accounts, dim_users, dim_dates
-│   │   ├── finance/              # fct_mrr_waterfall, fct_arr_movements
-│   │   ├── customer_success/     # fct_accounts_health
-│   │   ├── sales/                # fct_pipeline
-│   │   ├── marketing/            # fct_lead_funnel, fct_attribution
-│   │   └── exposures.yml         # Lightdash dashboard lineage
-│   └── utilities/dim_dates.sql
-├── snapshots/                    # SCD Type 2 (HubSpot companies, Stripe subscriptions)
-├── seeds/                        # icp_industry_scores.csv, icp_segment_scores.csv
-├── tests/                        # assert_health_status_logic_consistent.sql
-├── scripts/
-│   ├── reverse_etl_dlt.py        # Snowflake → HubSpot (dlt custom destination)
-│   └── generate_mock_data.py
-├── macros/                       # dbt Jinja macros
-├── .github/workflows/            # CI/CD pipelines
-├── dbt_project.yml
-├── profiles.yml                  # Snowflake connection profiles
-└── docs/
-    ├── TECHNICAL.md
-    ├── DEPLOYMENT.md
-    └── CASE_STUDY.md             # $45K ARR saved story
-```
-</details>
-
----
-
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 git clone https://github.com/farrux05-ai/b2b-saas-revops-intelligence.git
@@ -554,33 +298,60 @@ uv venv .venv && source .venv/bin/activate
 uv pip install -r requirements.txt
 
 cp .env.example .env
-# Set: SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PASSWORD, HUBSPOT_ACCESS_TOKEN, SLACK_TOKEN
+# Configure: SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PASSWORD,
+#            HUBSPOT_ACCESS_TOKEN, SLACK_TOKEN
 
-# Run via Dagster UI (recommended)
+# Recommended: run via Dagster UI
 dagster dev -f dagster_pipeline.py   # → http://localhost:3000
 
-# Or manually:
-python ingestion/stackflow_pipeline.py       # 1. Ingest
-dbt build --target snowflake                 # 2. Transform + Test
-edr report --target snowflake                # 3. Observability report
-python scripts/reverse_etl_dlt.py           # 4. Push to HubSpot
+# Or step-by-step:
+python ingestion/stackflow_pipeline.py   # 1. Ingest (dev mock data)
+dbt build --target snowflake             # 2. Transform + Test
+edr report --target snowflake            # 3. Observability report
+python scripts/reverse_etl_dlt.py       # 4. Push signals to HubSpot
 ```
 
 ---
 
-## 🔗 Related Docs
+## Repository Structure
 
-| | |
-|:-|:-|
-| [Technical Deep-Dive](docs/TECHNICAL.md) | Architecture decisions, model patterns, testing philosophy |
-| [Deployment Runbook](docs/DEPLOYMENT.md) | Snowflake setup, Lightdash config, CI/CD, Dagster scheduling |
-| [Case Study](docs/CASE_STUDY.md) | $45K ARR saved in 30 days — full story |
-| [Reverse ETL Demo](REVERSE_ETL_DEMO.md) | Step-by-step live pipeline walkthrough |
-| [Slim CI Demo](SLIM_CI_DEMO.md) | Step-by-step Slim CI demonstration guide |
-| [Live Data & Quality Portal](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/) | Main portal connecting dbt docs and Elementary |
-| [Live dbt Docs](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/dbt_docs/) | Interactive lineage graph + column docs |
-| [Live Elementary Report](https://farrux05-ai.github.io/b2b-saas-revops-intelligence/elementary_report.html) | Data observability, freshness SLAs + test failure report |
+```
+b2b-saas-revops/
+├── dagster_pipeline.py           # Orchestration: jobs, assets, schedule
+├── b2b_dlt/                      # Production ELT — live API connectors → Snowflake
+│   ├── hubspot/                  # HubSpot CRM connector
+│   ├── stripe_analytics/         # Stripe billing connector
+│   ├── zendesk/                  # Zendesk support connector
+│   └── pg_replication/           # PostgreSQL CDC (logical replication)
+├── ingestion/stackflow_pipeline.py  # Dev ELT — mock data → Snowflake
+├── models/
+│   ├── staging/                  # 8 source-aligned views
+│   ├── intermediate/             # Identity resolution + domain aggregation
+│   └── marts/                    # 13 business-facing fact + dimension tables
+│       ├── core/  finance/  customer_success/  sales/  marketing/  product/
+│       └── exposures.yml         # Lightdash dashboard lineage
+├── snapshots/                    # SCD Type 2 (HubSpot companies, Stripe subscriptions)
+├── scripts/reverse_etl_dlt.py    # Snowflake → HubSpot (dlt custom destination)
+├── lightdash/                    # Dashboards-as-code YAML
+├── .github/workflows/            # CI/CD pipelines
+└── docs/
+    ├── TECHNICAL.md
+    ├── DEPLOYMENT.md
+    └── CASE_STUDY.md             # $45K ARR saved — full story
+```
 
 ---
 
-*Built on the Enterprise Modern Data Stack. Designed to drive revenue, not just dashboards.*
+## Related Docs
+
+| Doc | Content |
+|:----|:--------|
+| [Technical Deep-Dive](docs/TECHNICAL.md) | Architecture decisions, model patterns, testing philosophy |
+| [Deployment Runbook](docs/DEPLOYMENT.md) | Snowflake setup, Lightdash, CI/CD, Dagster scheduling |
+| [Case Study](docs/CASE_STUDY.md) | $45K ARR saved in 30 days — full story |
+| [Reverse ETL Demo](REVERSE_ETL_DEMO.md) | Step-by-step live pipeline walkthrough |
+| [Slim CI Demo](SLIM_CI_DEMO.md) | Step-by-step Slim CI demonstration |
+
+---
+
+*End-to-end revenue intelligence. Built to drive decisions, not just dashboards.*
