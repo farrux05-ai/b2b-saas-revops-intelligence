@@ -1,0 +1,54 @@
+[sqlfluff]
+# Dialect — Snowflake
+dialect = snowflake
+
+# dbt templater (Jinja syntax support uchun)
+templater = dbt
+
+# Max qayta tekshirish davrini oshirib qo'yamiz (dbt modellari uchun)
+runaway_limit = 10
+
+# Indentatsiya kengligi
+indent_unit = space
+tab_space_size = 4
+
+# Bir qatordagi maksimal belgilar soni
+max_line_length = 120
+
+# Lintda chetlab o'tiladigan qoidalar (dbt-da ba'zi qoidalar amaliy emas)
+# L034: SELECT wildcards (mart.* patern uchun ruxsat beramiz)
+# L036: SELECT satrlari (dbt modellari uchun moslashtirilgan)
+exclude_rules = L034
+
+[sqlfluff:templater:dbt]
+project_dir = .
+profiles_dir = .
+profile = revops_intelligence_engine
+
+[sqlfluff:rules:capitalisation.keywords]
+# SQL kalit so'zlari katta harf bo'lishi shart: SELECT, FROM, WHERE ...
+capitalisation_policy = upper
+
+[sqlfluff:rules:capitalisation.identifiers]
+# Ustun va jadval nomlari kichik harf bo'lsin
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+# Funksiyalar katta harf: COALESCE(), SUM(), COUNT() ...
+capitalisation_policy = upper
+
+[sqlfluff:rules:capitalisation.types]
+# Data typelar katta harf: VARCHAR, INTEGER, DATE ...
+capitalisation_policy = upper
+
+[sqlfluff:rules:aliasing.table]
+# Jadval alias majburiy bo'lsin: FROM orders AS o
+aliasing = explicit
+
+[sqlfluff:rules:aliasing.column]
+# Ustun alias majburiy bo'lsin: SUM(amount) AS total_amount
+aliasing = explicit
+
+[sqlfluff:rules:convention.terminator]
+# Har bir SQL statement oxirida ; nuqta-vergul bo'lmasin (dbt uchun)
+multiline_newline = true
