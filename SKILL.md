@@ -1,38 +1,57 @@
 ---
 name: sentinelguard-revops-standard
-description: The ultimate standard for B2B SaaS RevOps data architecture.
+description: The ultimate enterprise standard for B2B SaaS RevOps data architecture, dbt modeling, SQL CTE standards, and identity resolution.
 ---
 
 # RevOps Intelligence Engine RevOps Standard
 
-## 1. Naming & Structure
-- **Staging**: `stg_[source]__[entity].sql` (Double underscore). Clean raw sources only.
-- **Intermediate**: `int_[entity]_[verb].sql`. End with action (e.g., `_joined`, `_aggregated`, `_scored`).
-- **Marts**: `dim_` (One Big Table) and `fct_` (Historical Waterfall).
-- **Utilities**: Non-business infrastructure (e.g., `dim_dates`) in `models/utilities/`.
+## 1. Naming & Directory Structure
+- **Staging**: `stg_[source]__[entity].sql` (Double underscore between source system and entity name).
+  - Location: `models/staging/[source]/`
+- **Intermediate**: `int_[entity]_[verb].sql` (Must end with descriptive action verb: `_joined`, `_aggregated`, `_integrated`, `_scored`).
+  - Location: `models/intermediate/[domain]/`
+- **Marts**: `dim_[entity].sql` (One Big Table / Conformed Dimension) and `fct_[entity].sql` (Historical State / Event Fact).
+  - Location: `models/marts/[domain]/`
+- **Utilities**: Non-business infrastructure models in `models/utilities/` (e.g., `dim_dates.sql`).
 
-## 2. Identity Resolution (Spine)
-- **Rule**: Never use `LEFT JOIN` as the spine.
-- **Method**: Use `UNION ALL` across all sources (Workspaces, HubSpot, Stripe).
-- **Nega?**: PLG Leakage'ni oldini olish uchun. CRM dagi Leadlar mahsulotga kirmasidan oldin ham ko'rinishi shart.
+---
+
+## 2. Identity Resolution & Master Spine Rule
+- **Rule**: NEVER use `LEFT JOIN` on a single CRM or billing table as the identity spine.
+- **Method**: Use `UNION ALL` across all raw identity providers (App Workspaces, HubSpot Leads, Stripe Customers) to create a unified identity spine.
+- **Rationale**: Prevents "PLG Leakage" — ensures leads and product users are tracked in analytics even before they convert or appear in the CRM.
+
+---
 
 ## 3. Intermediate 3-Stage Hierarchy
-1. **Identity**: `_joined` models to stitch global IDs.
-2. **Domains**: `_aggregated` models for Sales, Finance, usage, etc.
-3. **Integration**: `_integrated` and `_scored` models to add business intelligence (Health, Risk).
+1. **Identity Stage (`_joined`)**: Join raw staging tables to stitch global surrogate keys (e.g., `account_id`, `user_id`).
+2. **Domain Stage (`_aggregated`)**: Aggregate metrics within distinct functional domains (Sales pipeline, Stripe billing, Product usage).
+3. **Integration Stage (`_integrated` / `_scored`)**: Merge domain metrics onto the master identity spine and apply ML/heuristic scoring (Account Health, Churn Risk).
 
-## 4. Finance & MRR Waterfall
-- **Rule**: No `now()` or current state for movements.
-- **Method**: Use a **Date Spine** for point-in-time MRR snapshots.
-- **Nega?**: "Silent Churn" va tarixiy MRR o'zgarishlarini faqat oylik kesimda tahlil qilish mumkin.
+---
 
-## 5. Metadata & Seeds
-- **Seeds**: All static data (Holidays, segments) in CSV seeds.
-- **Exposures**: Document dashboard dependencies in `exposures.yml`.
-- **Nega?**: Data Lineage va tizimning moslashuvchanligi uchun.
+## 4. Finance & MRR Waterfall Standard
+- **Rule**: No `now()` or current-state column logic for historical movements.
+- **Method**: Use a **Date Spine** (`dim_dates`) to generate deterministic daily/monthly point-in-time snapshots of subscription states.
+- **MRR Movements**: Categorize all monthly balance deltas into explicit buckets:
+  - `New`: First time active subscription.
+  - `Expansion`: MRR increased vs previous period.
+  - `Contraction`: MRR decreased (non-zero) vs previous period.
+  - `Churn`: Subscription cancelled / MRR dropped to 0.
+  - `Reactivation`: Subscription restarted after churn.
 
-## 6. Testing Philosophy (Data Quality)
-- **Staging Layer (Source Contracts)**: Only test the contract with the source. `unique` and `not_null` on the natural Primary Key. Test `accepted_values` ONLY on source-managed enums (e.g. ticket status). Do NOT test business metrics (amounts, probabilities) here.
-- **Intermediate Layer (Integration)**: Test foreign keys and surrogate keys. Test the outputs of business logic (e.g. does the score match an accepted value?).
-- **Marts Layer (Business Reliability)**: Test business requirements (e.g. `dbt_expectations` row counts). Test primary keys for the dimension/fact tables.
-- **Rule**: Do not duplicate tests across layers. If `unique` and `not_null` are verified in `int_accounts_integrated`, there is no need to re-test the exact same spine key in `int_accounts_scored`.
+---
+
+## 5. SQL Syntax & CTE Formatting Rules
+- **Structure**: All models must use CTE-first syntax: `source_data` -> `transformation_ctes` -> `final`.
+- **Keywords**: Lowercase for all SQL keywords (`select`, `from`, `where`, `left join`, `group by`, `order by`).
+- **Explicit Selects**: No `SELECT *` in final output CTEs.
+- **Lineage**: Always use dbt `{{ ref(...) }}` and `{{ source(...) }}` macros.
+
+---
+
+## 6. Layered Testing Philosophy
+- **Staging Layer**: Verify source contract only. `unique` and `not_null` on primary keys. `accepted_values` only on source-managed status enums.
+- **Intermediate Layer**: Test foreign keys, surrogate key uniqueness, and business logic boundaries.
+- **Marts Layer**: Test business reliability and dimension uniqueness (`dim_` primary keys, `dbt_expectations` row counts).
+- **Rule**: Do not duplicate tests across layers.
