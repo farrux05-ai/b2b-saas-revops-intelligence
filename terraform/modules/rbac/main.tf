@@ -171,10 +171,10 @@ resource "snowflake_grant_privileges_to_account_role" "loader_database_usage" {
   }
 }
 
-# TRANSFORMER: USAGE on database
+# TRANSFORMER: USAGE and CREATE SCHEMA on database
 resource "snowflake_grant_privileges_to_account_role" "transformer_database_usage" {
   account_role_name = snowflake_account_role.transformer.name
-  privileges        = ["USAGE"]
+  privileges        = ["USAGE", "CREATE SCHEMA"]
   on_account_object {
     object_type = "DATABASE"
     object_name = var.database_name
@@ -322,7 +322,7 @@ resource "snowflake_grant_privileges_to_account_role" "transformer_schema_usage"
   for_each = toset(local.transformer_write_schemas)
 
   account_role_name = snowflake_account_role.transformer.name
-  privileges        = ["USAGE", "CREATE TABLE", "CREATE VIEW", "CREATE SCHEMA", "MODIFY"]
+  privileges        = ["USAGE", "CREATE TABLE", "CREATE VIEW", "CREATE STAGE", "MODIFY"]
   on_schema {
     schema_name = "${var.database_name}.${each.value}"
   }
