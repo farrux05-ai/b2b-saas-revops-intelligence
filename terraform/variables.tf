@@ -46,7 +46,7 @@ variable "database_name" {
 variable "database_data_retention_days" {
   description = "Number of days to retain Time Travel data for the database"
   type        = number
-  default     = 7
+  default     = 1
 }
 
 # ── Warehouses ───────────────────────────────────────────────

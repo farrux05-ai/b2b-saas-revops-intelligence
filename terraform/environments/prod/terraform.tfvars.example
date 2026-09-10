@@ -15,7 +15,7 @@ snowflake_password          = "YOUR_ADMIN_PASSWORD"
 
 # ── Database ──────────────────────────────────────────────────
 database_name                = "REVOPS_INTELLIGENCE"
-database_data_retention_days = 7
+database_data_retention_days = 1
 
 # ── Warehouse Sizes ───────────────────────────────────────────
 compute_warehouse_size = "SMALL"

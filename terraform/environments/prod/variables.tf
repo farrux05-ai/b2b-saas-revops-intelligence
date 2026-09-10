@@ -34,7 +34,7 @@ variable "database_name" {
 
 variable "database_data_retention_days" {
   type    = number
-  default = 7
+  default = 1
 }
 
 # ── Warehouses ────────────────────────────────────────────────
