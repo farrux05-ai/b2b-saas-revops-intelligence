@@ -90,3 +90,44 @@ When interacting with the user:
 - Use Python 3.10+ type hints (`str | None`, `list[dict]`).
 - Include docstrings for non-trivial helper functions.
 - Keep business logic decoupled from I/O side effects.
+
+---
+
+## 6. Terraform — Snowflake Infrastructure as Code
+
+### Module Structure (`terraform/`)
+```
+terraform/
+├── modules/
+│   ├── database/    ← snowflake_database + snowflake_schema resources
+│   ├── warehouse/   ← snowflake_warehouse resources (COMPUTE_WH, CI_WH, LOADING_WH)
+│   └── rbac/        ← snowflake_account_role, snowflake_user, grant resources
+└── environments/
+    └── prod/        ← Entry point: wires modules, holds backend config
+```
+
+### Naming Conventions
+- Terraform resources use **UPPER_SNAKE_CASE** for Snowflake object names (e.g. `COMPUTE_WH`, `RAW_DATA`).
+- Terraform resource identifiers use **snake_case** (e.g. `resource "snowflake_warehouse" "compute"`).
+- Module names match their directory: `module "database"`, `module "warehouse"`, `module "rbac"`.
+
+### State & Secrets Rules
+- **NEVER** commit `terraform.tfstate` or `terraform.tfvars` — both are gitignored.
+- Use `TF_VAR_*` environment variables in CI/CD instead of `.tfvars` files.
+- Use `lifecycle { ignore_changes = [password] }` on all `snowflake_user` resources.
+
+### Role Hierarchy (Least Privilege)
+```
+ACCOUNTADMIN → SYSADMIN
+  ├── TRANSFORMER  (dbt: read RAW_DATA, write STAGING→MARTS)
+  │   └── LOADER   (dlt: write RAW_DATA only)
+  └── REPORTER     (Lightdash: SELECT on MARTS, SEMANTIC_LAYER)
+```
+
+### Workflow
+```bash
+cd terraform/environments/prod
+terraform init
+terraform plan    # review before applying
+terraform apply
+```

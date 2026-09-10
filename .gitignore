@@ -46,3 +46,23 @@ build/
 edr_target/
 .dlt/
 
+# ── TERRAFORM ──────────────────────────────────────────
+# State files — contain sensitive infrastructure details
+terraform.tfstate
+terraform.tfstate.backup
+*.tfstate
+*.tfstate.*
+# Terraform working directory — generated on `terraform init`
+**/.terraform/
+# Lock file (optional — uncomment to ignore)
+# .terraform.lock.hcl
+# Variable files with actual secrets — NEVER commit these
+terraform.tfvars
+*.auto.tfvars
+# Crash logs
+crash.log
+crash.*.log
+# Plan output files (may contain sensitive values)
+*.tfplan
+plan.out
+

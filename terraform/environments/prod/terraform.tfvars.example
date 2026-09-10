@@ -1,0 +1,29 @@
+# ============================================================
+# environments/prod/terraform.tfvars.example
+#
+# Copy to terraform.tfvars and fill in real values.
+# This file IS committed to git (no secrets).
+# terraform.tfvars is gitignored.
+# ============================================================
+
+# ── Snowflake Account ─────────────────────────────────────────
+# Split your account identifier "myorg-xy12345" into two parts:
+snowflake_organization_name = "your_org"
+snowflake_account_name      = "your_account"
+snowflake_username          = "YOUR_ADMIN_USER"
+snowflake_password          = "YOUR_ADMIN_PASSWORD"
+
+# ── Database ──────────────────────────────────────────────────
+database_name                = "REVOPS_INTELLIGENCE"
+database_data_retention_days = 7
+
+# ── Warehouse Sizes ───────────────────────────────────────────
+compute_warehouse_size = "SMALL"
+ci_warehouse_size      = "X-SMALL"
+loading_warehouse_size = "X-SMALL"
+
+# ── Service Account Passwords ─────────────────────────────────
+dbt_prod_password   = "CHANGE_ME_PROD"
+dbt_ci_password     = "CHANGE_ME_CI"
+dlt_loader_password = "CHANGE_ME_LOADER"
+lightdash_password  = "CHANGE_ME_LIGHTDASH"

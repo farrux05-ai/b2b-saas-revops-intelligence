@@ -5,6 +5,7 @@
 ![Snowflake](https://img.shields.io/badge/Snowflake-29B5E8?style=for-the-badge&logo=snowflake&logoColor=white)
 ![dbt](https://img.shields.io/badge/dbt-FF694B?style=for-the-badge&logo=python&logoColor=white)
 ![Dagster](https://img.shields.io/badge/Dagster-163B36?style=for-the-badge&logo=python&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 ![HubSpot](https://img.shields.io/badge/HubSpot-FF7A59?style=for-the-badge&logo=hubspot&logoColor=white)
@@ -25,10 +26,11 @@
 8. [BI Dashboards](#5-bi-dashboards-dashboards-as-code)
 9. [Reverse ETL](#6-reverse-etl)
 10. [Orchestration](#7-orchestration)
-11. [CI/CD](#8-cicd)
-12. [Quick Start](#quick-start)
-13. [Repository Structure](#repository-structure)
-14. [Related Docs](#related-docs)
+11. [Infrastructure (Terraform)](#8-infrastructure-terraform)
+12. [CI/CD](#9-cicd)
+13. [Quick Start](#quick-start)
+14. [Repository Structure](#repository-structure)
+15. [Related Docs](#related-docs)
 
 ---
 
@@ -292,7 +294,27 @@ dagster dev -f dagster_pipeline.py   # → http://localhost:3000
 
 ---
 
-## 8. CI/CD
+## 8. Infrastructure (Terraform)
+
+Snowflake data warehouse infrastructure is fully managed as code via Terraform (`snowflakedb/snowflake` provider `~> 1.0`).
+
+### Provisioned Resources
+
+- **Database & Schemas**: `REVOPS_INTELLIGENCE` database with 11 isolated schemas (`RAW_DATA`, `STAGING`, `IDENTITY`, `DOMAINS`, `INTEGRATION`, `MARTS`, `SEMANTIC_LAYER`, `MARTS_CI`, `ELEMENTARY`, `MARTS_ELEMENTARY`, `MARTS_ELEMENTARY_CI`).
+- **Virtual Warehouses**: Dedicated query engines (`COMPUTE_WH`, `CI_WH`, `LOADING_WH`) with auto-suspend and auto-resume.
+- **RBAC & Security**: Role hierarchy (`LOADER` → `TRANSFORMER` → `REPORTER`) and isolated service accounts (`DBT_PROD_USER`, `DBT_CI_USER`, `DLT_LOADER_USER`, `LIGHTDASH_USER`) following least privilege.
+
+```bash
+cd terraform/environments/prod
+cp terraform.tfvars.example terraform.tfvars  # Set Snowflake credentials
+terraform init
+terraform plan
+terraform apply
+```
+
+---
+
+## 9. CI/CD
 
 Every PR triggers automated quality gates via GitHub Actions.
 
@@ -300,6 +322,7 @@ Every PR triggers automated quality gates via GitHub Actions.
 |:---------|:--------|:-------|
 | `dbt_slim_ci.yml` | PR open/update | Build only changed + downstream models on Snowflake |
 | `elementary_checks.yml` | PR open/update | Data quality checks → post results as PR comment |
+| `terraform_snowflake.yml` | PR / push to main | Validate, plan, and apply Snowflake IaC |
 | `dbt_docs_deploy.yml` | Merge to `main` | Generate + deploy dbt docs to GitHub Pages |
 
 ![Slim CI](screenshots/slim_ci.png)
@@ -337,6 +360,9 @@ python scripts/reverse_etl_dlt.py       # 4. Push signals to HubSpot
 ```
 b2b-saas-revops/
 ├── dagster_pipeline.py           # Orchestration: jobs, assets, schedule
+├── terraform/                    # Infrastructure as Code (Snowflake IaC)
+│   ├── modules/                  # Modules: database, warehouse, rbac
+│   └── environments/prod/        # Production Terraform environment
 ├── b2b_dlt/                      # Production ELT — live API connectors → Snowflake
 │   ├── hubspot/                  # HubSpot CRM connector
 │   ├── stripe_analytics/         # Stripe billing connector
@@ -352,7 +378,7 @@ b2b-saas-revops/
 ├── snapshots/                    # SCD Type 2 (HubSpot companies, Stripe subscriptions)
 ├── scripts/reverse_etl_dlt.py    # Snowflake → HubSpot (dlt custom destination)
 ├── lightdash/                    # Dashboards-as-code YAML
-├── .github/workflows/            # CI/CD pipelines
+├── .github/workflows/            # CI/CD pipelines (dbt, Elementary, Terraform)
 └── docs/
     ├── TECHNICAL.md
     ├── DEPLOYMENT.md

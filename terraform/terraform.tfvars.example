@@ -1,0 +1,44 @@
+# ============================================================
+# terraform.tfvars.example
+#
+# Copy this file to terraform.tfvars and fill in your values.
+# NEVER commit terraform.tfvars to git — it is gitignored.
+#
+# Alternatively, export TF_VAR_* environment variables:
+#   export TF_VAR_snowflake_organization_name="myorg"
+#   export TF_VAR_snowflake_account_name="xy12345"
+# ============================================================
+
+# ── Snowflake Account ─────────────────────────────────────────
+# Your account identifier is split into two parts:
+#   Full identifier:  myorg-xy12345
+#   organization_name = "myorg"
+#   account_name      = "xy12345"
+#
+# Find in Snowflake console: Admin → Accounts → Account Identifier
+snowflake_organization_name = "your_org"
+snowflake_account_name      = "your_account"
+
+# ── Provisioning User ─────────────────────────────────────────
+# Must have ACCOUNTADMIN role. Used ONLY for terraform apply.
+# NOT the same as your dbt service account.
+snowflake_username = "YOUR_ADMIN_USER"
+snowflake_password = "your_admin_password"
+
+# ── Database ──────────────────────────────────────────────────
+database_name                = "REVOPS_INTELLIGENCE"
+database_data_retention_days = 7
+
+# ── Warehouse Sizes ───────────────────────────────────────────
+# Valid sizes: X-SMALL, SMALL, MEDIUM, LARGE, X-LARGE
+compute_warehouse_size = "SMALL"
+ci_warehouse_size      = "X-SMALL"
+loading_warehouse_size = "X-SMALL"
+
+# ── Service Account Passwords ─────────────────────────────────
+# Strong, unique passwords for each service account.
+# Store these in your secrets manager (e.g. 1Password, AWS Secrets Manager).
+dbt_prod_password   = "change_me_strong_password_1!"
+dbt_ci_password     = "change_me_strong_password_2!"
+dlt_loader_password = "change_me_strong_password_3!"
+lightdash_password  = "change_me_strong_password_4!"
