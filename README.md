@@ -81,7 +81,7 @@ HubSpot · Stripe · Zendesk · PostHog · Internal DB
        Dagster (daily 07:00 UTC orchestration)
 ```
 
-![Full Data Architecture](screenshots/full_data_architecture.jpeg)
+![Full Data Architecture](screenshots/full_data_architecture.png)
 
 <details>
 <summary><strong>Full Tech Stack</strong></summary>
