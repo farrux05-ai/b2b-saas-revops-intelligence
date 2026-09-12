@@ -157,8 +157,19 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
+      - name: 📥 Download Previous Terraform State Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-state-prod
+          path: ${{ env.TF_WORKING_DIR }}
+        continue-on-error: true
+
       - name: 🔌 Terraform Init
         run: terraform init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+      - name: 📋 Terraform Plan
+        run: terraform plan -no-color
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: 🚀 Terraform Apply
@@ -172,3 +183,4 @@ jobs:
           name: terraform-state-prod
           path: ${{ env.TF_WORKING_DIR }}/terraform.tfstate
           retention-days: 90
+
