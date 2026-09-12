@@ -19,7 +19,13 @@ env:
   TF_WORKING_DIR: terraform/environments/prod
   TF_VERSION: "1.9.5"
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
 jobs:
+
   # ─────────────────────────────────────────────────────────
   # JOB 1: Format & Validate — runs on every PR
   # ─────────────────────────────────────────────────────────
@@ -192,9 +198,13 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add terraform.tfstate.enc
-            git diff --quiet && git diff --staged --quiet || (git commit -m "chore(infra): update encrypted terraform state [skip ci]" && git push)
+            if ! git diff --quiet HEAD || ! git diff --staged --quiet; then
+              git commit -m "chore(infra): update encrypted terraform state [skip ci]"
+              git push || echo "Warning: Could not push state update to repo."
+            fi
           fi
         working-directory: ${{ env.TF_WORKING_DIR }}
+
 
       - name: 📤 Upload Terraform State Artifact
         uses: actions/upload-artifact@v4
