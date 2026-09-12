@@ -392,10 +392,12 @@ b2b-saas-revops/
 | Doc | Content |
 |:----|:--------|
 | [Technical Deep-Dive](docs/TECHNICAL.md) | Architecture decisions, model patterns, testing philosophy |
+| [Terraform Infrastructure Architecture](docs/TERRAFORM_INFRASTRUCTURE.md) | Snowflake databases, 11 schemas, warehouses, RBAC, AES-256 state |
 | [Deployment Runbook](docs/DEPLOYMENT.md) | Snowflake setup, Lightdash, CI/CD, Dagster scheduling |
 | [Case Study](docs/CASE_STUDY.md) | $45K ARR saved in 30 days — full story |
 | [Reverse ETL Demo](REVERSE_ETL_DEMO.md) | Step-by-step live pipeline walkthrough |
 | [Slim CI Demo](SLIM_CI_DEMO.md) | Step-by-step Slim CI demonstration |
+
 
 ---
 
