@@ -80,6 +80,13 @@ jobs:
         run: terraform init
         working-directory: ${{ env.TF_WORKING_DIR }}
 
+      - name: 🔓 Decrypt State File
+        run: |
+          if [ -f terraform.tfstate.enc ]; then
+            openssl enc -d -aes-256-cbc -pbkdf2 -in terraform.tfstate.enc -out terraform.tfstate -pass pass:"${{ secrets.SNOWFLAKE_TF_PASSWORD }}"
+          fi
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
       - name: 📋 Terraform Plan
         id: plan
         run: |
@@ -157,12 +164,12 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
-      - name: 📥 Download Previous Terraform State Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: terraform-state-prod
-          path: ${{ env.TF_WORKING_DIR }}
-        continue-on-error: true
+      - name: 🔓 Decrypt State File
+        run: |
+          if [ -f terraform.tfstate.enc ]; then
+            openssl enc -d -aes-256-cbc -pbkdf2 -in terraform.tfstate.enc -out terraform.tfstate -pass pass:"${{ secrets.SNOWFLAKE_TF_PASSWORD }}"
+          fi
+        working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: 🔌 Terraform Init
         run: terraform init
@@ -173,7 +180,20 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: 🚀 Terraform Apply
+        id: apply
         run: terraform apply -auto-approve -no-color
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+      - name: 🔒 Encrypt and Commit State File
+        if: always() && steps.apply.outcome == 'success'
+        run: |
+          if [ -f terraform.tfstate ]; then
+            openssl enc -aes-256-cbc -pbkdf2 -in terraform.tfstate -out terraform.tfstate.enc -pass pass:"${{ secrets.SNOWFLAKE_TF_PASSWORD }}"
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add terraform.tfstate.enc
+            git diff --quiet && git diff --staged --quiet || (git commit -m "chore(infra): update encrypted terraform state [skip ci]" && git push)
+          fi
         working-directory: ${{ env.TF_WORKING_DIR }}
 
       - name: 📤 Upload Terraform State Artifact
@@ -183,4 +203,5 @@ jobs:
           name: terraform-state-prod
           path: ${{ env.TF_WORKING_DIR }}/terraform.tfstate
           retention-days: 90
+
 

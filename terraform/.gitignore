@@ -3,6 +3,8 @@ terraform.tfstate
 terraform.tfstate.backup
 *.tfstate
 *.tfstate.*
+!*.tfstate.enc
+
 
 # Terraform working directory
 .terraform/
